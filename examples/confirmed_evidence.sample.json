@@ -1,0 +1,21 @@
+{
+  "label": "manual-confirmed-batch",
+  "target": "Hanna Dosenko",
+  "source_tool": "confirmed_import:analyst",
+  "entries": [
+    {
+      "type": "url",
+      "value": "https://example.org/verified-evidence",
+      "source_target": "Hanna Dosenko",
+      "source_tool": "confirmed_import:analyst",
+      "depth": 1
+    },
+    {
+      "type": "phone",
+      "value": "+380501112233",
+      "source_target": "Hanna Dosenko",
+      "source_tool": "confirmed_import:analyst",
+      "depth": 1
+    }
+  ]
+}

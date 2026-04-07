@@ -1,0 +1,3 @@
+# target|phone1,phone2|username1,username2
+Example Target A|+380501112233,+380671112233|example_a,example.a
+Example Target B|+4748650767|example_b

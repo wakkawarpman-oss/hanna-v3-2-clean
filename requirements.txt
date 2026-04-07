@@ -1,0 +1,11 @@
+# Runtime
+pydantic>=2.8.0
+pycryptodome>=3.20.0
+censys>=2.2.18
+
+# Optional — PDF ingestion
+pypdf>=4.0.0
+
+# Dev / test
+pytest>=8.0.0
+pytest-cov>=5.0.0

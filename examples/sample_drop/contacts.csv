@@ -1,0 +1,4 @@
+type,value,source
+phone,+380501112233,manual_note
+username,example_target,local_article
+url,https://example.org/news/story,press
