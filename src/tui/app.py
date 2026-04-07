@@ -6,7 +6,7 @@ from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header, Static
 
 from tui.execution import TUIExecutionConfig, run_mode
-from tui.screens import ActivityScreen, ConfigEditorScreen, OverviewScreen, PipelineScreen, ReadinessScreen
+from tui.screens import ActivityScreen, ConfigEditorScreen, OverviewScreen, PipelineScreen, ReadinessScreen, validate_editor_payload
 from tui.state import (
     SessionState,
     active_modules_for_mode,
@@ -14,6 +14,7 @@ from tui.state import (
     append_activity,
     apply_run_result,
     build_default_session_state,
+    clear_pipeline_history,
     refresh_readiness,
     reset_modules_for_run,
     set_phase,
@@ -53,6 +54,7 @@ class HannaTUIApp(App[None]):
         ("c", "run_chain", "Chain"),
         ("e", "edit_profile", "Edit"),
         ("r", "refresh_readiness", "Refresh"),
+        ("x", "clear_timeline", "Clear"),
     ]
 
     def __init__(self, session_state: SessionState | None = None, plain: bool = False) -> None:
@@ -110,8 +112,13 @@ class HannaTUIApp(App[None]):
             return
         self.push_screen(ConfigEditorScreen(self.session_state), self._handle_editor_result)
 
+    def action_clear_timeline(self) -> None:
+        clear_pipeline_history(self.session_state)
+        append_activity(self.session_state, "info", "Pipeline timeline and counters cleared")
+        self._refresh_views()
+
     def action_help(self) -> None:
-        self.notify("Keys: 1-4 switch views, e edit profile, m manual, a aggregate, c chain, r refresh readiness, q quit", title="HANNA")
+        self.notify("Keys: 1-4 switch views, e edit profile, m manual, a aggregate, c chain, r refresh readiness, x clear timeline, q quit", title="HANNA")
 
     def _render_topbar(self) -> str:
         return (
@@ -190,6 +197,12 @@ class HannaTUIApp(App[None]):
         if not result:
             append_activity(self.session_state, "info", "Interactive profile edit cancelled")
             self._refresh_views()
+            return
+        errors = validate_editor_payload(result)
+        if errors:
+            append_activity(self.session_state, "error", "; ".join(errors))
+            self._refresh_views()
+            self.notify("; ".join(errors), title="HANNA", severity="error")
             return
         apply_editor_updates(self.session_state, result)
         append_activity(self.session_state, "ok", "Interactive operator profile updated")

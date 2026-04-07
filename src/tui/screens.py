@@ -8,6 +8,11 @@ from textual.widgets import Button, Input, Label, Static
 from tui.state import SessionState
 
 
+ALLOWED_MODES = {"idle", "manual", "aggregate", "chain"}
+ALLOWED_REPORT_MODES = {"internal", "shareable", "strict"}
+ALLOWED_EXPORT_FORMATS = {"json", "stix", "zip"}
+
+
 class SessionScreen(Screen[None]):
     def __init__(self, name: str, title: str) -> None:
         super().__init__(name=name)
@@ -54,7 +59,7 @@ class OverviewScreen(SessionScreen):
             f"No preflight: {execution.no_preflight}\n"
             f"Runs root: {self.session_state.ops.runs_root}\n"
             f"DB: {self.session_state.ops.db_path}\n\n"
-            "Controls: 1 overview, 2 pipeline, 3 readiness, 4 activity, e edit profile, m manual, a aggregate, c chain, r refresh readiness, q quit"
+            "Controls: 1 overview, 2 pipeline, 3 readiness, 4 activity, e edit profile, m manual, a aggregate, c chain, r refresh readiness, x clear timeline, q quit"
         )
         self.query_one("#overview-body", Static).update(body)
 
@@ -254,3 +259,30 @@ class ConfigEditorScreen(ModalScreen[dict[str, str] | None]):
 
 def _bool_text(value: bool) -> str:
     return "yes" if value else "no"
+
+
+def validate_editor_payload(payload: dict[str, str]) -> list[str]:
+    errors: list[str] = []
+    mode = payload.get("mode", "").strip().lower()
+    report_mode = payload.get("report_mode", "").strip().lower()
+    workers_raw = payload.get("workers", "").strip()
+    export_formats = [item.strip().lower() for item in payload.get("export_formats", "").split(",") if item.strip()]
+    manual_module = payload.get("manual_module", "").strip()
+    modules = [item.strip() for item in payload.get("modules", "").split(",") if item.strip()]
+
+    if mode and mode not in ALLOWED_MODES:
+        errors.append(f"Invalid mode: {mode}")
+    if report_mode and report_mode not in ALLOWED_REPORT_MODES:
+        errors.append(f"Invalid report mode: {report_mode}")
+    invalid_formats = [item for item in export_formats if item not in ALLOWED_EXPORT_FORMATS]
+    if invalid_formats:
+        errors.append(f"Invalid export formats: {', '.join(invalid_formats)}")
+    if workers_raw:
+        try:
+            if int(workers_raw) < 1:
+                errors.append("Workers must be >= 1")
+        except ValueError:
+            errors.append("Workers must be an integer")
+    if mode == "manual" and not (manual_module or modules):
+        errors.append("Manual mode requires a manual module or at least one module entry")
+    return errors

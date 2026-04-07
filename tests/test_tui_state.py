@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from models import AdapterOutcome, RunResult
-from tui.state import apply_editor_updates, apply_run_result, build_default_session_state, refresh_readiness, reset_modules_for_run, update_module_status, update_phase_counters
+from tui.screens import validate_editor_payload
+from tui.state import apply_editor_updates, apply_run_result, build_default_session_state, clear_pipeline_history, refresh_readiness, reset_modules_for_run, update_module_status, update_phase_counters
 
 
 def test_build_default_session_state_uses_target_and_report_mode():
@@ -127,3 +128,34 @@ def test_update_phase_counters_stores_structured_pipeline_details():
     assert "total_files=3" in state.pipeline.phase_counters["ingest"]
     assert state.pipeline.phase_timeline
     assert "ingest: total_files=3, ingested=2, rejected=1" in state.pipeline.phase_timeline[-1]
+
+
+def test_clear_pipeline_history_resets_timeline_and_counters():
+    state = build_default_session_state(target="Case Entity", modules=["pd-infra"])
+    update_phase_counters(state, "ingest", {"total_files": 3})
+    state.last_result_summary = ["summary"]
+
+    clear_pipeline_history(state)
+
+    assert state.pipeline.phase == "idle"
+    assert state.pipeline.phase_counters == {}
+    assert state.pipeline.phase_timeline == []
+    assert state.last_result_summary == []
+
+
+def test_validate_editor_payload_reports_invalid_values():
+    errors = validate_editor_payload(
+        {
+            "mode": "broken",
+            "report_mode": "red",
+            "export_formats": "json,xml",
+            "workers": "zero",
+            "manual_module": "",
+            "modules": "",
+        }
+    )
+
+    assert any("Invalid mode" in item for item in errors)
+    assert any("Invalid report mode" in item for item in errors)
+    assert any("Invalid export formats" in item for item in errors)
+    assert any("Workers must be an integer" in item for item in errors)

@@ -48,3 +48,22 @@ def test_render_compact_chain_status_includes_recent_counters():
 
     assert "ingest[total_files=2, ingested=1]" in rendered
     assert "resolve[clusters=3]" in rendered
+
+
+def test_action_clear_timeline_resets_pipeline_history(monkeypatch):
+    state = build_default_session_state(target="Case Entity", modules=["pd-infra"], default_mode="chain")
+    app = HannaTUIApp(session_state=state)
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: None)
+
+    app.session_state.pipeline.phase = "deep_recon"
+    app.session_state.pipeline.phase_counters["ingest"] = "total_files=2"
+    app.session_state.pipeline.phase_timeline.append("[2026-04-08T01:00:00] ingest: total_files=2")
+    app.session_state.last_result_summary = ["summary"]
+
+    app.action_clear_timeline()
+
+    assert app.session_state.pipeline.phase == "idle"
+    assert app.session_state.pipeline.phase_counters == {}
+    assert app.session_state.pipeline.phase_timeline == []
+    assert app.session_state.last_result_summary == []

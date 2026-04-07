@@ -277,6 +277,14 @@ def apply_editor_updates(state: SessionState, payload: dict[str, str]) -> None:
     refresh_readiness(state)
 
 
+def clear_pipeline_history(state: SessionState) -> None:
+    state.pipeline.phase = "idle"
+    state.pipeline.phase_counters = {}
+    state.pipeline.phase_timeline = []
+    state.last_result_summary = []
+    _recompute_progress(state)
+
+
 def reset_modules_for_run(state: SessionState, mode: str, modules: list[str]) -> None:
     state.execution.default_mode = mode
     state.pipeline.phase = "preparing"
