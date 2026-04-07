@@ -128,15 +128,22 @@ class HannaTUIApp(App[None]):
         )
 
     def _render_compact_chain_status(self) -> str:
+        total = len(self.session_state.pipeline.modules)
+        done = sum(1 for module in self.session_state.pipeline.modules if module.status == "done")
+        running = sum(1 for module in self.session_state.pipeline.modules if module.status == "running")
+        queued = sum(1 for module in self.session_state.pipeline.modules if module.status == "queued")
+        errors = sum(1 for module in self.session_state.pipeline.modules if module.status in {"error", "timeout"})
+        phase = self.session_state.pipeline.phase
+        module_summary = f"phase={phase} | modules done={done}/{total} run={running} queue={queued} err={errors}"
         if not self.session_state.pipeline.phase_counters:
-            return "Chain: idle"
+            return f"Chain: {module_summary}"
         compact_parts = []
         for phase_name, detail in list(self.session_state.pipeline.phase_counters.items())[-3:]:
             compact_parts.append(f"{phase_name}[{detail}]")
         timeline_tail = self.session_state.pipeline.phase_timeline[-1] if self.session_state.pipeline.phase_timeline else ""
         if timeline_tail:
-            return f"Chain: {' | '.join(compact_parts)} | latest: {timeline_tail}"
-        return f"Chain: {' | '.join(compact_parts)}"
+            return f"Chain: {module_summary} | {' | '.join(compact_parts)} | latest: {timeline_tail}"
+        return f"Chain: {module_summary} | {' | '.join(compact_parts)}"
 
     def _switch_view(self, name: str) -> None:
         self.session_state.current_view = name

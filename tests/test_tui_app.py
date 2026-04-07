@@ -39,15 +39,34 @@ def test_apply_event_updates_ui_state_transitions(monkeypatch):
 def test_render_compact_chain_status_includes_recent_counters():
     state = build_default_session_state(target="Case Entity", modules=["pd-infra"], default_mode="chain")
     app = HannaTUIApp(session_state=state)
+    total_modules = len(app.session_state.pipeline.modules)
 
     app.session_state.pipeline.phase_counters["ingest"] = "total_files=2, ingested=1"
     app.session_state.pipeline.phase_counters["resolve"] = "clusters=3"
     app.session_state.pipeline.phase_timeline.append("[2026-04-08T01:00:00] resolve: clusters=3")
+    app.session_state.pipeline.phase = "resolve"
+    app.session_state.pipeline.modules[0].status = "running"
 
     rendered = app._render_compact_chain_status()
 
+    assert "phase=resolve" in rendered
+    assert f"modules done=0/{total_modules} run=1 queue=0 err=0" in rendered
     assert "ingest[total_files=2, ingested=1]" in rendered
     assert "resolve[clusters=3]" in rendered
+
+
+def test_render_compact_chain_status_shows_module_summary_when_idle():
+    state = build_default_session_state(target="Case Entity", modules=["pd-infra", "shodan"], default_mode="chain")
+    app = HannaTUIApp(session_state=state)
+    total_modules = len(app.session_state.pipeline.modules)
+
+    app.session_state.pipeline.phase = "idle"
+    app.session_state.pipeline.modules[0].status = "done"
+    app.session_state.pipeline.modules[1].status = "error"
+
+    rendered = app._render_compact_chain_status()
+
+    assert rendered == f"Chain: phase=idle | modules done=1/{total_modules} run=0 queue=0 err=1"
 
 
 def test_action_clear_timeline_resets_pipeline_history(monkeypatch):
