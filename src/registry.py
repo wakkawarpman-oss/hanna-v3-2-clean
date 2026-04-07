@@ -42,6 +42,7 @@ ADAPTER_REGISTRY: dict[str, type[ReconAdapter]] = {
     "vk_graph": VKGraphAdapter,
     "avito": AvitoAdapter,
     "ua_phone": UAPhoneAdapter,
+    "getcontact": UAPhoneAdapter,
     "maryam": MaryamAdapter,
     "ashok": AshokAdapter,
     "ghunt": GHuntAdapter,
@@ -69,6 +70,11 @@ ADAPTER_REGISTRY: dict[str, type[ReconAdapter]] = {
 
 # Re-export so callers can do `from registry import MODULES`
 MODULES: dict[str, type[ReconAdapter]] = ADAPTER_REGISTRY
+MODULE_ALIASES: dict[str, str] = {"getcontact": "ua_phone"}
+
+
+def _default_module_names() -> list[str]:
+    return [name for name in MODULES.keys() if name not in MODULE_ALIASES]
 
 # ── Presets ──────────────────────────────────────────────────────
 
@@ -101,8 +107,8 @@ MODULE_PRESETS: dict[str, list[str]] = {
     "recon-auto-quick": ["subfinder", "httpx_probe", "nuclei", "katana", "naabu"],
     "recon-auto-deep": ["subfinder", "httpx_probe", "nuclei", "katana", "naabu"],
     "recon-auto": ["subfinder", "httpx_probe", "nuclei", "katana", "naabu"],
-    "full-spectrum-2026": list(ADAPTER_REGISTRY.keys()),
-    "full-spectrum": list(ADAPTER_REGISTRY.keys()),
+    "full-spectrum-2026": _default_module_names(),
+    "full-spectrum": _default_module_names(),
 }
 
 # ── Priority matrix (ROI-based) ─────────────────────────────────
@@ -113,6 +119,7 @@ MODULE_PRIORITY: dict[str, int] = {
     "ashok": 0,
     "ua_leak": 1,
     "ua_phone": 1,
+    "getcontact": 1,
     "ru_leak": 1,
     "web_search": 1,
     "firms": 1,
@@ -144,6 +151,7 @@ MODULE_PRIORITY: dict[str, int] = {
 
 MODULE_LANE: dict[str, str] = {
     "ua_phone": "fast",
+    "getcontact": "fast",
     "ua_leak": "fast",
     "ru_leak": "fast",
     "ghunt": "fast",
@@ -179,7 +187,7 @@ LANE_ORDER: dict[str, int] = {"fast": 0, "slow": 1}
 def resolve_modules(names: list[str] | None) -> list[str]:
     """Resolve a list of module names / preset names into concrete module names."""
     if not names:
-        return list(MODULES.keys())
+        return _default_module_names()
     if len(names) == 1 and names[0] in MODULE_PRESETS:
         return MODULE_PRESETS[names[0]]
     resolved: list[str] = []

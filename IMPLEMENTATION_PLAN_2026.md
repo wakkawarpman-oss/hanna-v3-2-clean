@@ -1,371 +1,267 @@
-# HANNA OSINT Adapter Expansion — Implementation Plan (2026-04-07)
+# HANNA v3.2 Clean — Implementation Status and Next-Stage Plan (2026-04-08)
 
-## Baseline Inventory
+## Executive Status
 
-### Already Integrated as HANNA Adapters (14)
-| Adapter | Category | Status |
-|---------|----------|--------|
-| ua_leak | Person/Leaks | ✅ Working |
-| ru_leak | Person/Leaks | ✅ Working |
-| vk_graph | Social | ✅ Working |
-| avito | Marketplace | ✅ Working |
-| ua_phone | Phone/GetContact | ✅ Working (AES encrypted) |
-| maryam | Web/OSINT framework | ✅ Working (CLI wrapper) |
-| ashok | Infrastructure | ✅ Working (CLI wrapper) |
-| ghunt | Google OSINT | ✅ Working (CLI wrapper) |
-| social_analyzer | Username 1000+ | ✅ Working (CLI wrapper) |
-| satintel | GEOINT/EXIF | ✅ Working |
-| search4faces | Face recognition | ✅ Working (API) |
-| web_search | DDG + Playwright | ✅ Working |
-| opendatabot | UA business registry | ✅ Working (API + web fallback) |
-| firms | NASA satellite | ✅ Working (API) |
+HANNA is no longer in the prototype phase.
 
-### Installed on System but NOT Integrated as Adapters
-| Tool | Category | Path |
-|------|----------|------|
-| sherlock | Username OSINT | /opt/homebrew/bin/sherlock |
-| maigret | Username OSINT | /opt/homebrew/bin/maigret |
-| holehe | Email discovery | /opt/homebrew/bin/holehe |
-| phoneinfoga | Phone OSINT | /opt/homebrew/bin/phoneinfoga |
-| theHarvester | Email/Domain | ~/.local/bin/theHarvester |
-| amass | Subdomain enum | /opt/homebrew/bin/amass |
-| subfinder | Subdomain enum | /opt/homebrew/bin/subfinder |
-| dnsx | DNS resolution | ~/go/bin/dnsx |
-| assetfinder | Asset discovery | ~/go/bin/assetfinder |
-| nmap | Port scan | /opt/homebrew/bin/nmap |
-| masscan | Port scan | /opt/homebrew/bin/masscan |
-| shodan | Internet search | /opt/homebrew/bin/shodan |
-| ffuf | Dir brute-force | /opt/homebrew/bin/ffuf |
-| nikto | Web vuln scan | /opt/homebrew/bin/nikto |
-| exiftool | Metadata | /opt/homebrew/bin/exiftool |
-| spiderfoot | OSINT framework | ~/.local/bin/spiderfoot |
-| httpx | HTTP probing | /opt/homebrew/bin/httpx |
+The clean repository now represents a working OSINT orchestration platform in late integration and release hardening. The core runtime, discovery fusion, HTML dossier rendering, machine-readable exports, and operator cleanup flows are already implemented.
 
-### NOT Installed, Need Installation
-| Tool | Category | Install Method |
-|------|----------|---------------|
-| **nuclei** | Vuln scan (шаблонний) | `go install github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest` |
-| **katana** | Web crawler | `go install github.com/projectdiscovery/katana/cmd/katana@latest` |
-| **naabu** | Port scan | `go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest` |
-| **censys** | Internet search | `pip3 install censys` |
-| **recon-ng** | OSINT framework | repo-local checkout under `tools/recon-ng` or explicit `RECONNG_BIN` |
-| **blackbird** | Username OSINT | repo-local checkout under `tools/blackbird` or explicit `BLACKBIRD_BIN` |
-| **metagoofil** | Doc metadata | repo-local checkout under `tools/metagoofil` or explicit `METAGOOFIL_BIN` |
-| **gobuster** | Dir brute-force | `go install github.com/OJ/gobuster/v3@latest` |
-| **eyewitness** | Web screenshots | repo-local checkout under `tools/EyeWitness` or explicit `EYEWITNESS_BIN` |
+This document reflects the current shipped system and the next implementation wave, rather than an earlier adapter-expansion-only plan.
 
----
+## What Is Already Shipped
 
-## Architecture Decision: What Gets an Adapter vs What Stays External
+### Core Runtime
 
-### Gets a HANNA Adapter (produces ReconHit, runs in worker pool)
-Tools that return **observable data** (phones, emails, usernames, URLs, IPs, coordinates):
-- nuclei → infrastructure hits, vuln findings
-- katana → crawled URLs, discovered endpoints
-- httpx → tech fingerprints, status probing
-- censys → certificates, hosts, shadow IT
-- naabu → open ports per IP
-- blackbird → username → platform URLs
-- holehe → email → registered services
-- recon-ng → modular data feeds
-- metagoofil → doc metadata (emails, names, usernames)
-- eyewitness → screenshot + tech detection
-- subfinder → subdomains (wrap existing binary)
-- amass → subdomains + ASN (wrap existing binary)
+- Unified CLI in `src/cli.py`
+- Three execution modes: `manual`, `aggregate`, `chain`
+- Preflight checks for tool binaries, env vars, and runtime prerequisites
+- Reset / cleanup command for generated state
 
-### Stays External (used through reconFTW or manual)
-Tools that are **consumers** of data rather than producers of observables:
-- reconFTW (orchestrator that calls our tools)
-- SpiderFoot (parallel system — feeds data via export)
-- Maltego (visualization layer — reads RunResult JSON)
-- gobuster/feroxbuster (directory brute — too noisy for auto-integration)
+### Discovery and Fusion Layer
 
----
+- Metadata ingestion into the discovery database
+- Observable registration and deduplication
+- Entity resolution and corroboration tracking
+- Rejected-target handling and verification passes
+- HTML dossier rendering from the resolved graph
 
-## Implementation Phases
+### Operator Safety and Reporting
 
-### Phase 1 — ProjectDiscovery Stack (highest ROI)
-**Install + Adapt:** nuclei, katana, httpx, naabu
-**Why first:** These form the `subfinder → dnsx → httpx → nuclei + katana` pipeline that's the 2026 infrastructure recon gold standard. httpx already installed.
+- Safe-by-default dossier redaction
+- Supported redaction modes: `internal`, `shareable`, `strict`
+- Report-mode propagation through canonical and legacy entrypoints
+- Sanitized chain dossier inclusion in ZIP evidence packs
 
-#### New Adapters:
-1. **`adapters/nuclei.py`** — NucleiAdapter
-   - Input: domain, URL, IP
-   - Output: ReconHit(type=vulnerability, infrastructure)
-   - Wraps CLI: `nuclei -u {target} -j -silent`
-   - Parses JSON output → hits with CVE/template references
-   - Lane: slow (template-based scanning is heavy)
-   - Priority: P1
+### Export Surface
 
-2. **`adapters/katana.py`** — KatanaAdapter
-   - Input: URL/domain
-   - Output: ReconHit(type=url, endpoint)
-   - Wraps CLI: `katana -u {target} -j -d 3 -silent`
-   - Discovers JS endpoints, forms, APIs
-   - Lane: slow (crawling)
-   - Priority: P2
+- JSON export for serialized `RunResult`
+- STIX-like bundle export for downstream systems
+- ZIP export containing machine-readable artifacts and rendered dossier
+- ZIP manifest now records the selected dossier `report_mode`
 
-3. **`adapters/httpx_probe.py`** — HttpxAdapter
-   - Input: domain list (from subfinder/amass)
-   - Output: ReconHit(type=infrastructure) — tech stack, status, titles
-   - Wraps CLI: `httpx -u {target} -j -silent -tech-detect`
-   - Lane: fast
-   - Priority: P1
+### Regression Coverage
 
-4. **`adapters/naabu.py`** — NaabuAdapter
-   - Input: IP/domain
-   - Output: ReconHit(type=port, infrastructure)
-   - Wraps CLI: `naabu -host {target} -j -silent`
-   - Fast port scanning, replaces masscan for typical use
-   - Lane: fast
-   - Priority: P1
+- Exporter contract tests
+- CLI contract tests
+- Chain runner report-mode tests
+- Discovery redaction tests
+- Runtime reset tests
 
-#### New Preset:
-```python
-"pd-infra": ["httpx_probe", "katana", "nuclei", "naabu"]
-"pd-full":  ["httpx_probe", "katana", "nuclei", "naabu", "ashok"]
-"pd-infra-quick": ["httpx_probe", "katana", "nuclei", "naabu"]
-"pd-infra-deep":  ["httpx_probe", "katana", "nuclei", "naabu"]
-```
+## Current Integrated Adapter Base
 
----
+These adapters are already integrated into HANNA and produce structured results through the shared orchestration layer.
 
-### Phase 2 — Person OSINT Expansion
-**Install + Adapt:** blackbird, holehe (wrap), censys
-**Why second:** Directly augments person OSINT — the core use case.
+| Adapter | Category | Current Role |
+|---------|----------|--------------|
+| ua_leak | Person / leaks | Corroboration and leak enrichment |
+| ru_leak | Person / leaks | Additional leak-side corroboration |
+| vk_graph | Social | Social graph and platform traces |
+| avito | Marketplace | Marketplace footprint and seller traces |
+| ua_phone | Phone | Phone enrichment and caller identity signals |
+| maryam | Framework wrapper | External framework bridge |
+| ashok | Infrastructure | Infrastructure and public-host enrichment |
+| ghunt | Google OSINT | Google-account enrichment |
+| social_analyzer | Username OSINT | Cross-platform username footprint |
+| satintel | GEOINT / EXIF | Spatial and media-side enrichment |
+| search4faces | Face search | Face-recognition enrichment |
+| web_search | Web discovery | Search-engine and browser-assisted discovery |
+| opendatabot | UA registry | Business and registry linkage |
+| firms | Satellite / specialized | Specialized geospatial enrichment |
 
-#### New Adapters:
-5. **`adapters/blackbird.py`** — BlackbirdAdapter
-   - Input: username
-   - Output: ReconHit(type=url) — platform profile URLs
-   - Wraps CLI: `blackbird -u {username} --json`
-   - Complements social_analyzer (different platform coverage)
-   - Lane: fast
-   - Priority: P2
+## System Layers
 
-6. **`adapters/holehe_adapter.py`** — HoleheAdapter
-   - Input: email
-   - Output: ReconHit(type=url, username) — services where email is registered
-   - Wraps CLI: `holehe {email} --only-used --no-color`
-   - Essential for email → service mapping
-   - Lane: fast
-   - Priority: P1
+### 1. Adapter Layer
 
-7. **`adapters/censys_adapter.py`** — CensysAdapter
-   - Input: domain, IP, certificate
-   - Output: ReconHit(type=infrastructure) — certs, hosts, cloud assets
-   - Uses Python SDK: `from censys.search import CensysHosts`
-   - Complements Shodan (different data sources, especially certs)
-   - Env: `CENSYS_API_ID`, `CENSYS_API_SECRET`
-   - Lane: fast
-   - Priority: P1
+Adapters wrap external tools and APIs and emit normalized hits instead of tool-specific raw output.
 
-8. **`adapters/metagoofil_adapter.py`** — MetagoofilAdapter
-   - Input: domain
-   - Output: ReconHit(type=email, username) — metadata from public docs
-   - Wraps CLI: `metagoofil -d {domain} -t pdf,docx,xlsx -l 50`
-   - Lane: slow
-   - Priority: P2
+Responsibilities:
 
-#### New Presets:
-```python
-"person-deep": ["ua_phone", "ghunt", "holehe", "blackbird", "search4faces", "social_analyzer"]
-"email-chain": ["holehe", "ghunt", "metagoofil"]
-```
+- validate target compatibility,
+- call CLI or API sources,
+- parse external output,
+- return normalized observables with confidence and provenance.
 
----
+### 2. Runner Layer
 
-### Phase 3 — Existing Tool Wrappers (already installed, just need adapters)
-**Adapt only (no install):** subfinder, amass, nmap, shodan
+The runner layer exposes three execution modes:
 
-#### New Adapters:
-9. **`adapters/subfinder_adapter.py`** — SubfinderAdapter
-    - Wraps: `subfinder -d {domain} -silent`
-    - Output: ReconHit(type=domain) — subdomains
-    - Lane: fast, Priority: P1
+- `manual` for single-adapter direct execution,
+- `aggregate` for parallel batches across selected modules,
+- `chain` for ingest → resolve → recon → verify → render.
 
-10. **`adapters/amass_adapter.py`** — AmassAdapter
-    - Wraps: `amass enum -d {domain} -passive`
-    - Output: ReconHit(type=domain, ip) — subdomains + ASN
-    - Lane: slow, Priority: P1
+### 3. Discovery Engine
 
-11. **`adapters/nmap_adapter.py`** — NmapAdapter
-    - Wraps: `nmap -sV -T4 --top-ports 1000 -oX - {target}`
-    - Output: ReconHit(type=port, infrastructure) — service fingerprints
-    - Lane: slow, Priority: P0
+The discovery engine turns raw findings into a coherent operational picture:
 
-12. **`adapters/shodan_adapter.py`** — ShodanAdapter
-    - Uses Python SDK or CLI: `shodan host {ip}`
-    - Output: ReconHit(type=infrastructure, port) — banners, vulns, tech
-    - Env: `SHODAN_API_KEY`
-    - Lane: fast, Priority: P1
+- ingest metadata and evidence,
+- register observables,
+- link corroborating signals,
+- resolve entities,
+- verify profiles and content,
+- render dossiers.
 
-#### New Presets:
-```python
-"subdomain-full": ["subfinder", "amass", "ashok"]
-"port-scan": ["naabu", "nmap"]
-"infra-deep": ["subfinder", "httpx_probe", "nuclei", "nmap", "shodan", "censys"]
-"recon-auto-quick": ["subfinder", "httpx_probe", "nuclei", "katana", "naabu"]
-"recon-auto-deep": ["subfinder", "httpx_probe", "nuclei", "katana", "naabu"]
-```
+### 4. Export and Ops Layer
 
----
+This layer gives the platform operational maturity:
 
-### Phase 4 — Framework & Automation Integration
-**Install + Configure:** recon-ng, reconFTW, SpiderFoot activation
+- JSON/STIX/ZIP exports,
+- runtime cleanup and reset,
+- machine-readable evidence handoff,
+- preflight gating before runs.
 
-#### New Adapters:
-13. **`adapters/reconng.py`** — ReconNGAdapter
-    - Wraps recon-ng workspaces via CLI
-    - Input: domain/email/username
-    - Runs selected recon-ng modules, parses DB output
-    - Lane: slow, Priority: P2
+## Current Gaps
 
-14. **`adapters/eyewitness_adapter.py`** — EyewitnessAdapter
-    - Wraps: `eyewitness --web -f urls.txt --no-prompt`
-    - Input: URL list (from httpx/subfinder)
-    - Output: ReconHit(type=url) — screenshots + tech classification
-    - Lane: slow, Priority: P3
+The main remaining gaps are no longer in the existence of the platform, but in expansion and operational refinement.
 
-#### Pipeline Scripts (not adapters — orchestration layer):
-- `pipelines/infra_recon.py` — subfinder → dnsx → httpx → nuclei + katana
-- `pipelines/person_recon.py` — holehe → ghunt → blackbird → social_analyzer
-- `pipelines/full_spectrum.py` — both pipelines + all existing adapters
+### Documentation and Operator Runbooks
 
----
+- keep README and plan aligned with the clean repository reality,
+- document recommended presets and report-mode guidance,
+- document release and smoke-check procedures.
 
-## Updated Registry After All Phases
+### Adapter Expansion
 
-```python
-# registry.py — After expansion (28 adapters)
-MODULES = {
-    # === Existing 14 ===
-    "ua_leak", "ru_leak", "vk_graph", "avito", "ua_phone",
-    "maryam", "ashok", "ghunt", "social_analyzer", "satintel",
-    "search4faces", "web_search", "opendatabot", "firms",
-    # === Phase 1: ProjectDiscovery ===
-    "nuclei", "katana", "httpx_probe", "naabu",
-    # === Phase 2: Person OSINT ===
-    "blackbird", "holehe", "censys", "metagoofil",
-    # === Phase 3: Existing Tool Wrappers ===
-    "subfinder", "amass", "nmap", "shodan",
-    # === Phase 4: Frameworks ===
-    "reconng", "eyewitness",
-}
+The platform core is ready for the next adapter wave. The highest-value missing integrations remain the infrastructure and enrichment modules identified below.
 
-MODULE_PRIORITY = {
-    # ... existing ...
-    "nmap": 0,         # P0 — service fingerprinting
-    "nuclei": 1,       # P1 — vuln scanning
-    "httpx_probe": 1,  # P1 — tech detection
-    "naabu": 1,        # P1 — fast port scan
-    "subfinder": 1,    # P1 — subdomain enum
-    "amass": 1,        # P1 — subdomain + ASN
-    "shodan": 1,       # P1 — internet search
-    "censys": 1,       # P1 — cert + host search
-    "holehe": 1,       # P1 — email service mapping
-    "katana": 2,       # P2 — crawling
-    "blackbird": 2,    # P2 — username search
-    "metagoofil": 2,   # P2 — doc metadata
-    "reconng": 2,      # P2 — modular recon
-    "eyewitness": 3,   # P3 — screenshots
-}
+### End-to-End Acceptance Flows
 
-MODULE_PRESETS = {
-    # ... existing ...
-    # Phase 1
-    "pd-infra": ["httpx_probe", "katana", "nuclei", "naabu"],
-    # Phase 2
-    "person-deep": ["ua_phone", "ghunt", "holehe", "blackbird", "search4faces", "social_analyzer"],
-    "email-chain": ["holehe", "ghunt", "metagoofil"],
-    # Phase 3
-    "subdomain-full": ["subfinder", "amass", "ashok"],
-    "port-scan": ["naabu", "nmap"],
-    "infra-deep": ["subfinder", "httpx_probe", "nuclei", "nmap", "shodan", "censys"],
-    # Phase 4
-    "recon-auto": ["subfinder", "httpx_probe", "nuclei", "katana", "naabu"],
-    # Combined
-    "full-spectrum-2026": [*ALL_28_ADAPTERS],
-}
-```
+- add more scenario-style tests around `chain` with exports,
+- add smoke validation for ZIP plus sanitized dossier behavior,
+- keep release verification fast and repeatable.
 
----
+## Next Adapter Wave
 
-## Execution Order & Dependencies
+The next expansion should focus on adapters that fit the existing runtime cleanly and materially improve coverage.
 
-```
-Phase 1 (ProjectDiscovery)          Phase 2 (Person)
-  ┌─────────────────┐                ┌──────────────┐
-  │ Install:        │                │ Install:     │
-  │  nuclei         │                │  blackbird   │
-  │  katana         │                │  censys      │
-  │  naabu          │                │  metagoofil  │
-  │ (httpx: done)   │                │ (holehe:done)│
-  ├─────────────────┤                ├──────────────┤
-  │ Adapters:       │                │ Adapters:    │
-  │  nuclei.py      │                │  blackbird   │
-  │  katana.py      │                │  holehe      │
-  │  httpx_probe.py │                │  censys      │
-  │  naabu.py       │                │  metagoofil  │
-  └────────┬────────┘                └──────┬───────┘
-           │                                │
-           ▼                                ▼
-  Phase 3 (Wrap Existing)           Phase 4 (Frameworks)
-  ┌─────────────────┐                ┌──────────────┐
-  │ Adapters only:  │                │ Install:     │
-  │  subfinder.py   │                │  recon-ng    │
-  │  amass.py       │                │  eyewitness  │
-  │  nmap.py        │                │  (reconFTW)  │
-  │  shodan.py      │                ├──────────────┤
-  └────────┬────────┘                │ Adapters:    │
-           │                         │  reconng.py  │
-           │                         │  eyewitness  │
-           ▼                         └──────┬───────┘
-  ┌──────────────────────────────────────────┘
-  │ Final: Update registry.py, presets, cli.py
-  │ Test full-spectrum-2026 preset
-  └─────────────────────────────────────────────
-```
+### Phase 1 — Infrastructure Expansion
 
----
+Priority: highest ROI for infrastructure recon and downstream pivoting.
 
-## Implementation Rule per Adapter
+Planned adapters:
 
-Every new adapter MUST follow this contract:
-```python
-class XxxAdapter(ReconAdapter):
-    name = "xxx"
-    region = "global"  # or "ua" / "ru"
+- `httpx_probe`
+- `nuclei`
+- `katana`
+- `naabu`
+- `subfinder`
+- `amass`
 
-    def search(self, target_name, known_phones, known_usernames) -> list[ReconHit]:
-        # 1. Determine input type (domain? email? username? phone?)
-        # 2. Call tool (subprocess or SDK)
-        # 3. Parse output
-        # 4. Return list[ReconHit] with proper observable_type, confidence, source_detail
-```
+Intended outcome:
 
-After creating adapter:
-1. Import in `adapters/__init__.py`
-2. Add to `ADAPTER_REGISTRY`
-3. Add to `registry.py`: MODULE_PRIORITY, MODULE_LANE
-4. Add to relevant presets
-5. Add env var docs to `.env.example`
-6. Smoke test: `python3 cli.py manual --module xxx --target test`
-7. Run `python3 src/cli.py preflight --strict` before operational rollout
-8. For infrastructure presets, explicitly validate the intended nuclei profile (`quick` vs `deep`) before running broad scans
+- discover subdomains,
+- resolve live HTTP surfaces,
+- probe tech stack,
+- enumerate ports,
+- identify templated findings,
+- expand reachable endpoint inventory.
 
----
+### Phase 2 — Person and Account Expansion
 
-## What NOT to Integrate (and Why)
+Priority: direct payoff for person-centric investigations.
+
+Planned adapters:
+
+- `holehe`
+- `blackbird`
+- `censys`
+- `metagoofil`
+
+Intended outcome:
+
+- widen account-footprint discovery,
+- map email-to-service presence,
+- add certificate and host-side enrichment,
+- mine document metadata for emails and usernames.
+
+### Phase 3 — Existing Tool Wrappers
+
+Priority: convert already-installed tooling into first-class platform modules.
+
+Planned adapters:
+
+- `nmap`
+- `shodan`
+
+Optional wrappers depending on operational value:
+
+- `sherlock`
+- `maigret`
+- `phoneinfoga`
+- `theHarvester`
+
+### Phase 4 — Framework Bridges
+
+Priority: controlled integration of heavier external ecosystems.
+
+Planned adapters:
+
+- `reconng`
+- `eyewitness`
+
+These should only be promoted when the parsing contract is stable and operational noise is acceptable.
+
+## Tools That Should Stay External
+
+Some tools are still useful, but should not be promoted to first-class automated adapters by default.
 
 | Tool | Reason |
 |------|--------|
-| reconFTW | External orchestrator — runs OUR tools, not an adapter |
-| Maltego | GUI-only visualization — reads our JSON exports |
-| gobuster/feroxbuster | Too noisy for auto; use manually via terminal |
-| OSINT Framework (site) | Reference website, not a tool |
-| Kagi/Perplexity | Search engines, not scriptable OSINT tools |
-| RustScan | Redundant with naabu (same niche, naabu has JSON output) |
-| alterx/gotator | Subdomain mutation — use *inside* subfinder/amass config |
-| puredns/massdns | Bulk DNS — too aggressive for automated pipeline |
-| ct-exposer/certipy | crt.sh — already covered by ashok adapter (crt.sh fallback) |
+| reconFTW | External orchestrator that should call HANNA, not be modeled as a HANNA adapter |
+| SpiderFoot | Parallel ecosystem better handled through export/import boundaries |
+| Maltego | Visualization consumer of exports rather than a data producer |
+| gobuster / feroxbuster | Useful but too noisy for default automated integration |
+| OSINT Framework | Reference catalog, not a runnable adapter |
+| Kagi / Perplexity | Search engines, not stable adapter targets |
+| RustScan | Overlaps with `naabu` without enough advantage for the core pipeline |
+
+## Implementation Contract for New Adapters
+
+Every new adapter must fit the existing platform model.
+
+```python
+class XxxAdapter(ReconAdapter):
+    name = "xxx"
+    region = "global"
+
+    def search(self, target_name, known_phones, known_usernames) -> list[ReconHit]:
+        # 1. Validate input type
+        # 2. Call CLI or API
+        # 3. Parse raw output
+        # 4. Return normalized hits with provenance
+```
+
+Required follow-through after implementation:
+
+1. Register the adapter in `adapters/__init__.py` and the main registry.
+2. Add priority, lane, and preset wiring.
+3. Document required env vars and binary expectations.
+4. Add smoke coverage and at least one parser-focused regression test.
+5. Run strict preflight before operational rollout.
+
+## Delivery Priorities From Here
+
+### Priority A — Keep the Core Stable
+
+- preserve clean export contracts,
+- preserve redaction guarantees,
+- keep chain dossier behavior deterministic,
+- keep reset safe and explicit.
+
+### Priority B — Expand With Discipline
+
+- integrate only tools that emit useful observables,
+- prefer adapters that fit the shared result model cleanly,
+- avoid noisy wrappers unless there is a strong operational case.
+
+### Priority C — Make Operations Boring
+
+- clean docs,
+- repeatable smoke checks,
+- stable folder and naming conventions,
+- explicit runbooks for internal vs shareable outputs.
+
+## Bottom Line
+
+HANNA already has the shape of a productized OSINT execution layer.
+
+The system has moved beyond “can we make the tools run” and into “can we make the platform safe, stable, exportable, and expandable without chaos.” The next implementation wave should extend adapter coverage while preserving the clean runtime and operator surface that now exists.

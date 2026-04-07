@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 import pytest
 
@@ -46,3 +47,38 @@ def test_cmd_reset_requires_confirm():
             keep_artifacts=False,
             confirm=False,
         ))
+
+
+def test_export_result_artifacts_passes_chain_html_and_report_mode(monkeypatch, tmp_path):
+    calls = []
+
+    def _json_export(_result, output_dir):
+        path = Path(output_dir) / "result.json"
+        path.write_text("{}", encoding="utf-8")
+        return path
+
+    def _stix_export(_result, output_dir):
+        path = Path(output_dir) / "result.stix.json"
+        path.write_text("{}", encoding="utf-8")
+        return path
+
+    def _zip_export(_result, output_dir, html_path=None, report_mode=None):
+        calls.append({"output_dir": str(output_dir), "html_path": html_path, "report_mode": report_mode})
+        path = Path(output_dir) / "bundle.zip"
+        path.write_text("zip", encoding="utf-8")
+        return path
+
+    monkeypatch.setattr(cli_mod, "export_run_result_json", _json_export)
+    monkeypatch.setattr(cli_mod, "export_run_result_stix", _stix_export)
+    monkeypatch.setattr(cli_mod, "export_run_result_zip", _zip_export)
+
+    exported = cli_mod._export_result_artifacts(
+        result=object(),
+        export_formats=["json", "stix", "zip"],
+        export_dir=str(tmp_path),
+        html_path="/tmp/dossier.html",
+        report_mode="strict",
+    )
+
+    assert exported["zip"].endswith("bundle.zip")
+    assert calls == [{"output_dir": str(tmp_path), "html_path": "/tmp/dossier.html", "report_mode": "strict"}]

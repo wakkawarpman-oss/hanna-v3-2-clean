@@ -43,7 +43,13 @@ def _parse_export_formats(value: str | None) -> list[str]:
     return list(dict.fromkeys(formats))
 
 
-def _export_result_artifacts(result, export_formats: list[str], export_dir: str | None, html_path: str | None = None) -> dict[str, str]:
+def _export_result_artifacts(
+    result,
+    export_formats: list[str],
+    export_dir: str | None,
+    html_path: str | None = None,
+    report_mode: str | None = None,
+) -> dict[str, str]:
     if not export_formats:
         return {}
     target_dir = Path(export_dir) if export_dir else (RUNS_ROOT / "exports" / "artifacts")
@@ -54,7 +60,14 @@ def _export_result_artifacts(result, export_formats: list[str], export_dir: str 
     if "stix" in export_formats:
         exported["stix"] = str(export_run_result_stix(result, target_dir))
     if "zip" in export_formats:
-        exported["zip"] = str(export_run_result_zip(result, target_dir, html_path=html_path))
+        exported["zip"] = str(
+            export_run_result_zip(
+                result,
+                target_dir,
+                html_path=html_path,
+                report_mode=report_mode,
+            )
+        )
     return exported
 
 
@@ -192,6 +205,7 @@ def _cmd_chain(args: argparse.Namespace) -> None:
         export_formats,
         args.export_dir,
         html_path=result.extra.get("output_path") if isinstance(result.extra, dict) else None,
+        report_mode=result.extra.get("report_mode") if isinstance(result.extra, dict) else None,
     )
     for line in result.summary_lines():
         print(line)

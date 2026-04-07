@@ -1,120 +1,171 @@
-# HANNA v3.2 Clean Repository
+# HANNA v3.2 Clean
 
-Clean standalone repository for running HANNA deep recon, discovery fusion, and HTML dossier generation.
+HANNA is a modular OSINT orchestration platform for running adapter-based collection, normalizing observables, resolving entities, and producing both operator-facing dossiers and machine-readable exports.
 
-## What Is Included
+This repository is the clean canonical codebase published as `wakkawarpman-oss/hanna-v3-2-clean`.
 
-- `src/deep_recon.py` — multi-adapter recon runner (presets, lanes, module orchestration)
-- `src/discovery_engine.py` — ingestion, entity resolution, correlation, report graph
-- `src/run_discovery.py` — main CLI with single-target and batch mode (`--targets-file`)
-- `src/bridge_legacy_phone_dossier.py` — legacy bridge dossier renderer
-- `src/pydantic_models.py` — structured models used by the pipeline
-- `requirements.txt` — Python dependencies
-- `examples/` — ready-to-use sample files for batch logic
-- `docs/` — architecture and batch format docs
+## Current Status
+
+The project is in late integration and release hardening.
+
+Core platform capabilities are already present:
+
+- Canonical CLI for `chain`, `aggregate`, `manual`, `preflight`, `list`, and `reset`
+- Discovery engine with ingestion, observable registration, entity resolution, and verification flows
+- Safe-by-default HTML dossier generation with `internal`, `shareable`, and `strict` redaction modes
+- Canonical export surface for JSON, STIX-like bundles, and ZIP evidence packs
+- Operator cleanup workflow for runtime DB, logs, reports, and generated artifacts
+- Regression coverage for report redaction, export contracts, and reset behavior
+
+## Architecture
+
+The repository is organized around four layers:
+
+1. Adapters
+   External tools and APIs are wrapped behind a shared adapter contract so they produce consistent hits and metadata.
+
+2. Execution Runners
+   `manual`, `aggregate`, and `chain` provide operator-friendly entrypoints for single-module runs, parallel module batches, and full discovery workflows.
+
+3. Discovery Engine
+   Normalizes observables, links corroborating evidence, resolves entities, tracks rejected targets, and renders dossiers.
+
+4. Export and Ops Surface
+   JSON, STIX, ZIP, preflight checks, and workspace reset give the system a stable operational shell.
+
+## Repository Layout
+
+- `src/cli.py` — canonical operator CLI
+- `src/runners/` — execution modes and orchestration
+- `src/discovery_engine.py` — ingestion, entity resolution, verification, and dossier rendering
+- `src/adapters/` — integrated data-source wrappers
+- `src/exporters/` — JSON, STIX, and ZIP exports
+- `src/runtime_ops.py` — reset and cleanup helpers
+- `tests/` — regression coverage for runners, exporters, CLI contracts, and discovery behavior
 
 ## Quick Start
 
 ```bash
-cd HANNA_v3_2_clean_repo
+cd hanna-v3-2-clean
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python3 src/cli.py preflight
 ```
 
-## External Tooling Policy
-
-- Go tools such as `nuclei`, `katana`, and `naabu` are expected as real binaries in `PATH` or via explicit `*_BIN` env overrides.
-- Fragile tools such as `blackbird`, `recon-ng`, `metagoofil`, and `EyeWitness` should be treated as repo-local checkouts under `tools/` or pointed to with explicit absolute `*_BIN` env vars.
-- Do not assume `pip install recon-ng`, `pip install metagoofil`, or `pip install blackbird` are reliable production install paths on modern macOS/Python.
-
-Run preflight before operational use:
+Use strict preflight before operational runs:
 
 ```bash
 python3 src/cli.py preflight --strict
 ```
 
-Scope preflight to selected modules or presets:
+## Main Workflows
+
+Run the full discovery pipeline and render a sanitized dossier:
 
 ```bash
-python3 src/cli.py preflight --modules pd-infra --strict
-```
-
-`aggregate` and `chain` now run preflight fail-fast by default. Use `--no-preflight` only for deliberate troubleshooting.
-
-## Single Target Run
-
-```bash
-python src/run_discovery.py \
+python3 src/cli.py chain \
   --target "Example Target" \
-  --mode fast-lane \
+  --modules ua_leak,ghunt,opendatabot \
   --verify \
-  --output ./runs/exports/html/dossiers/example_fast.html
+  --report-mode shareable \
+  --export-formats json,stix,zip
 ```
 
-## Batch Run (Array of Targets)
+Run selected adapters in parallel without dossier rendering:
 
 ```bash
-python src/run_discovery.py \
-  --targets-file examples/targets.txt \
-  --mode fast-lane \
-  --verify \
-  --output ./runs/exports/html/dossiers/batch_fast.html
+python3 src/cli.py aggregate \
+  --target example.com \
+  --modules full-spectrum \
+  --workers 4 \
+  --export-formats json,stix
 ```
 
-`--targets-file` format:
-
-```text
-target|phone1,phone2|username1,username2
-```
-
-Example file is available at `examples/targets.txt`.
-
-## Folder Intake (TXT/PDF/CSV -> Full HTML Dossier)
-
-Drop your evidence files into a folder and run:
+Run a single adapter directly:
 
 ```bash
-python src/intake_drop_folder.py \
-  --input-dir /path/to/drop_folder \
-  --target "Case Target" \
-  --profile username \
-  --mode fast-lane \
-  --verify
+python3 src/cli.py manual \
+  --module ua_phone \
+  --target "Phone pivot" \
+  --phones "+380991234567"
 ```
 
-What it does:
+## GetContact / ua_phone
 
-- Recursively finds `txt`, `pdf`, `csv`
-- Extracts text into normalized intake logs
-- Generates metadata JSON files in exports
-- Runs discovery + deep recon
-- Builds a full HTML dossier
+GetContact is wired through the `ua_phone` adapter, not as a separate module name.
 
-Use `--no-build-dossier` if you only want ingestion.
+The live `ua_phone` flow can use:
 
-## Outputs
+- `GETCONTACT_TOKEN`
+- `GETCONTACT_AES_KEY`
+- `TELEGRAM_BOT_TOKEN`
 
-- Deep recon JSON reports: `~/Desktop/ОСІНТ_ВИВІД/runs/deep_recon_*.json`
-- HTML dossier output path is controlled by `--output`
-- Discovery DB default: `~/Desktop/ОСІНТ_ВИВІД/runs/discovery.db`
+Without those values, `ua_phone` still runs, but it falls back to passive or manual-follow-up behavior instead of full live enrichment.
 
-## Timeout Model
+Check the live prerequisites explicitly with:
 
-- Request timeout is capped inside adapters.
-- CLI subprocess timeout is bounded below the worker hard timeout with a safety margin.
-- Long-running modules such as `nuclei`, `reconng`, `metagoofil`, and `eyewitness` use module-specific worker timeout overrides.
+```bash
+python3 src/cli.py preflight --modules ua_phone
+```
 
-## Nuclei Profiles
+Clean runtime state while preserving selected outputs:
 
-- `quick` is the default operator profile and is intended for validation, smoke checks, and lighter infra presets.
-- `deep` expands target count and nuclei scan pressure for heavier infrastructure runs.
-- Set explicitly with `--nuclei-profile quick|deep` or via `HANNA_NUCLEI_PROFILE`.
-- Presets such as `pd-infra` and `recon-auto` infer `quick`; `pd-full`, `infra-deep`, and `full-spectrum-2026` infer `deep` unless overridden.
+```bash
+python3 src/cli.py reset --confirm --keep-reports
+```
 
-## Checkpoint Saved
+## Report Modes
 
-Checkpoint archive from source state:
+HTML dossier rendering supports three redaction modes:
 
-`~/Desktop/ОСІНТ_ВИВІД/runs/checkpoints/hanna_specs_checkpoint_20260406_163813.tar.gz`
+- `internal` — keeps raw values for trusted internal use
+- `shareable` — default mode, masks sensitive values while keeping analytical utility
+- `strict` — strongest masking for broader sharing
+
+When `chain` exports ZIP artifacts, the ZIP carries the rendered dossier that matches the selected `report_mode`, and the manifest records that redaction mode.
+
+## Export Surface
+
+The machine-readable export layer supports:
+
+- `json` — serialized `RunResult` envelope
+- `stix` — STIX-like bundle for downstream systems
+- `zip` — evidence pack containing JSON, STIX, manifest, and the rendered chain dossier when available
+
+Example:
+
+```bash
+python3 src/cli.py chain \
+  --target "Example Target" \
+  --report-mode strict \
+  --export-formats zip \
+  --export-dir ./runs/exports/artifacts
+```
+
+## External Tooling Policy
+
+- ProjectDiscovery-style tools such as `httpx`, `nuclei`, `katana`, and `naabu` are expected as real binaries in `PATH` or via explicit `*_BIN` overrides.
+- Fragile tools such as `blackbird`, `recon-ng`, `metagoofil`, and `EyeWitness` should be treated as explicit local checkouts or absolute binary paths.
+- Internet-search tools and APIs such as Shodan or Censys should be integrated via stable credentials and scoped operational presets.
+
+## What This Repository Is Not
+
+This repository is not just a loose collection of OSINT scripts.
+
+It is the orchestration layer that:
+
+- runs adapters behind a shared contract,
+- fuses heterogeneous findings into a single observable model,
+- resolves entities and corroborates signals,
+- renders operator dossiers,
+- exports artifacts for downstream systems.
+
+## Next Work
+
+The next wave is focused on expanding adapter coverage and tightening release discipline:
+
+- integrate the ProjectDiscovery stack as first-class adapters,
+- add more person and infrastructure enrichment modules,
+- align operational docs and presets with real-world runbooks,
+- keep hardening export, report, and cleanup contracts.

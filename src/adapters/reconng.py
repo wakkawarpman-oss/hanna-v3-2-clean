@@ -44,7 +44,9 @@ class ReconNGAdapter(ReconAdapter):
 
     def _run_reconng(self, seed: str, target_type: str) -> list[ReconHit]:
         reconng_bin = os.environ.get("RECONNG_BIN", "")
-        repo_bin = Path(__file__).resolve().parents[2] / "tools" / "recon-ng" / "recon-ng"
+        repo_root = Path(__file__).resolve().parents[2] / "tools" / "recon-ng"
+        repo_bin = repo_root / "recon-ng"
+        venv_python = repo_root / ".venv" / "bin" / "python"
         with tempfile.TemporaryDirectory(prefix="hanna-reconng-") as tmpdir:
             workspace = "hanna_auto"
             db_path = Path.home() / ".recon-ng" / "workspaces" / workspace / "data.db"
@@ -73,7 +75,9 @@ class ReconNGAdapter(ReconAdapter):
             rc_path = Path(tmpdir) / "script.rc"
             rc_path.write_text("\n".join(lines), encoding="utf-8")
             cmd = [reconng_bin] if reconng_bin else []
-            if repo_bin.exists() and not cmd:
+            if venv_python.exists() and repo_bin.exists() and not cmd:
+                cmd = [str(venv_python), str(repo_bin)]
+            elif repo_bin.exists() and not cmd:
                 cmd = [str(repo_bin)]
             elif not cmd:
                 cmd = ["recon-ng"]

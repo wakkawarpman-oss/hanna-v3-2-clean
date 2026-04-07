@@ -62,7 +62,7 @@ def test_zip_exporter_packages_manifest_and_artifacts(tmp_path):
     html_path = tmp_path / "dossier.html"
     html_path.write_text("<html>safe</html>", encoding="utf-8")
 
-    path = export_run_result_zip(result, tmp_path, html_path=html_path)
+    path = export_run_result_zip(result, tmp_path, html_path=html_path, report_mode="shareable")
 
     assert path.exists()
     with zipfile.ZipFile(path) as zf:
@@ -74,4 +74,16 @@ def test_zip_exporter_packages_manifest_and_artifacts(tmp_path):
 
         manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
         assert manifest["target_name"] == "Test Target"
+        assert manifest["report_mode"] == "shareable"
         assert len(manifest["artifacts"]) >= 3
+
+
+def test_zip_exporter_requires_html_when_report_mode_is_declared(tmp_path):
+    result = _sample_result()
+
+    try:
+        export_run_result_zip(result, tmp_path, report_mode="strict")
+    except FileNotFoundError as exc:
+        assert "requires a rendered HTML dossier" in str(exc)
+    else:
+        raise AssertionError("Expected FileNotFoundError when report_mode is set without HTML dossier")

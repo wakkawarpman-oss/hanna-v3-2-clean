@@ -24,18 +24,26 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def export_run_result_zip(result: RunResult, output_dir: str | Path, html_path: str | Path | None = None) -> Path:
+def export_run_result_zip(
+    result: RunResult,
+    output_dir: str | Path,
+    html_path: str | Path | None = None,
+    report_mode: str | None = None,
+) -> Path:
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     json_path = export_run_result_json(result, output_dir)
     stix_path = export_run_result_stix(result, output_dir)
     html_file = Path(html_path) if html_path else None
+    if report_mode and (html_file is None or not html_file.exists()):
+        raise FileNotFoundError("ZIP export with report_mode requires a rendered HTML dossier")
 
     zip_path = output_dir / f"{_slugify(result.target_name)}-{result.mode}-{_timestamp_fragment(result.finished_at or result.started_at)}.zip"
     manifest: dict[str, object] = {
         "target_name": result.target_name,
         "mode": result.mode,
+        "report_mode": report_mode,
         "artifacts": [],
     }
 

@@ -49,6 +49,7 @@ ADAPTER_REGISTRY: dict[str, type[ReconAdapter]] = {
     "vk_graph": VKGraphAdapter,
     "avito": AvitoAdapter,
     "ua_phone": UAPhoneAdapter,
+    "getcontact": UAPhoneAdapter,
     "maryam": MaryamAdapter,
     "ashok": AshokAdapter,
     "ghunt": GHuntAdapter,

@@ -18,6 +18,8 @@ class PreflightCheck:
 
 
 MODULE_CHECKS: dict[str, set[str]] = {
+    "ua_phone": {"telegram_bot_token", "getcontact_token", "getcontact_aes_key"},
+    "getcontact": {"telegram_bot_token", "getcontact_token", "getcontact_aes_key"},
     "nuclei": {"nuclei"},
     "katana": {"katana"},
     "httpx_probe": {"httpx_probe"},
@@ -82,7 +84,7 @@ def run_preflight(modules: list[str] | None = None) -> list[PreflightCheck]:
 
     repo_tools = [
         ("blackbird", "BLACKBIRD_BIN", Path("tools/blackbird/blackbird.py"), Path("tools/blackbird/.venv/bin/python")),
-        ("reconng", "RECONNG_BIN", Path("tools/recon-ng/recon-ng"), None),
+        ("reconng", "RECONNG_BIN", Path("tools/recon-ng/recon-ng"), Path("tools/recon-ng/.venv/bin/python")),
         ("metagoofil", "METAGOOFIL_BIN", Path("tools/metagoofil/metagoofil.py"), Path("tools/metagoofil/.venv/bin/python")),
         ("eyewitness", "EYEWITNESS_BIN", Path("tools/EyeWitness/Python/EyeWitness.py"), Path("tools/EyeWitness/eyewitness-venv/bin/python")),
     ]
@@ -124,6 +126,18 @@ def run_preflight(modules: list[str] | None = None) -> list[PreflightCheck]:
     for env_name in ["CENSYS_API_ID", "CENSYS_API_SECRET", "SHODAN_API_KEY"]:
         checks.append(PreflightCheck(
             name=env_name.lower(),
+            status="ok" if os.environ.get(env_name, "").strip() else "warn",
+            detail="set" if os.environ.get(env_name, "").strip() else f"missing {env_name}",
+        ))
+
+    ua_phone_envs = [
+        ("telegram_bot_token", "TELEGRAM_BOT_TOKEN"),
+        ("getcontact_token", "GETCONTACT_TOKEN"),
+        ("getcontact_aes_key", "GETCONTACT_AES_KEY"),
+    ]
+    for check_name, env_name in ua_phone_envs:
+        checks.append(PreflightCheck(
+            name=check_name,
             status="ok" if os.environ.get(env_name, "").strip() else "warn",
             detail="set" if os.environ.get(env_name, "").strip() else f"missing {env_name}",
         ))
