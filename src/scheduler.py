@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
 from dataclasses import dataclass, field
 
@@ -22,11 +23,26 @@ class LaneScheduler:
     """Dispatch recon tasks by lane with worker isolation and timeout controls."""
 
     @staticmethod
-    def dispatch(tasks: list[ReconTask], max_workers: int, log_dir: str, label: str = "") -> SchedulerResult:
+    def dispatch(
+        tasks: list[ReconTask],
+        max_workers: int,
+        log_dir: str,
+        label: str = "",
+        event_callback: Callable[[dict], None] | None = None,
+    ) -> SchedulerResult:
         result = SchedulerResult()
         n_workers = min(max_workers, len(tasks)) or 1
         prefix = f"[{label}] " if label else ""
         print(f"  {prefix}Dispatching {len(tasks)} task(s) across {n_workers} worker(s)  [Fast Lane -> Slow Lane | P0->P3]")
+        LaneScheduler._emit(
+            event_callback,
+            {
+                "type": "dispatch_started",
+                "label": label,
+                "task_count": len(tasks),
+                "workers": n_workers,
+            },
+        )
 
         for lane_name in ("fast", "slow"):
             lane_tasks = [t for t in tasks if t.lane == lane_name]
@@ -35,6 +51,16 @@ class LaneScheduler:
 
             lane_workers = min(max_workers, len(lane_tasks)) or 1
             print(f"\n  {prefix}{lane_name.upper()} LANE  |  {len(lane_tasks)} task(s) across {lane_workers} worker(s)")
+            LaneScheduler._emit(
+                event_callback,
+                {
+                    "type": "lane_started",
+                    "label": label,
+                    "lane": lane_name,
+                    "task_count": len(lane_tasks),
+                    "workers": lane_workers,
+                },
+            )
 
             pool = ProcessPoolExecutor(max_workers=lane_workers)
             future_map: dict[Future, ReconTask] = {}
@@ -43,6 +69,17 @@ class LaneScheduler:
             for task in lane_tasks:
                 plabel = f"P{task.priority}"
                 print(f"  [{task.module_name}] Queued  ({plabel}, {task.adapter_cls.region.upper()} segment)")
+                LaneScheduler._emit(
+                    event_callback,
+                    {
+                        "type": "task_queued",
+                        "label": label,
+                        "lane": lane_name,
+                        "module": task.module_name,
+                        "priority": task.priority,
+                        "region": task.adapter_cls.region,
+                    },
+                )
                 fut = pool.submit(
                     _run_adapter_isolated,
                     adapter_cls_name=task.module_name,
@@ -80,6 +117,16 @@ class LaneScheduler:
                                 raw_log_path="",
                             ))
                             print(f"  [{task.module_name}] CRASHED: {exc}")
+                            LaneScheduler._emit(
+                                event_callback,
+                                {
+                                    "type": "task_crashed",
+                                    "label": label,
+                                    "lane": task.lane,
+                                    "module": task.module_name,
+                                    "error": msg,
+                                },
+                            )
                             continue
 
                         tr = TaskResult.from_dict(result_dict, lane=task.lane)
@@ -88,9 +135,32 @@ class LaneScheduler:
                         if tr.error:
                             result.errors.append({"module": tr.module_name, "error": tr.error})
                             print(f"  [{tr.module_name}] ERROR: {tr.error}  ({tr.elapsed_sec:.1f}s)")
+                            LaneScheduler._emit(
+                                event_callback,
+                                {
+                                    "type": "task_error",
+                                    "label": label,
+                                    "lane": tr.lane,
+                                    "module": tr.module_name,
+                                    "error": tr.error,
+                                    "elapsed_sec": tr.elapsed_sec,
+                                    "hit_count": 0,
+                                },
+                            )
                         else:
                             result.all_hits.extend(tr.hits)
                             print(f"  [{tr.module_name}] -> {len(tr.hits)} hit(s)  ({tr.elapsed_sec:.1f}s)")
+                            LaneScheduler._emit(
+                                event_callback,
+                                {
+                                    "type": "task_done",
+                                    "label": label,
+                                    "lane": tr.lane,
+                                    "module": tr.module_name,
+                                    "elapsed_sec": tr.elapsed_sec,
+                                    "hit_count": len(tr.hits),
+                                },
+                            )
 
                     now = time.monotonic()
                     timed_out = [
@@ -112,13 +182,49 @@ class LaneScheduler:
                             raw_log_path="",
                         ))
                         print(f"  [{task.module_name}] {msg} - cancelled")
+                        LaneScheduler._emit(
+                            event_callback,
+                            {
+                                "type": "task_timeout",
+                                "label": label,
+                                "lane": task.lane,
+                                "module": task.module_name,
+                                "error": msg,
+                                "elapsed_sec": float(task.worker_timeout),
+                            },
+                        )
             finally:
                 pool.shutdown(wait=False, cancel_futures=True)
 
             lane_ok = sum(1 for tr in result.task_results if tr.lane == lane_name and not tr.error)
             print(f"  {prefix}{lane_name.upper()} LANE complete  |  {lane_ok}/{len(lane_tasks)} task(s) finished cleanly")
+            LaneScheduler._emit(
+                event_callback,
+                {
+                    "type": "lane_complete",
+                    "label": label,
+                    "lane": lane_name,
+                    "ok_count": lane_ok,
+                    "task_count": len(lane_tasks),
+                },
+            )
 
+        LaneScheduler._emit(
+            event_callback,
+            {
+                "type": "dispatch_complete",
+                "label": label,
+                "modules_run": list(result.modules_run),
+                "errors": len(result.errors),
+                "hits": len(result.all_hits),
+            },
+        )
         return result
+
+    @staticmethod
+    def _emit(event_callback: Callable[[dict], None] | None, payload: dict) -> None:
+        if event_callback:
+            event_callback(payload)
 
 
 def dedup_and_confirm(all_hits: list[ReconHit]) -> tuple[list[ReconHit], list[ReconHit]]:

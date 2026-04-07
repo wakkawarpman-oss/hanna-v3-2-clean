@@ -32,6 +32,33 @@ def test_cli_parser_accepts_reset_subcommand():
     assert args.confirm is True
 
 
+def test_cli_parser_accepts_tui_subcommand():
+    parser = cli_mod._build_parser()
+    args = parser.parse_args([
+        "tui",
+        "--target", "Case Target",
+        "--modules", "full-spectrum",
+        "--run-mode", "aggregate",
+        "--phones", "+380500000000",
+        "--usernames", "caseuser",
+        "--workers", "2",
+        "--export-formats", "json,zip",
+        "--report-mode", "strict",
+        "--plain",
+    ])
+
+    assert args.mode == "tui"
+    assert args.target == "Case Target"
+    assert args.modules == "full-spectrum"
+    assert args.run_mode == "aggregate"
+    assert args.phones == "+380500000000"
+    assert args.usernames == "caseuser"
+    assert args.workers == 2
+    assert args.export_formats == "json,zip"
+    assert args.report_mode == "strict"
+    assert args.plain is True
+
+
 def test_parse_export_formats_rejects_invalid_value():
     with pytest.raises(ValueError):
         cli_mod._parse_export_formats("json,xml")

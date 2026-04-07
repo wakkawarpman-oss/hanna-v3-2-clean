@@ -1,7 +1,20 @@
 from __future__ import annotations
 
 from adapters.base import ReconHit
+from scheduler import LaneScheduler
 from scheduler import dedup_and_confirm
+
+
+def test_scheduler_emit_noop_without_callback():
+    LaneScheduler._emit(None, {"type": "dispatch_started"})
+
+
+def test_scheduler_emit_calls_callback():
+    events = []
+
+    LaneScheduler._emit(events.append, {"type": "dispatch_started", "task_count": 2})
+
+    assert events == [{"type": "dispatch_started", "task_count": 2}]
 
 
 def test_dedup_and_confirm_boosts_cross_confirmed_hits():

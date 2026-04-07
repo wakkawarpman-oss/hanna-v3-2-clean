@@ -5,6 +5,7 @@ censys>=2.2.18
 
 # Optional — PDF ingestion
 pypdf>=4.0.0
+textual>=0.79.1
 
 # Dev / test
 pytest>=8.0.0

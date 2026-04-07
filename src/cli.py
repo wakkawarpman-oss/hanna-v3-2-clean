@@ -6,6 +6,7 @@ Three execution modes:
   chain      Full pipeline: ingest → resolve → deep-recon → verify → render
   aggregate  Parallel one-shot across selected adapters
   manual     Run a single adapter interactively
+    tui        Launch operator cockpit scaffold
 
 Usage:
     python3 cli.py chain   --target "Hanna Dosenko" --modules ua_leak,ru_leak --verify
@@ -124,6 +125,28 @@ def _build_parser() -> argparse.ArgumentParser:
     mn.add_argument("--nuclei-profile", choices=["quick", "deep"], default=None)
     mn.add_argument("--export-formats", default=None, help="Comma-separated export formats: json,stix,zip")
     mn.add_argument("--export-dir", default=None, help="Directory for machine-readable exports")
+
+    tui = sub.add_parser("tui", help="Launch the HANNA operator cockpit scaffold")
+    tui.add_argument("--target", default=None, help="Optional target label to preload into the cockpit")
+    tui.add_argument("--modules", default=None, help="Comma-separated modules or preset name for cockpit context")
+    tui.add_argument("--run-mode", choices=["idle", "manual", "aggregate", "chain"], default="idle")
+    tui.add_argument("--module", default=None, help="Manual-mode adapter name")
+    tui.add_argument("--phones", default=None, help="Comma-separated known phones")
+    tui.add_argument("--usernames", default=None, help="Comma-separated known usernames")
+    tui.add_argument("--workers", type=int, default=4)
+    tui.add_argument("--db", default=str(DEFAULT_DB_PATH))
+    tui.add_argument("--exports-dir", default=str(RUNS_ROOT / "exports"))
+    tui.add_argument("--output", default=None, help="Optional HTML dossier path for chain mode")
+    tui.add_argument("--verify", action="store_true")
+    tui.add_argument("--verify-all", action="store_true")
+    tui.add_argument("--verify-content", action="store_true")
+    tui.add_argument("--proxy", default=None)
+    tui.add_argument("--leak-dir", default=None)
+    tui.add_argument("--no-preflight", action="store_true")
+    tui.add_argument("--export-formats", default="json,stix,zip", help="Comma-separated export formats: json,stix,zip")
+    tui.add_argument("--export-dir", default=None, help="Directory for machine-readable exports")
+    tui.add_argument("--report-mode", choices=["internal", "shareable", "strict"], default="shareable")
+    tui.add_argument("--plain", action="store_true", help="Reserve a plain-mode flag for low-capability terminals")
 
     # ── list ─────────────────────────────────────────────────────
     sub.add_parser("list", help="List available adapters and presets")
@@ -302,6 +325,37 @@ def _cmd_reset(args: argparse.Namespace) -> None:
         print(f"  missing: {path}")
 
 
+def _cmd_tui(args: argparse.Namespace) -> None:
+    try:
+        from tui import HannaTUIApp, build_default_session_state
+    except ImportError as exc:
+        raise RuntimeError("TUI dependencies are missing. Install requirements.txt to use 'hanna tui'.") from exc
+
+    session_state = build_default_session_state(
+        target=args.target,
+        modules=_split(args.modules) or None,
+        report_mode=args.report_mode,
+        default_mode=args.run_mode,
+        manual_module=args.module,
+        known_phones=_split(args.phones),
+        known_usernames=_split(args.usernames),
+        workers=args.workers,
+        db_path=args.db,
+        exports_dir=args.exports_dir,
+        output_path=args.output,
+        export_formats=_parse_export_formats(args.export_formats),
+        export_dir=args.export_dir,
+        verify=args.verify,
+        verify_all=args.verify_all,
+        verify_content=args.verify_content,
+        proxy=args.proxy,
+        leak_dir=args.leak_dir,
+        no_preflight=args.no_preflight,
+    )
+    app = HannaTUIApp(session_state=session_state, plain=args.plain)
+    app.run()
+
+
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
@@ -315,6 +369,7 @@ def main() -> None:
         "chain": _cmd_chain,
         "aggregate": _cmd_aggregate,
         "manual": _cmd_manual,
+        "tui": _cmd_tui,
         "list": _cmd_list,
         "preflight": _cmd_preflight,
         "reset": _cmd_reset,
