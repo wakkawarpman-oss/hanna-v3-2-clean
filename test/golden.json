@@ -1,0 +1,33 @@
+[
+  {
+    "name": "full-rich-profile",
+    "input": "Пелешенко Дмитро Валерійович 1972 Харків вул. Широнинцев 49 0958042036",
+    "expected": {
+      "fio": "Пелешенко Дмитро Валерійович",
+      "birthYear": "1972",
+      "city": "Харків",
+      "phone": "0958042036",
+      "confidenceMin": 4
+    }
+  },
+  {
+    "name": "fop-and-phone",
+    "input": "Коваленко Петро ФОП Київ +380501234567",
+    "expected": {
+      "fop": "ФОП",
+      "phone": "+380501234567",
+      "city": "Київ",
+      "confidenceMin": 3
+    }
+  },
+  {
+    "name": "address-without-fio",
+    "input": "вул. Сумська 25 Харків",
+    "expected": {
+      "fio": null,
+      "city": "Харків",
+      "address": "вул. Сумська 25 Харків",
+      "confidenceMin": 2
+    }
+  }
+]

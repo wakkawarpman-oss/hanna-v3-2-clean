@@ -1,8 +1,11 @@
 'use strict'
 
+const fs = require('node:fs')
+const path = require('node:path')
 const blessed = require('blessed')
 const contrib = require('blessed-contrib')
 const { initSearch, DebugParser } = require('./components/search-panel')
+const { CalibratedParser, DEFAULT_CONFIG } = require('./components/calibrated-parser')
 const { DebugTui } = require('./components/debug-tui')
 const { UltraPerfTui } = require('./components/ultra-perf-tui')
 const { BehavioralMetrics } = require('./components/behavioral-metrics')
@@ -48,7 +51,29 @@ function statusText (status) {
   return '{red-fg}ERROR{/}'
 }
 
-function buildScreen () {
+function loadCalibrationConfig (enabled) {
+  if (!enabled) {
+    return DEFAULT_CONFIG
+  }
+
+  try {
+    const configPath = path.resolve('config.calibrated.json')
+    const raw = fs.readFileSync(configPath, 'utf8')
+    const parsed = JSON.parse(raw)
+    return {
+      parser: { ...DEFAULT_CONFIG.parser, ...(parsed.parser || {}) },
+      search: { ...DEFAULT_CONFIG.search, ...(parsed.search || {}) },
+      tui: { ...DEFAULT_CONFIG.tui, ...(parsed.tui || {}) },
+      behavioral: { ...DEFAULT_CONFIG.behavioral, ...(parsed.behavioral || {}) }
+    }
+  } catch {
+    return DEFAULT_CONFIG
+  }
+}
+
+function buildScreen (options = {}) {
+  const compactMode = options.compactMode === true
+
   const screen = blessed.screen({
     smartCSR: true,
     title: 'HANNA OSINT & KESB Monitor'
@@ -60,7 +85,7 @@ function buildScreen () {
     label: ' HANNA OSINT & KESB ',
     border: { type: 'line', fg: COLORS.primary },
     style: { fg: COLORS.primary },
-    content: '{center}Gate 2 / Step 1 monitor{/center}',
+    content: `{center}Gate 2 / Step 1 monitor${compactMode ? ' | COMPACT' : ''}{/center}`,
     tags: true
   })
 
@@ -127,7 +152,9 @@ function buildScreen () {
     label: ' Quick Actions ',
     border: { type: 'line', fg: COLORS.primary },
     tags: true,
-    content: '{center}Tab: next\nq: quit\nCtrl+A: analyze\nCtrl+E: export{/center}'
+    content: compactMode
+      ? '{center}Tab/q\nCtrl+A\nCtrl+E{/center}'
+      : '{center}Tab: next\nq: quit\nCtrl+A: analyze\nCtrl+E: export{/center}'
   })
 
   const clock = grid.set(20, 6, 4, 4, blessed.box, {
@@ -160,12 +187,17 @@ function buildScreen () {
 }
 
 function startTui () {
-  const ui = buildScreen()
+  const calibratedEnabled = process.env.CALIBRATED === '1'
+  const calibration = loadCalibrationConfig(calibratedEnabled)
+  const ui = buildScreen({ compactMode: calibration.tui.compactMode })
   const { screen, sessions, table, rps, logs, resources, clock } = ui
-  const ultraPerf = process.env.TUI_ULTRA === '1' ? new UltraPerfTui(screen) : null
+  const frameBudget = Math.max(1, Math.round(1000 / Math.max(15, Number(calibration.tui.fpsTarget) || 60)))
+  const ultraPerf = process.env.TUI_ULTRA === '1' ? new UltraPerfTui(screen, { frameBudget }) : null
   const behavioralEnabled = process.env.BEHAVIORAL === '1'
   const metrics = behavioralEnabled ? new BehavioralMetrics() : null
   let metricsPanel = null
+  const noiseLevel = Math.min(0.25, Math.max(0.01, Number(calibration.behavioral.noiseLevel) || 0.1))
+  const calibratedParser = calibratedEnabled ? new CalibratedParser(path.resolve('config.calibrated.json')) : null
 
   if (behavioralEnabled) {
     metricsPanel = blessed.box({
@@ -200,7 +232,7 @@ function startTui () {
     if (metrics && line.startsWith('Search completed')) {
       metrics.trackAction('search')
     }
-  })
+  }, { parser: calibratedParser })
 
   const focusables = [sessions, logs]
   let focusIndex = 0
@@ -237,7 +269,9 @@ function startTui () {
   }
 
   function tickMetrics () {
-    const next = Math.floor(Math.random() * 20)
+    const base = Math.floor(Math.random() * 20)
+    const noisy = Math.max(0, Math.round(base + ((Math.random() * 2) - 1) * 20 * noiseLevel))
+    const next = noisy
     rpsSeries.shift()
     rpsSeries.push(next)
     renderRps()
@@ -266,7 +300,10 @@ function startTui () {
   renderComponents()
   renderRps()
   renderResources()
-  addLog('[startup] HANNA TUI initialized')
+  addLog(`[startup] HANNA TUI initialized${calibratedEnabled ? ' [CALIBRATED]' : ''}`)
+  if (calibratedEnabled) {
+    addLog(`[startup] Calibration loaded: fps=${calibration.tui.fpsTarget}, compact=${calibration.tui.compactMode}, noise=${noiseLevel}`)
+  }
   tickClock()
 
   screen.key(['escape', 'q', 'C-c'], () => process.exit(0))

@@ -1,0 +1,42 @@
+name: Production Deploy
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install and test
+        run: |
+          npm ci
+          npm run test:all
+          npm run production-readiness -- --skip-install
+
+      - name: Build Docker image
+        run: |
+          docker build -f Dockerfile.prod -t hanna:${{ github.sha }} .
+          docker tag hanna:${{ github.sha }} hanna:latest
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          script: |
+            cd /opt/hanna
+            docker compose -f docker-compose.prod.yml pull || true
+            docker compose -f docker-compose.prod.yml up -d --build
+            docker system prune -f

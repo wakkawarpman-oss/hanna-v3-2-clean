@@ -194,11 +194,12 @@ class DebugParser extends SafeParser {
 }
 
 class SearchPanel extends SafeParser {
-  constructor (screen, apiClient, onLog) {
+  constructor (screen, apiClient, onLog, parserEngine = null) {
     super()
     this.screen = screen || null
     this.api = apiClient || null
     this.onLog = typeof onLog === 'function' ? onLog : () => {}
+    this.parserEngine = parserEngine || this
     this.results = []
     this.smartSearch = new SmartSearch()
     this.searchResults = new SearchResults()
@@ -275,7 +276,7 @@ class SearchPanel extends SafeParser {
       return
     }
 
-    const parsed = this.parseSearchInput(input)
+    const parsed = this.parserEngine.parseSearchInput(input)
     this.showParsedData(parsed)
 
     if (parsed.confidence < 2) {
@@ -287,7 +288,7 @@ class SearchPanel extends SafeParser {
       return
     }
 
-    const activeTools = await this.routeToTools(parsed)
+    const activeTools = await this.parserEngine.routeToTools(parsed)
     this.updateToolStatus(activeTools)
 
     const results = await this.fetchToolResults(parsed, activeTools)
@@ -449,10 +450,14 @@ class SearchPanel extends SafeParser {
   }
 }
 
-function initSearch (screen, apiClient, onLog) {
-  const panel = new SearchPanel(screen, apiClient, onLog)
+function initSearch (screen, apiClient, onLog, options = {}) {
+  const panel = new SearchPanel(screen, apiClient, onLog, options.parser || null)
 
   setTimeout(() => {
+    if (!panel.searchBox) {
+      return
+    }
+
     panel.searchBox.setValue('Пелешенко Дмитро Валерійович 1972 Харків, Гв. Широнинцев 49 0958042036')
     if (!panel.searchBox.hidden) {
       panel.screen.render()

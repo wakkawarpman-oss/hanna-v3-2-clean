@@ -1,0 +1,17 @@
+{
+  "parser": {
+    "sensitivity": 0.5,
+    "fuzziness": 0.75
+  },
+  "search": {
+    "boostFio": 3,
+    "boostYear": 2.5
+  },
+  "tui": {
+    "fpsTarget": 60,
+    "compactMode": false
+  },
+  "behavioral": {
+    "noiseLevel": 0.1
+  }
+}

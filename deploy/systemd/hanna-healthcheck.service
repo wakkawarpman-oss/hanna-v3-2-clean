@@ -1,0 +1,15 @@
+[Unit]
+Description=Hanna Parser Health Monitor
+After=hanna-parser.service
+Requires=hanna-parser.service
+PartOf=hanna-parser.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=hanna
+WorkingDirectory=/opt/hanna
+ExecStart=/usr/bin/curl -fsS -m 5 http://localhost:3000/health
+
+[Install]
+WantedBy=hanna-parser.service

@@ -105,6 +105,46 @@ npm run behavioral:test
 npm run tui:behavioral
 ```
 
+Manual calibration workflow:
+
+```bash
+npm run calibrate
+npm run calibrate:validate
+npm run tui:calibrated
+npm run calibrate:reset
+```
+
+Calibration values are stored in `config.calibrated.json` and applied when `CALIBRATED=1`.
+
+## Production Deployment Template
+
+This repo now includes production-ready deployment templates for Docker, PM2, Nginx, Prometheus, GitHub Actions, and systemd:
+
+- `Dockerfile.prod`
+- `docker-compose.prod.yml`
+- `nginx.conf`
+- `prometheus.yml`
+- `ecosystem.config.js`
+- `.github/workflows/deploy.yml`
+- `deploy/systemd/hanna-parser.service`
+- `deploy/systemd/hanna-healthcheck.service`
+- `deploy/systemd/setup-hanna-user.sh`
+- `deploy/systemd/deploy-hanna-systemd.sh`
+
+Quick local production smoke:
+
+```bash
+cp .env.example .env.prod
+docker compose -f docker-compose.prod.yml up --build
+curl -fsS http://localhost:3000/health
+```
+
+Systemd deployment helper:
+
+```bash
+bash deploy/systemd/deploy-hanna-systemd.sh
+```
+
 Stress testing suite:
 
 ```bash

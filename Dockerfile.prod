@@ -1,13 +1,33 @@
-FROM node:20-alpine AS deps
+FROM node:20-alpine AS builder
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev --no-optional
 
-FROM node:20-alpine AS runner
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN npm run build:prod
 
-ENV NODE_OPTIONS="--max-old-space-size=256 --optimize-for-size"
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+RUN apk add --no-cache curl
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/app.js ./app.js
+COPY --from=builder /app/app-opt.js ./app-opt.js
+COPY --from=builder /app/routes ./routes
+COPY --from=builder /app/plugins ./plugins
+COPY --from=builder /app/components ./components
+COPY --from=builder /app/scripts ./scripts
+COPY --from=builder /app/config.calibrated.json ./config.calibrated.json
+
+USER node
+ENV NODE_ENV=production \
+		NODE_OPTIONS="--max-old-space-size=512 --optimize-for-size"
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+	CMD curl -fsS http://localhost:3000/health >/dev/null || exit 1
+
 EXPOSE 3000
 CMD ["npm", "run", "start:prod"]
