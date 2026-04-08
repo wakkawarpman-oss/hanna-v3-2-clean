@@ -1,0 +1,12 @@
+[submodule "tools/EyeWitness"]
+	path = tools/EyeWitness
+	url = https://github.com/RedSiege/EyeWitness.git
+[submodule "tools/blackbird"]
+	path = tools/blackbird
+	url = https://github.com/p1ngul1n0/blackbird.git
+[submodule "tools/metagoofil"]
+	path = tools/metagoofil
+	url = https://github.com/opsdisk/metagoofil.git
+[submodule "tools/recon-ng"]
+	path = tools/recon-ng
+	url = https://github.com/lanmaster53/recon-ng.git
