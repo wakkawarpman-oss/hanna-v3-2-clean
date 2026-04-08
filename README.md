@@ -59,6 +59,13 @@ source .venv/bin/activate
 ./scripts/hanna pf
 ```
 
+## TUI Quick Start
+
+```bash
+npm install
+npm run tui
+```
+
 Use strict preflight before operational runs:
 
 ```bash

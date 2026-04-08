@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Production Readiness Hardening
+- Added TUI validation and release scripts in `package.json`:
+  - `tui:check`
+  - `test:tui`
+  - `security`
+  - `release`
+- Added CLI binary mapping for `hanna` command in Node package metadata.
+- Added core runtime env keys (`JWT_SECRET`, `API_URL`, `TENANT_ID`) to `.env.example`.
+- Added TUI quick start section to `README.md`.
+- Added dedicated GitHub Actions workflow for TUI health checks.
+- Added `Dockerfile.tui` for containerized TUI runtime.
+
 ### Gate 2 Step 2
 - Added tenant-scoped core routes:
   - GET /users
