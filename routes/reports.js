@@ -37,7 +37,17 @@ async function reportRoutes (fastify, _opts) {
     config: { rateLimit: { max: 20, timeWindow: '1 minute' } }
   }, async (request, reply) => {
     const tenantId = request.user.tenantId
-    const requiredPerm = `reports:export:${tenantId}`
+    const format = String(request.body?.format || 'pdf')
+    if (!['pdf', 'json'].includes(format)) {
+      return reply.code(400).send({
+        statusCode: 400,
+        error: 'Bad Request',
+        code: 'REPORT_EXPORT_FORMAT_INVALID',
+        message: `Unsupported export format '${format}'`
+      })
+    }
+
+    const requiredPerm = `reports:export:${format}`
     const { allowed, reason } = fastify.checkPermission(request.user, requiredPerm, tenantId)
 
     if (!allowed) {
@@ -67,6 +77,7 @@ async function reportRoutes (fastify, _opts) {
       status: 'accepted',
       jobId: `job-${Date.now()}`,
       reportId: report.id,
+      format,
       tenantId
     })
   })

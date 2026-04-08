@@ -31,7 +31,7 @@ const USERS = {
       'adapter:run:shodan',
       'user:list:tenant1',
       'reports:read:tenant1',
-      'reports:export:tenant1',
+      'reports:export:pdf',
       'metrics:read:tenant1'
     ],
     tenantId: 'tenant1'
