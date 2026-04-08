@@ -107,11 +107,27 @@ test('POST /reports/:id/export returns 202 for permitted user', async (t) => {
 
   const token = await login(app, 'analyst@example.com', 'analyst-secret')
   const res = await request(app, 'POST', '/reports/rpt-001/export', {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token}` },
+    body: { format: 'pdf' }
   })
 
   assert.equal(res.statusCode, 202)
   assert.ok(res.body.jobId)
+  assert.equal(res.body.format, 'pdf')
+})
+
+test('POST /reports/:id/export returns 403 for unsupported permission format', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
+
+  const token = await login(app, 'analyst@example.com', 'analyst-secret')
+  const res = await request(app, 'POST', '/reports/rpt-001/export', {
+    headers: { Authorization: `Bearer ${token}` },
+    body: { format: 'json' }
+  })
+
+  assert.equal(res.statusCode, 403)
+  assert.equal(res.body.code, 'FORBIDDEN_PERMISSION_DENIED')
 })
 
 test('POST /reports/:id/export returns 404 for unknown report', async (t) => {
@@ -164,4 +180,58 @@ test('GET /metrics denied when permission is missing', async (t) => {
 
   assert.equal(res.statusCode, 403)
   assert.equal(res.body.code, 'FORBIDDEN_PERMISSION_DENIED')
+})
+
+test('GET /metrics returns 401 for expired token', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
+
+  const expiredToken = app.jwt.sign({
+    sub: 'user-admin-001',
+    roles: ['admin'],
+    permissions: ['*:*:*'],
+    tenantId: 'tenant1',
+    jti: 'expired-admin'
+  }, { expiresIn: '-1s' })
+
+  const res = await request(app, 'GET', '/metrics', {
+    headers: { Authorization: `Bearer ${expiredToken}` }
+  })
+
+  assert.equal(res.statusCode, 401)
+  assert.equal(res.body.code, 'AUTH_INVALID_OR_EXPIRED_TOKEN')
+})
+
+test('wildcard permissions allow create, read-only permissions block create', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
+
+  const wildcardToken = app.jwt.sign({
+    sub: 'user-admin-001',
+    roles: ['admin'],
+    permissions: ['user:*', 'user:list:tenant1'],
+    tenantId: 'tenant1',
+    jti: 'wild-user'
+  }, { expiresIn: '1h' })
+
+  const readOnlyToken = app.jwt.sign({
+    sub: 'user-read-001',
+    roles: ['viewer'],
+    permissions: ['user:list:tenant1'],
+    tenantId: 'tenant1',
+    jti: 'readonly-user'
+  }, { expiresIn: '1h' })
+
+  const createAllowed = await request(app, 'POST', '/users', {
+    headers: { Authorization: `Bearer ${wildcardToken}` },
+    body: { email: 'wildcard-user@tenant1.com', role: 'analyst', tenantId: 'tenant1' }
+  })
+  assert.equal(createAllowed.statusCode, 201)
+
+  const createDenied = await request(app, 'POST', '/users', {
+    headers: { Authorization: `Bearer ${readOnlyToken}` },
+    body: { email: 'readonly-user@tenant1.com', role: 'viewer', tenantId: 'tenant1' }
+  })
+  assert.equal(createDenied.statusCode, 403)
+  assert.equal(createDenied.body.code, 'FORBIDDEN_PERMISSION_DENIED')
 })

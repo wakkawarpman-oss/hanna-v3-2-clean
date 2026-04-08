@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node app.js",
     "test": "node --test test/*.spec.js",
+    "test:core": "node --test test/core-routes.spec.js",
+    "test:all": "npm test && python3 -m pytest -q tests/*.py",
     "tui": "node hanna-tui.js",
     "tui:check": "node --check hanna-tui.js",
     "test:tui": "npm run tui:check && npm test",
