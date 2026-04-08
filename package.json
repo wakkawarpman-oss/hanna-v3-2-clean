@@ -5,11 +5,26 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "test": "node --test test/vertical-slice.spec.js"
+    "test": "node --test test/*.spec.js",
+    "test:core": "node --test test/core-routes.spec.js",
+    "test:all": "npm test && python3 -m pytest -q tests/*.py",
+    "tui": "node hanna-tui.js",
+    "tui:check": "node --check hanna-tui.js",
+    "test:tui": "npm run tui:check && npm test",
+    "test:contract": "npm test && python3 -m pytest -q tests/*.py",
+    "health": "curl -fsS http://localhost:3000/metrics >/dev/null",
+    "hanna": "./scripts/hanna.sh start",
+    "security": "npm audit --production && npm test",
+    "release": "npm test && npm run security && npm version patch"
+  },
+  "bin": {
+    "hanna": "./scripts/hanna"
   },
   "dependencies": {
     "@fastify/jwt": "^10.0.0",
     "@fastify/rate-limit": "^10.3.0",
+    "blessed": "^0.1.81",
+    "blessed-contrib": "^4.11.0",
     "fastify": "^5.7.2",
     "fastify-plugin": "^5.0.0"
   }

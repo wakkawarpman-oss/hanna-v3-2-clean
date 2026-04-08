@@ -59,6 +59,24 @@ source .venv/bin/activate
 ./scripts/hanna pf
 ```
 
+## TUI Quick Start
+
+```bash
+npm install
+npm run tui
+```
+
+Hanna quick command toolkit:
+
+```bash
+./scripts/install.sh
+hanna start
+hanna test
+hanna contract
+hanna tui
+hanna stop
+```
+
 Use strict preflight before operational runs:
 
 ```bash
@@ -246,6 +264,11 @@ It is the orchestration layer that:
 
 Core Migration Gate 2: see [docs/GATE2_EXECUTION_PLAN.md](docs/GATE2_EXECUTION_PLAN.md).
 
+<<<<<<< docs/gate2-execution-plan
+=======
+Gate 2 Step 1 status: auth and adapter route contracts are stabilized with deterministic 401/403/404 outcomes.
+
+>>>>>>> master
 The next wave is focused on expanding adapter coverage and tightening release discipline:
 
 - integrate the ProjectDiscovery stack as first-class adapters,
