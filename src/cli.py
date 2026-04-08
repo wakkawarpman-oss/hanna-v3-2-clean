@@ -33,6 +33,7 @@ from exporters import export_run_metadata_json, export_run_result_json, export_r
 from preflight import format_preflight_report, has_hard_failures, preflight_summary, run_preflight
 from registry import MODULE_PRESETS, MODULES, resolve_modules
 from runtime_ops import reset_workspace
+from schemas import validate_result_outcomes
 from smart_summary import summarize_payload
 
 log = logging.getLogger("hanna.cli")
@@ -135,6 +136,12 @@ def _export_result_artifacts(
 ) -> dict[str, str]:
     if not export_formats:
         return {}
+    if hasattr(result, "to_dict"):
+        try:
+            validate_result_outcomes(result.to_dict())
+        except ValueError as exc:
+            print(str(exc), file=sys.stderr)
+            raise
     target_dir = Path(export_dir) if export_dir else (RUNS_ROOT / "exports" / "artifacts")
     target_dir.mkdir(parents=True, exist_ok=True)
     exported: dict[str, str] = {}
