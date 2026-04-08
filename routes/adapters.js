@@ -45,6 +45,7 @@ async function adapterRoutes (fastify, _opts) {
       return reply.code(404).send({
         statusCode: 404,
         error: 'Not Found',
+        code: 'ADAPTER_NOT_FOUND',
         message: `Adapter '${id}' not found`
       })
     }
@@ -63,6 +64,9 @@ async function adapterRoutes (fastify, _opts) {
       return reply.code(403).send({
         statusCode: 403,
         error: 'Forbidden',
+        code: reason === 'tenant_mismatch'
+          ? 'FORBIDDEN_TENANT_MISMATCH'
+          : 'FORBIDDEN_PERMISSION_DENIED',
         message: reason === 'tenant_mismatch'
           ? 'Tenant boundary violation'
           : 'Insufficient permission'

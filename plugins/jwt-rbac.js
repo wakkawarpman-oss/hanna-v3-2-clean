@@ -105,6 +105,7 @@ async function jwtRbacPlugin (fastify, opts) {
       reply.code(401).send({
         statusCode: 401,
         error: 'Unauthorized',
+        code: 'AUTH_INVALID_OR_EXPIRED_TOKEN',
         message: 'Invalid or expired token'
       })
     }
