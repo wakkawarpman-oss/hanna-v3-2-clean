@@ -9,6 +9,9 @@
     "tui": "node hanna-tui.js",
     "tui:check": "node --check hanna-tui.js",
     "test:tui": "npm run tui:check && npm test",
+    "test:contract": "npm test && python3 -m pytest -q tests/*.py",
+    "health": "curl -fsS http://localhost:3000/metrics >/dev/null",
+    "hanna": "./scripts/hanna.sh start",
     "security": "npm audit --production && npm test",
     "release": "npm test && npm run security && npm version patch"
   },

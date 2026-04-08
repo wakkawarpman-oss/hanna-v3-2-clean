@@ -15,6 +15,9 @@ All notable changes to this project are documented in this file.
 - Added TUI quick start section to `README.md`.
 - Added dedicated GitHub Actions workflow for TUI health checks.
 - Added `Dockerfile.tui` for containerized TUI runtime.
+- Added `scripts/hanna.sh` quick operations toolkit (`start`, `tui`, `test`, `contract`, `status`, `logs`, `stop`, `init`).
+- Added `scripts/install.sh` to install `hanna` command under `~/.hanna` and link it into `~/.local/bin`.
+- Added `docker-compose.tui.yml` helper for API + TUI local orchestration.
 
 ### Gate 2 Step 2
 - Added tenant-scoped core routes:
