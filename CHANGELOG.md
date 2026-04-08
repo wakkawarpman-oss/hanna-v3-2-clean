@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
+### Gate 2 Step 2
+- Added tenant-scoped core routes:
+  - GET /users
+  - POST /users
+  - GET /reports
+  - POST /reports/:id/export
+  - GET /metrics
+- Added deterministic permission and tenant-boundary enforcement for new route surface.
+- Added Step 2 contract tests in `test/core-routes.spec.js` covering auth, permission, 404, and success paths.
+- Updated Node test command to run all route contract specs under `test/*.spec.js`.
+
 ### Gate 2 Step 1
 - Hardened auth-routing and adapter authorization contract for:
   - POST /auth/login
