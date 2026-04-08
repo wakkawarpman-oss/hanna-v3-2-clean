@@ -66,6 +66,13 @@ npm install
 npm run tui
 ```
 
+TUI search controls:
+
+- `Ctrl+S` — open OSINT search window and focus input
+- `Enter` — run multi-entity search routing
+- `Ctrl+Enter` — load a sample query
+- `Esc` — close search window
+
 Hanna quick command toolkit:
 
 ```bash

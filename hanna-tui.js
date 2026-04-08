@@ -2,6 +2,7 @@
 
 const blessed = require('blessed')
 const contrib = require('blessed-contrib')
+const { initSearch } = require('./components/search-panel')
 
 const COLORS = {
   primary: 'green',
@@ -159,6 +160,10 @@ function startTui () {
   const ui = buildScreen()
   const { screen, sessions, table, rps, logs, resources, clock } = ui
 
+  const searchPanel = initSearch(screen, null, (line) => {
+    logs.log(`[${nowIsoMinute()}] ${line}`)
+  })
+
   const focusables = [sessions, logs]
   let focusIndex = 0
   focusables[focusIndex].focus()
@@ -241,6 +246,12 @@ function startTui () {
 
   screen.key(['C-e'], () => {
     addLog(`[${nowIsoMinute()}] Manual action: EXPORT`)
+    screen.render()
+  })
+
+  screen.key(['C-s'], () => {
+    searchPanel.open()
+    addLog(`[${nowIsoMinute()}] Search panel opened`)
     screen.render()
   })
 
