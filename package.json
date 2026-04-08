@@ -1,0 +1,17 @@
+{
+  "name": "hanna-fastify-vertical-slice",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "tap test/vertical-slice.spec.js"
+  },
+  "dependencies": {
+    "@fastify/jwt": "^9.1.0",
+    "fastify": "^5.0.0",
+    "fastify-plugin": "^5.0.1"
+  },
+  "devDependencies": {
+    "tap": "^20.0.3"
+  }
+}
