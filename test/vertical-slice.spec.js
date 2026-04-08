@@ -79,6 +79,7 @@ test('login with invalid credentials returns 401', async (t) => {
   })
 
   assert.equal(res.statusCode, 401, 'should return 401')
+  assert.equal(res.body.code, 'AUTH_INVALID_CREDENTIALS')
 })
 
 test('public GET /adapters returns adapter list without auth', async (t) => {
@@ -147,6 +148,7 @@ test('403 returned for insufficient permission (viewer tries to run adapter)', a
 
   assert.equal(res.statusCode, 403, `expected 403, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
   assert.equal(res.body.error, 'Forbidden')
+  assert.equal(res.body.code, 'FORBIDDEN_PERMISSION_DENIED')
 })
 
 test('tenant mismatch is denied – unit test of checkPermission utility', async (_t) => {
@@ -177,6 +179,7 @@ test('401 returned when no token is provided to protected route', async (t) => {
   const res = await request(app, 'POST', '/adapters/shodan/run')
 
   assert.equal(res.statusCode, 401, `expected 401, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
+  assert.equal(res.body.code, 'AUTH_INVALID_OR_EXPIRED_TOKEN')
 })
 
 test('401 returned when malformed bearer token is provided', async (t) => {
@@ -188,6 +191,7 @@ test('401 returned when malformed bearer token is provided', async (t) => {
   })
 
   assert.equal(res.statusCode, 401, `expected 401, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
+  assert.equal(res.body.code, 'AUTH_INVALID_OR_EXPIRED_TOKEN')
 })
 
 test('401 returned when expired token is provided', async (t) => {
@@ -209,6 +213,7 @@ test('401 returned when expired token is provided', async (t) => {
   })
 
   assert.equal(res.statusCode, 401, `expected 401, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
+  assert.equal(res.body.code, 'AUTH_INVALID_OR_EXPIRED_TOKEN')
 })
 
 test('404 returned when adapter id is unknown', async (t) => {
@@ -225,6 +230,7 @@ test('404 returned when adapter id is unknown', async (t) => {
   })
 
   assert.equal(res.statusCode, 404, `expected 404, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
+  assert.equal(res.body.code, 'ADAPTER_NOT_FOUND')
 })
 
 test('superadmin *:*:* bypasses all permission checks', async (t) => {

@@ -69,6 +69,7 @@ async function authRoutes (fastify, _opts) {
       return reply.code(401).send({
         statusCode: 401,
         error: 'Unauthorized',
+        code: 'AUTH_INVALID_CREDENTIALS',
         message: 'Invalid credentials'
       })
     }
