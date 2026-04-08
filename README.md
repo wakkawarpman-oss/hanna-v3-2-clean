@@ -66,6 +66,17 @@ npm install
 npm run tui
 ```
 
+Hanna quick command toolkit:
+
+```bash
+./scripts/install.sh
+hanna start
+hanna test
+hanna contract
+hanna tui
+hanna stop
+```
+
 Use strict preflight before operational runs:
 
 ```bash
