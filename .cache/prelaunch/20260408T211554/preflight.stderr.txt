@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/Users/admin/Desktop/runs/exports/html/dossiers/new osint-ui rewrite/hanna-v3-2-clean/src/cli.py", line 36, in <module>
+    from schemas.adapter_result import validate_result_outcomes
+  File "/Users/admin/Desktop/runs/exports/html/dossiers/new osint-ui rewrite/hanna-v3-2-clean/src/schemas/__init__.py", line 3, in <module>
+    from schemas.adapter_result import AdapterResult, normalize_legacy_payload, validate_result_outcomes
+  File "/Users/admin/Desktop/runs/exports/html/dossiers/new osint-ui rewrite/hanna-v3-2-clean/src/schemas/adapter_result.py", line 13, in <module>
+    from pydantic import BaseModel, ConfigDict, Field, ValidationError
+ModuleNotFoundError: No module named 'pydantic'

@@ -16,11 +16,12 @@ ALLOWED_REPORT_MODES = {"internal", "shareable", "strict"}
 ALLOWED_EXPORT_FORMATS = {"json", "metadata", "stix", "zip"}
 
 ASCII_HANNA = r"""
- _   _    _    _   _ _   _    _   
-| | | |  / \\  | \ | | \ | |  / \\  
-| |_| | / _ \\ |  \| |  \| | / _ \\ 
-|  _  |/ ___ \\| |\  | |\  |/ ___ \\
-|_| |_/_/   \\_\\_| \_|_| \_/_/   \\_\\
+██╗  ██╗ █████╗ ███╗   ██╗███╗   ██╗ █████╗
+██║  ██║██╔══██╗████╗  ██║████╗  ██║██╔══██╗
+███████║███████║██╔██╗ ██║██╔██╗ ██║███████║
+██╔══██║██╔══██║██║╚██╗██║██║╚██╗██║██╔══██║
+██║  ██║██║  ██║██║ ╚████║██║ ╚████║██║  ██║
+╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚═╝  ╚═╝
 """.strip("\n")
 
 
@@ -30,9 +31,9 @@ class AsciiHeader(Static):
         total = ready + len(session_state.readiness.secrets_missing)
         time_label = session_state.started_at.replace("T", " ")[:16]
         self.update(
-            f"{ASCII_HANNA}   [bold #19f9ff]OSINT & КІБЕРРОЗВІДКА[/]\n"
-            f"[dim]{time_label}[/] | view={session_state.current_view} | mode={session_state.execution.default_mode} | phase={session_state.pipeline.phase}\n"
-            f"keys={ready}/{total} | warnings={session_state.readiness.warnings} | failures={session_state.readiness.hard_failures} | prompt={session_state.prompt_status}"
+            f"[bold #00ffcc]{ASCII_HANNA}[/]   [bold #ff44aa]OSINT & КІБЕРРОЗВІДКА[/]\n"
+            f"[#7fdbff]{time_label}[/] | [#ffcc00]view={session_state.current_view}[/] | [#ff6bdf]mode={session_state.execution.default_mode}[/] | [#00ff88]phase={session_state.pipeline.phase}[/]\n"
+            f"[#19f9ff]keys={ready}/{total}[/] | [#ff9f6b]warnings={session_state.readiness.warnings}[/] | [#ff4466]failures={session_state.readiness.hard_failures}[/] | [#c89bff]prompt={session_state.prompt_status}[/]"
         )
 
 
@@ -110,8 +111,8 @@ class ThreatMeterPanel(Static):
 class LaneContainer(Static):
     def render_lane(self, title: str, modules: list[tuple[str, str, str]], confirmed: int, pending: int, rejected: int) -> None:
         lines = [
-            f"[ {title} ]",
-            f"SNR [#6cf68f]{confirmed} confirmed[/] | [#f7c95c]{pending} pending[/] | [#ff6b7c]{rejected} noise[/]",
+            f"[bold #ffcc00][ {title} ][/]",
+            f"SNR [bold #00ff88]{confirmed} confirmed[/] | [bold #ffcc00]{pending} pending[/] | [bold #ff4466]{rejected} noise[/]",
         ]
         if not modules:
             lines.append("  no modules assigned")
@@ -263,11 +264,11 @@ class OverviewScreen(SessionScreen):
     }
 
     #ascii-header {
-        height: 10;
-        color: #19f9ff;
+        height: 12;
+        color: #00ffcc;
         margin-bottom: 1;
-        background: #140b18;
-        border: round #19f9ff;
+        background: #0a0816;
+        border: round #00ffcc;
     }
 
     #overview-grid {
@@ -303,25 +304,27 @@ class OverviewScreen(SessionScreen):
 
     #target-panel {
         height: 20;
-        border: round #20d5ff;
+        border: round #7fdbff;
+        background: #0c0a18;
     }
 
     #command-legend {
         height: 8;
-        border: round #f1e6a8;
+        border: round #ffcc00;
         background: #0e0b14;
+        color: #ffcc00;
     }
 
     #pipeline-monitor {
         height: 12;
-        border: round #ff7a8e;
-        background: #120b12;
+        border: round #ff44aa;
+        background: #120812;
     }
 
     #summary-panel {
         height: 11;
-        border: round #db7cff;
-        background: #110919;
+        border: round #c89bff;
+        background: #0e0819;
     }
 
     #fast-lane {
@@ -332,19 +335,19 @@ class OverviewScreen(SessionScreen):
 
     #system-panel {
         height: 10;
-        border: round #20d5ff;
-        background: #0d1118;
+        border: round #00ff88;
+        background: #081210;
     }
 
     #observables-panel {
         height: 1fr;
-        border: round #d96df0;
+        border: round #ff6bdf;
         background: #0d0913;
     }
 
     #activity-feed {
         height: 1fr;
-        border: round #20d5ff;
+        border: round #7fdbff;
         background: #0b1018;
     }
 
@@ -355,14 +358,14 @@ class OverviewScreen(SessionScreen):
     #heatmap-panel {
         width: 1fr;
         height: 10;
-        border: round #f08b9a;
+        border: round #ff4466;
         background: #130c12;
         margin-right: 1;
     }
 
     #threat-meter {
         width: 14;
-        border: round #f1d54b;
+        border: round #ffcc00;
         background: #14100c;
         height: 10;
     }

@@ -11,10 +11,14 @@ const { UltraPerfTui } = require('./components/ultra-perf-tui')
 const { BehavioralMetrics } = require('./components/behavioral-metrics')
 
 const COLORS = {
-  primary: 'green',
+  primary: 'cyan',
+  accent: 'magenta',
+  success: 'green',
   warning: 'yellow',
   danger: 'red',
-  text: 'white'
+  text: 'white',
+  dim: 'gray',
+  highlight: 'blue'
 }
 
 const COMPONENTS = [
@@ -85,16 +89,16 @@ function buildScreen (options = {}) {
     label: ' HANNA OSINT & KESB ',
     border: { type: 'line', fg: COLORS.primary },
     style: { fg: COLORS.primary },
-    content: `{center}Gate 2 / Step 1 monitor${compactMode ? ' | COMPACT' : ''}{/center}`,
+    content: `{center}{cyan-fg}{bold}██╗  ██╗ █████╗ ███╗   ██╗███╗   ██╗ █████╗{/bold}{/cyan-fg}\n{magenta-fg}OSINT & КІБЕРРОЗВІДКА{/magenta-fg} | Gate 2 / Step 1 monitor${compactMode ? ' | COMPACT' : ''}{/center}`,
     tags: true
   })
 
   const sessions = grid.set(3, 0, 21, 6, blessed.list, {
     label: ' Sessions ',
-    border: { type: 'line', fg: COLORS.primary },
+    border: { type: 'line', fg: COLORS.accent },
     style: {
       fg: COLORS.text,
-      selected: { bg: 'blue' }
+      selected: { bg: 'blue', fg: 'white' }
     },
     keys: true,
     mouse: true,
@@ -109,15 +113,15 @@ function buildScreen (options = {}) {
     interactive: false,
     columnSpacing: 2,
     columnWidth: [14, 12, 20],
-    border: { type: 'line', fg: COLORS.primary }
+    border: { type: 'line', fg: COLORS.success }
   })
 
   const rps = grid.set(3, 18, 12, 6, contrib.sparkline, {
     label: ' RPS ',
     tags: true,
-    border: { type: 'line', fg: COLORS.primary },
+    border: { type: 'line', fg: COLORS.warning },
     style: {
-      line: 'cyan',
+      line: 'magenta',
       text: COLORS.text,
       baseline: 'black'
     }
@@ -126,7 +130,7 @@ function buildScreen (options = {}) {
   const logs = grid.set(15, 6, 9, 12, blessed.log, {
     label: ' Event Logs ',
     border: { type: 'line', fg: COLORS.primary },
-    style: { fg: COLORS.text },
+    style: { fg: '#7fdbff' },
     tags: true,
     mouse: true,
     keys: true,
@@ -141,7 +145,7 @@ function buildScreen (options = {}) {
 
   const resources = grid.set(15, 18, 5, 6, contrib.bar, {
     label: ' Resources ',
-    border: { type: 'line', fg: COLORS.primary },
+    border: { type: 'line', fg: COLORS.accent },
     barWidth: 5,
     barSpacing: 3,
     xOffset: 0,
@@ -150,7 +154,7 @@ function buildScreen (options = {}) {
 
   const quick = grid.set(20, 18, 4, 6, blessed.box, {
     label: ' Quick Actions ',
-    border: { type: 'line', fg: COLORS.primary },
+    border: { type: 'line', fg: COLORS.warning },
     tags: true,
     content: compactMode
       ? '{center}Tab/q\nCtrl+A\nCtrl+E{/center}'
@@ -159,16 +163,16 @@ function buildScreen (options = {}) {
 
   const clock = grid.set(20, 6, 4, 4, blessed.box, {
     label: ' Time ',
-    border: { type: 'line', fg: COLORS.primary },
+    border: { type: 'line', fg: COLORS.success },
     tags: true,
     content: `{center}${timeLabel()}{/center}`
   })
 
   const statusLegend = grid.set(20, 10, 4, 8, blessed.box, {
     label: ' Status Legend ',
-    border: { type: 'line', fg: COLORS.primary },
+    border: { type: 'line', fg: COLORS.highlight },
     tags: true,
-    content: '{green-fg}ACTIVE{/} {yellow-fg}WARNING{/} {red-fg}ERROR{/}'
+    content: '{green-fg}{bold}ACTIVE{/} {yellow-fg}{bold}WARNING{/} {red-fg}{bold}ERROR{/}'
   })
 
   void header

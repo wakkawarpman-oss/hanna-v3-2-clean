@@ -50,16 +50,16 @@ class HannaTUIApp(App[None]):
     #topbar {
         dock: top;
         height: 3;
-        border: tall #19f9ff;
-        color: #19f9ff;
+        border: tall #00ffcc;
+        color: #00ffcc;
         padding: 0 1;
-        background: #140b18;
+        background: #0a0816;
     }
 
     #command-bar {
         dock: bottom;
         height: 3;
-        border: tall #20d5ff;
+        border: tall #7fdbff;
         background: #0b1018;
         padding: 0 1;
         align: left middle;
@@ -68,16 +68,16 @@ class HannaTUIApp(App[None]):
     #startup-banner {
         dock: bottom;
         height: 2;
-        border: tall #f1e6a8;
+        border: tall #ffcc00;
         background: #100c14;
-        color: #f1e6a8;
+        color: #ffcc00;
         padding: 0 1;
         content-align: left middle;
     }
 
     #command-prompt {
         width: 9;
-        color: #19f9ff;
+        color: #00ffcc;
         content-align: center middle;
     }
 
@@ -86,7 +86,7 @@ class HannaTUIApp(App[None]):
         margin-right: 1;
         background: #09060d;
         color: #e8f7ff;
-        border: round #20d5ff;
+        border: round #7fdbff;
     }
 
     .export-button {
@@ -94,12 +94,12 @@ class HannaTUIApp(App[None]):
         min-width: 16;
         background: #15101b;
         color: #f2f1f5;
-        border: round #db7cff;
+        border: round #ff6bdf;
     }
 
     #command-status {
         width: 24;
-        color: #7fffd4;
+        color: #00ff88;
         content-align: center middle;
     }
     """

@@ -46,27 +46,82 @@ These are built into `src/cli.py` and work both through `./scripts/hanna` and di
 ./scripts/hanna rs --confirm --json-only --output-file ./runs/exports/reset-result.json
 ```
 
+## NPM Shortcuts
+
+Quick aliases added directly to `package.json`:
+
+| Command | Equivalent | Time |
+|---|---|---|
+| `npm run h` | `system-verify` | ~3s |
+| `npm run go` | `production-readiness` (verify + master-test) | ~8s |
+| `npm run live` | `master-test` | ~5s |
+| `npm run reset` | `hanna reset --confirm --json-only` | ~1s |
+| `npm run bench` | `benchmark:multi` | ~15s |
+
 ## Shell Aliases
 
 Load once per shell session:
 
 ```bash
-cd /Users/admin/Desktop/hanna-v3-2-clean
 source scripts/hanna-aliases.sh
 ```
 
-Then you can use these even shorter commands:
+### OSINT Workflow Aliases
+
+| Alias | Purpose |
+|---|---|
+| `hls` | List modules and presets |
+| `hpf` | Preflight check |
+| `hui` | TUI dashboard (plain mode) |
+| `hagg` | Parallel adapter run |
+| `hch` | Full pipeline (chain) |
+| `hman` | Single adapter run |
+| `hfs <target>` | Full-spectrum aggregate |
+| `hchainfs <target>` | Full-spectrum chain |
+| `hsum <target> <text>` | Smart summary + risk flags |
+
+### Quick Operations Aliases
+
+| Alias | Purpose |
+|---|---|
+| `hanna` | `cd` to repo + `system-verify` |
+| `hstart` | `npm start` |
+| `hstop` | Stop via pm2 / systemctl |
+| `hlogs` | `tail -f` on log directory |
+| `hhealth` | `curl` health endpoint + JSON pretty-print |
+| `hreset` | Factory reset (JSON output) |
+
+### Example Usage
 
 ```bash
 hls
-hls --json-only --output-file ./runs/exports/inventory.json
 hpf --modules full-spectrum
-hpf --modules ua_phone --json-only
 hui --target "Ivan" --modules full-spectrum
 hfs example.com
-hchainfs "Ivan" --verify --export-formats json,metadata,stix,zip --metadata-file ./runs/exports/artifacts/ivan.chain.metadata.json
+hchainfs "Ivan" --verify --export-formats json,metadata,stix,zip
 hman --module nuclei --target https://example.com
 hsum "Case Target" "password dump for user@example.com near військова частина"
+```
+
+### Quick Operations
+
+```bash
+hanna          # Verify everything
+hstart         # Launch server
+hlogs          # Live log tail
+hhealth        # API health check
+hreset         # Factory reset
+hstop          # Stop all processes
+```
+
+## tmux Dashboard (Production)
+
+```bash
+tmux new -s hanna -d
+tmux split-window -h "watch -n 5 npm run h"
+tmux split-window -v "source scripts/hanna-aliases.sh && hlogs"
+tmux split-window -v "watch -n 30 curl -s localhost:3000/health"
+tmux attach -t hanna
 ```
 
 ## Environment Readiness

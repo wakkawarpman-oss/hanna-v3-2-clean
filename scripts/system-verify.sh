@@ -12,8 +12,9 @@ echo "HANNA v3.3.1 SYSTEM VERIFICATION"
 echo "================================"
 
 if ! command -v systemctl >/dev/null 2>&1; then
-  echo "ERROR: systemctl not found. This script is for Linux systemd hosts."
-  exit 1
+  echo "WARN: systemctl not found. Skipping systemd-specific checks on this host."
+  echo "INFO: this is expected on macOS/dev machines."
+  exit 0
 fi
 
 # 1) SYSTEMD UNITS

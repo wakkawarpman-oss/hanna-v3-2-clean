@@ -27,3 +27,4 @@ node_modules/
 test/data/*mb.txt
 debug-dumps/
 test/debug-*.json
+test-report.json

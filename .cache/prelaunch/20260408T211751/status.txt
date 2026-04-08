@@ -1,0 +1,6 @@
+PASS Legacy wrapper inventory
+PASS Root UI wrapper help
+PASS Canonical inventory JSON
+FAIL Canonical preflight JSON (exit=1)
+PASS Summary schema smoke
+PASS Focused regression pack
