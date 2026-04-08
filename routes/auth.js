@@ -5,6 +5,10 @@
  *
  * The user store is intentionally stubbed so it can be swapped for a real
  * database or identity provider without touching the JWT contract.
+ *
+ * ⚠️  STUB ONLY – NOT FOR PRODUCTION USE.
+ * Replace USERS with real DB lookups and use bcrypt/argon2 for password
+ * hashing with constant-time comparison before any deployment.
  */
 
 // ---------------------------------------------------------------------------
@@ -69,9 +73,8 @@ async function authRoutes (fastify, _opts) {
       })
     }
 
-    // Build canonical payload.
-    // jti is a unique token id; in production use a UUID generator.
-    const jti = `${Date.now()}-${Math.random().toString(36).slice(2)}`
+    // jti is a unique token id using cryptographically secure randomness.
+    const jti = require('node:crypto').randomUUID()
 
     const payload = {
       sub: user.sub,

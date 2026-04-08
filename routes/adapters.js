@@ -32,22 +32,14 @@ async function adapterRoutes (fastify, _opts) {
   })
 
   // Protected: run a specific adapter
-  fastify.post('/adapters/:id/run', async (request, reply) => {
-    // 1. Authenticate – verify JWT and populate request.user
-    try {
-      await request.jwtVerify()
-    } catch (_err) {
-      return reply.code(401).send({
-        statusCode: 401,
-        error: 'Unauthorized',
-        message: 'Invalid or expired token'
-      })
-    }
-
+  fastify.post('/adapters/:id/run', {
+    onRequest: [fastify.authenticate],
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } }
+  }, async (request, reply) => {
     const { id } = request.params
     const user = request.user
 
-    // 2. Check that the adapter exists
+    // 1. Check that the adapter exists
     const adapter = ADAPTERS.find((a) => a.id === id)
     if (!adapter) {
       return reply.code(404).send({
@@ -57,14 +49,14 @@ async function adapterRoutes (fastify, _opts) {
       })
     }
 
-    // 3. Derive required permission: adapter:run:<id>
+    // 2. Derive required permission: adapter:run:<id>
     //    A permission of adapter:run:* also satisfies this.
     const requiredPerm = `adapter:run:${id}`
 
-    // 4. Tenant comes from the JWT; routes accept the caller's own tenantId.
+    // 3. Tenant comes from the JWT; routes accept the caller's own tenantId.
     const requiredTenantId = user.tenantId
 
-    // 5. Permission check
+    // 4. Permission check
     const { allowed, reason } = fastify.checkPermission(user, requiredPerm, requiredTenantId)
 
     if (!allowed) {
@@ -77,7 +69,7 @@ async function adapterRoutes (fastify, _opts) {
       })
     }
 
-    // 6. Execute (stub – delegate to the Python layer in production)
+    // 5. Execute (stub – delegate to the Python layer in production)
     return reply.code(202).send({
       status: 'accepted',
       adapterId: id,

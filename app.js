@@ -16,11 +16,12 @@ const adapterRoutes = require('./routes/adapters')
  * @returns {Promise<import('fastify').FastifyInstance>}
  */
 async function buildApp (opts = {}) {
-  const app = fastify(opts)
+  const { jwtSecret, ...fastifyOpts } = opts
+  const app = fastify(fastifyOpts)
 
   // 1. Plugins (must be registered before routes that depend on them)
   await app.register(rateLimit, { global: false })
-  await app.register(jwtRbac)
+  await app.register(jwtRbac, { jwtSecret })
 
   // 2. Routes
   await app.register(authRoutes)

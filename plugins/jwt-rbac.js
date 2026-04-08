@@ -87,14 +87,13 @@ async function jwtRbacPlugin (fastify, opts) {
   const jwtSecret = opts.jwtSecret || process.env.JWT_SECRET
 
   if (!jwtSecret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('JWT_SECRET environment variable is required in production')
-    }
-    // Development/test only – warn loudly so this is never overlooked.
-    fastify.log.warn('JWT_SECRET not set – using insecure default. Do NOT use in production.')
+    throw new Error(
+      'JWT_SECRET is required. ' +
+      'Pass jwtSecret in plugin options or set the JWT_SECRET environment variable.'
+    )
   }
 
-  await fastify.register(fastifyJwt, { secret: jwtSecret || 'hanna-dev-secret-change-in-prod' })
+  await fastify.register(fastifyJwt, { secret: jwtSecret })
 
   // Decorate fastify with authenticate() – verifies the Bearer token and
   // populates request.user with the decoded payload.

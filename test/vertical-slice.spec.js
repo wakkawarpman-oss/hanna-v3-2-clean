@@ -8,7 +8,18 @@
 
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
+const { randomBytes } = require('node:crypto')
 const { buildApp } = require('../app')
+
+// Use a fresh random secret per test run to prevent accidental reuse.
+const TEST_SECRET = 'TEST_ONLY_' + randomBytes(32).toString('hex')
+
+// ---------------------------------------------------------------------------
+// Helper: build app with a fixed test secret.
+// ---------------------------------------------------------------------------
+function buildTestApp () {
+  return buildApp({ logger: false, jwtSecret: TEST_SECRET })
+}
 
 // ---------------------------------------------------------------------------
 // Helper: fire an HTTP request against the Fastify test instance.
@@ -35,7 +46,7 @@ async function request (app, method, url, opts = {}) {
 // ---------------------------------------------------------------------------
 
 test('login success returns access token with canonical payload', async (t) => {
-  const app = await buildApp({ logger: false })
+  const app = await buildTestApp()
   t.after(() => app.close())
 
   const res = await request(app, 'POST', '/auth/login', {
@@ -60,7 +71,7 @@ test('login success returns access token with canonical payload', async (t) => {
 })
 
 test('login with invalid credentials returns 401', async (t) => {
-  const app = await buildApp({ logger: false })
+  const app = await buildTestApp()
   t.after(() => app.close())
 
   const res = await request(app, 'POST', '/auth/login', {
@@ -71,7 +82,7 @@ test('login with invalid credentials returns 401', async (t) => {
 })
 
 test('public GET /adapters returns adapter list without auth', async (t) => {
-  const app = await buildApp({ logger: false })
+  const app = await buildTestApp()
   t.after(() => app.close())
 
   const res = await request(app, 'GET', '/adapters')
@@ -82,7 +93,7 @@ test('public GET /adapters returns adapter list without auth', async (t) => {
 })
 
 test('protected route succeeds with valid permission (adapter:run:shodan)', async (t) => {
-  const app = await buildApp({ logger: false })
+  const app = await buildTestApp()
   t.after(() => app.close())
 
   // analyst@example.com has permissions: ['evidence:read:tenant1', 'adapter:run:shodan']
@@ -102,7 +113,7 @@ test('protected route succeeds with valid permission (adapter:run:shodan)', asyn
 })
 
 test('protected route succeeds with wildcard permission (adapter:run:*)', async (t) => {
-  const app = await buildApp({ logger: false })
+  const app = await buildTestApp()
   t.after(() => app.close())
 
   // admin@example.com has permissions: ['*:*:*']
@@ -120,7 +131,7 @@ test('protected route succeeds with wildcard permission (adapter:run:*)', async 
 })
 
 test('403 returned for insufficient permission (viewer tries to run adapter)', async (t) => {
-  const app = await buildApp({ logger: false })
+  const app = await buildTestApp()
   t.after(() => app.close())
 
   // guest@tenant2.com only has 'evidence:read:tenant2' — no adapter:run permissions
@@ -160,7 +171,7 @@ test('tenant mismatch is denied – unit test of checkPermission utility', async
 })
 
 test('401 returned when no token is provided to protected route', async (t) => {
-  const app = await buildApp({ logger: false })
+  const app = await buildTestApp()
   t.after(() => app.close())
 
   const res = await request(app, 'POST', '/adapters/shodan/run')
