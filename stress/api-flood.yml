@@ -1,0 +1,18 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 120
+      arrivalRate: 50
+      name: "api flood"
+  defaults:
+    headers:
+      content-type: "application/json"
+scenarios:
+  - name: "health + parser"
+    flow:
+      - get:
+          url: "/health"
+      - post:
+          url: "/parser"
+          json:
+            input: "Пелешенко Дмитро 1972 Харків"

@@ -105,6 +105,27 @@ npm run behavioral:test
 npm run tui:behavioral
 ```
 
+Stress testing suite:
+
+```bash
+npm run stress:all
+npm run stress:report
+```
+
+Optional heavy scenarios:
+
+```bash
+npm run stress:tui
+npm run stress:disk
+npm run stress:kill9
+npm run stress:apocalypse
+```
+
+Notes:
+
+- `stress:api` requires Artillery (`npx artillery ...`).
+- `stress:all` runs a quick baseline by default; set `STRESS_TUI=1` and/or `STRESS_LONG=1` to include heavy runs.
+
 API optimized runtime options:
 
 ```bash
