@@ -16,6 +16,18 @@ Step 1 completion snapshot:
 	- Node vertical-slice tests: 12/12 green
 	- Python AdapterResult schema tests: 26/26 green
 
+Step 2 execution snapshot:
+- Added core route surface:
+	- GET /users
+	- POST /users
+	- GET /reports
+	- POST /reports/:id/export
+	- GET /metrics
+- Added dedicated Step 2 contract tests in test/core-routes.spec.js
+- Current validation on implementation branch:
+	- Node route contract tests: 21/21 green
+	- Python regression suite: 171/171 green
+
 ## Task 1: Freeze and extend auth contract behavior
 
 - Endpoints in scope:
