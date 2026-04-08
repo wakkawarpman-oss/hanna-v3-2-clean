@@ -33,4 +33,5 @@ jobs:
       - name: Run vertical slice tests
         env:
           JWT_SECRET: ci-test-secret
+          TAP_DISABLE_COVERAGE: "1"
         run: npm test
