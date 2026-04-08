@@ -33,6 +33,7 @@ from exporters import export_run_metadata_json, export_run_result_json, export_r
 from preflight import format_preflight_report, has_hard_failures, preflight_summary, run_preflight
 from registry import MODULE_PRESETS, MODULES, resolve_modules
 from runtime_ops import reset_workspace
+from schemas.adapter_result import validate_result_outcomes
 from smart_summary import summarize_payload
 
 log = logging.getLogger("hanna.cli")
@@ -135,6 +136,16 @@ def _export_result_artifacts(
 ) -> dict[str, str]:
     if not export_formats:
         return {}
+    # Validate all outcomes against the canonical AdapterResult schema before
+    # writing any artifacts.  Malformed outcomes are rejected immediately so
+    # that corrupted data never reaches disk.
+    outcomes = getattr(result, "outcomes", None)
+    if outcomes:
+        raw_outcomes = [o.to_dict() if hasattr(o, "to_dict") else o for o in outcomes]
+        try:
+            validate_result_outcomes(raw_outcomes)
+        except ValueError as exc:
+            raise RuntimeError(f"Aborting export: {exc}") from exc
     target_dir = Path(export_dir) if export_dir else (RUNS_ROOT / "exports" / "artifacts")
     target_dir.mkdir(parents=True, exist_ok=True)
     exported: dict[str, str] = {}
