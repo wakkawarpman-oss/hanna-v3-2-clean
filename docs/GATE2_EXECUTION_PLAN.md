@@ -4,6 +4,18 @@ Status baseline before Gate 2:
 - Node vertical slice is green (9/9)
 - Python AdapterResult schema is green (26/26)
 
+Step 1 completion snapshot:
+- Added negative-path contract tests for malformed token, expired token, and unknown adapter
+- Hardened deterministic error payload codes:
+	- AUTH_INVALID_CREDENTIALS
+	- AUTH_INVALID_OR_EXPIRED_TOKEN
+	- FORBIDDEN_PERMISSION_DENIED
+	- FORBIDDEN_TENANT_MISMATCH
+	- ADAPTER_NOT_FOUND
+- Verified baseline compatibility after Step 1:
+	- Node vertical-slice tests: 12/12 green
+	- Python AdapterResult schema tests: 26/26 green
+
 ## Task 1: Freeze and extend auth contract behavior
 
 - Endpoints in scope:
