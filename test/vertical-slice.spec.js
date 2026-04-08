@@ -179,6 +179,54 @@ test('401 returned when no token is provided to protected route', async (t) => {
   assert.equal(res.statusCode, 401, `expected 401, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
 })
 
+test('401 returned when malformed bearer token is provided', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
+
+  const res = await request(app, 'POST', '/adapters/shodan/run', {
+    headers: { Authorization: 'Bearer definitely-not-a-jwt' }
+  })
+
+  assert.equal(res.statusCode, 401, `expected 401, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
+})
+
+test('401 returned when expired token is provided', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
+
+  const expiredPayload = {
+    sub: 'user-expired-001',
+    roles: ['analyst'],
+    permissions: ['adapter:run:shodan'],
+    tenantId: 'tenant1',
+    jti: 'expired-token-jti'
+  }
+
+  const expiredToken = app.jwt.sign(expiredPayload, { expiresIn: '-1s' })
+
+  const res = await request(app, 'POST', '/adapters/shodan/run', {
+    headers: { Authorization: `Bearer ${expiredToken}` }
+  })
+
+  assert.equal(res.statusCode, 401, `expected 401, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
+})
+
+test('404 returned when adapter id is unknown', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
+
+  const loginRes = await request(app, 'POST', '/auth/login', {
+    body: { email: 'admin@example.com', password: 'admin-secret' }
+  })
+  assert.equal(loginRes.statusCode, 200)
+
+  const res = await request(app, 'POST', '/adapters/unknown_adapter/run', {
+    headers: { Authorization: `Bearer ${loginRes.body.accessToken}` }
+  })
+
+  assert.equal(res.statusCode, 404, `expected 404, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
+})
+
 test('superadmin *:*:* bypasses all permission checks', async (t) => {
   const { checkPermission } = require('../plugins/jwt-rbac')
 
