@@ -4,6 +4,8 @@ Status baseline before Gate 2:
 - Node vertical slice is green (9/9)
 - Python AdapterResult schema is green (26/26)
 
+<<<<<<< docs/gate2-execution-plan
+=======
 Step 1 completion snapshot:
 - Added negative-path contract tests for malformed token, expired token, and unknown adapter
 - Hardened deterministic error payload codes:
@@ -28,6 +30,7 @@ Step 2 execution snapshot:
 	- Node route contract tests: 21/21 green
 	- Python regression suite: 171/171 green
 
+>>>>>>> master
 ## Task 1: Freeze and extend auth contract behavior
 
 - Endpoints in scope:
