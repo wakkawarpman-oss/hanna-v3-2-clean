@@ -96,3 +96,29 @@ def test_session_screen_update_state_before_mount_does_not_crash():
     screen.update_state(state)
 
     assert screen.session_state is state
+
+
+def test_action_toggle_rejected_flips_visibility_flag(monkeypatch):
+    state = build_default_session_state(target="Case Entity", modules=["pd-infra"], default_mode="chain")
+    app = HannaTUIApp(session_state=state)
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: None)
+
+    assert app.session_state.show_rejected is False
+    app.action_toggle_rejected()
+    assert app.session_state.show_rejected is True
+
+
+def test_command_prompt_run_updates_profile_and_starts_mode(monkeypatch):
+    state = build_default_session_state(target="Case Entity", modules=["pd-infra"], default_mode="idle")
+    app = HannaTUIApp(session_state=state)
+    started: list[str] = []
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: None)
+    monkeypatch.setattr(app, "_start_run", lambda mode: started.append(mode))
+
+    app._execute_command("run --mode full-spectrum --target 'Ivan Signal' --usernames ivan_ops")
+
+    assert started == ["aggregate"]
+    assert app.session_state.execution.target == "Ivan Signal"
+    assert "ivan_ops" in app.session_state.execution.known_usernames

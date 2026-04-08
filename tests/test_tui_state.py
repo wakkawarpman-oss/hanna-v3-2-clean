@@ -57,6 +57,7 @@ def test_apply_run_result_updates_summary_and_target_data():
     assert state.target.emails == ["case@example.com"]
     assert state.last_result_summary
     assert state.export.html_dir == "/tmp/dossier.html"
+    assert any(item.value == "+380500000000" for item in state.observables)
 
 
 def test_refresh_readiness_rebuilds_check_state():

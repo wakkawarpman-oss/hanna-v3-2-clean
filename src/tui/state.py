@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+import re
 
 from config import DEFAULT_DB_PATH, HTML_DIR, RUNS_ROOT
 from models import RunResult
@@ -31,6 +32,15 @@ class ModuleRunState:
     lane: str
     status: str
     detail: str
+
+
+@dataclass
+class ObservableState:
+    kind: str
+    value: str
+    source: str
+    confidence: float
+    status: str
 
 
 @dataclass
@@ -112,6 +122,10 @@ class SessionState:
     running: bool = False
     last_result_summary: list[str] = field(default_factory=list)
     activity: list[ActivityEvent] = field(default_factory=list)
+    observables: list[ObservableState] = field(default_factory=list)
+    show_rejected: bool = False
+    prompt_status: str = "ready"
+    latest_result: RunResult | None = None
 
 
 def build_default_session_state(
@@ -145,6 +159,8 @@ def build_default_session_state(
     readiness = _build_readiness_state(checks)
     started_at = datetime.now().isoformat(timespec="seconds")
     target_state = TargetState(label=target or "No target selected")
+    target_state.phones = list(known_phones or [])
+    target_state.usernames = list(known_usernames or [])
     activity = [
         ActivityEvent(level="info", text="HANNA TUI initialized", timestamp=started_at),
         ActivityEvent(level="info", text=f"Resolved {len(resolved_modules)} module(s) for operator view", timestamp=started_at),
@@ -201,6 +217,7 @@ def build_default_session_state(
         ),
         readiness=readiness,
         activity=activity,
+        observables=_build_seed_observables(target_state),
     )
 
 
@@ -268,11 +285,15 @@ def apply_editor_updates(state: SessionState, payload: dict[str, str]) -> None:
     state.pipeline.phase_timeline = []
     state.running = False
     state.last_result_summary = []
+    state.latest_result = None
+    state.prompt_status = "ready"
+    state.show_rejected = False
     preview_modules = active_modules_for_mode(mode, state.execution)
     state.pipeline.modules = [
         ModuleRunState(name=name, lane=MODULE_LANE.get(name, "fast"), status="idle", detail="ready from interactive profile")
         for name in preview_modules
     ]
+    state.observables = _build_seed_observables(state.target)
     _recompute_progress(state)
     refresh_readiness(state)
 
@@ -282,6 +303,7 @@ def clear_pipeline_history(state: SessionState) -> None:
     state.pipeline.phase_counters = {}
     state.pipeline.phase_timeline = []
     state.last_result_summary = []
+    state.prompt_status = "ready"
     _recompute_progress(state)
 
 
@@ -297,6 +319,7 @@ def reset_modules_for_run(state: SessionState, mode: str, modules: list[str]) ->
     _recompute_progress(state)
     state.last_result_summary = []
     state.running = True
+    state.prompt_status = f"running:{mode}"
 
 
 def set_phase(state: SessionState, phase: str, detail: str | None = None) -> None:
@@ -332,6 +355,8 @@ def append_activity(state: SessionState, level: str, text: str) -> None:
 def apply_run_result(state: SessionState, result: RunResult) -> None:
     state.running = False
     state.last_result_summary = result.summary_lines()
+    state.latest_result = result
+    state.prompt_status = "ready"
     state.target.label = result.target_name or state.target.label
     state.target.phones = list(result.new_phones)
     state.target.emails = list(result.new_emails)
@@ -355,6 +380,11 @@ def apply_run_result(state: SessionState, result: RunResult) -> None:
             state.export.html_dir = str(html_path)
         if exported:
             append_activity(state, "ok", f"Artifacts exported: {', '.join(sorted(exported.keys()))}")
+    state.observables = _build_observables_from_result(state.target, result)
+
+
+def toggle_rejected_rows(state: SessionState) -> None:
+    state.show_rejected = not state.show_rejected
 
 
 def active_modules_for_mode(mode: str, execution: ExecutionConfig) -> list[str]:
@@ -388,7 +418,68 @@ def _build_readiness_state(checks: list[PreflightCheck]) -> ReadinessState:
 def _initial_module_names(resolved_modules: list[str], manual_module: str | None) -> list[str]:
     if manual_module:
         return [manual_module]
-    return list(resolved_modules[:10])
+    return list(resolved_modules[:14])
+
+
+def _build_seed_observables(target: TargetState) -> list[ObservableState]:
+    observables: list[ObservableState] = []
+    if target.label and target.label != "No target selected":
+        observables.append(ObservableState(kind=_infer_seed_kind(target.label), value=target.label, source="seed", confidence=1.0, status="confirmed"))
+    for phone in target.phones:
+        observables.append(ObservableState(kind="phone", value=phone, source="seed", confidence=0.95, status="confirmed"))
+    for email in target.emails:
+        observables.append(ObservableState(kind="email", value=email, source="seed", confidence=0.95, status="confirmed"))
+    for username in target.usernames:
+        observables.append(ObservableState(kind="username", value=username, source="seed", confidence=0.9, status="confirmed"))
+    return _dedup_observables(observables)
+
+
+def _build_observables_from_result(target: TargetState, result: RunResult) -> list[ObservableState]:
+    observables = _build_seed_observables(target)
+    for hit in result.all_hits:
+        observables.append(
+            ObservableState(
+                kind=hit.observable_type,
+                value=hit.value,
+                source=hit.source_module,
+                confidence=hit.confidence,
+                status=_status_for_confidence(hit.confidence),
+            )
+        )
+    for phone in result.new_phones:
+        observables.append(ObservableState(kind="phone", value=phone, source="result", confidence=0.8, status="confirmed"))
+    for email in result.new_emails:
+        observables.append(ObservableState(kind="email", value=email, source="result", confidence=0.8, status="confirmed"))
+    return _dedup_observables(observables)
+
+
+def _dedup_observables(values: list[ObservableState]) -> list[ObservableState]:
+    best: dict[tuple[str, str], ObservableState] = {}
+    for item in values:
+        key = (item.kind, item.value)
+        current = best.get(key)
+        if current is None or item.confidence >= current.confidence:
+            best[key] = item
+    return sorted(best.values(), key=lambda item: (item.status == "rejected", -item.confidence, item.kind, item.value))
+
+
+def _status_for_confidence(confidence: float) -> str:
+    if confidence >= 0.75:
+        return "confirmed"
+    if confidence >= 0.45:
+        return "candidate"
+    return "rejected"
+
+
+def _infer_seed_kind(value: str) -> str:
+    lowered = value.lower().strip()
+    if "@" in lowered:
+        return "email"
+    if re.search(r"\d", lowered) and ("+" in lowered or lowered.replace(" ", "").isdigit()):
+        return "phone"
+    if "." in lowered and " " not in lowered:
+        return "domain"
+    return "name"
 
 
 def _split_csv(value: str) -> list[str]:

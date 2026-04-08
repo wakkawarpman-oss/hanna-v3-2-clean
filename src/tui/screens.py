@@ -1,16 +1,95 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen, Screen
 from textual.widgets import Button, Input, Label, Static
 
+from smart_summary import summarize_text
 from tui.state import SessionState
 
 
 ALLOWED_MODES = {"idle", "manual", "aggregate", "chain"}
 ALLOWED_REPORT_MODES = {"internal", "shareable", "strict"}
 ALLOWED_EXPORT_FORMATS = {"json", "stix", "zip"}
+
+ASCII_HANNA = r"""
+ _   _    _    _   _ _   _    _   
+| | | |  / \\  | \ | | \ | |  / \\  
+| |_| | / _ \\ |  \| |  \| | / _ \\ 
+|  _  |/ ___ \\| |\  | |\  |/ ___ \\
+|_| |_/_/   \\_\\_| \_|_| \_/_/   \\_\\
+""".strip("\n")
+
+
+class AsciiHeader(Static):
+    def render_header(self, session_state: SessionState) -> None:
+        self.update(
+            f"{ASCII_HANNA}\n"
+            "[ HANNA v3.2.0 ] - Intelligence Control Plane\n"
+            f"view={session_state.current_view}  phase={session_state.pipeline.phase}  prompt={session_state.prompt_status}"
+        )
+
+
+class TerminalGauge(Static):
+    def render_gauge(self, score: float, level: str, risk_count: int) -> None:
+        clamped = max(0, min(100, int(score)))
+        filled = max(0, min(10, round(clamped / 10)))
+        bar = "#" * filled + "." * (10 - filled)
+        zone = "GREEN" if clamped < 40 else "AMBER" if clamped < 70 else "RED"
+        self.update(
+            "[ Security / Risk Score ]\n"
+            "      .---------------------.\n"
+            "   .-' 000 025 050 075 100 '-.\n"
+            f"  /         [{bar}]         \\\n"
+            f" |         SCORE {clamped:03d}         |\n"
+            f" |   level={level.upper():<8} zone={zone:<5} |\n"
+            f" |   risk_flags={risk_count:<2}             |\n"
+            "  \\_________________________/"
+        )
+
+
+class LaneContainer(Static):
+    def render_lane(self, title: str, modules: list[tuple[str, str, str]], confirmed: int, pending: int, rejected: int) -> None:
+        lines = [
+            f"[ {title} ]",
+            f"SNR [GREEN {confirmed} CONFIRMED] | [AMBER {pending} PENDING] | [RED {rejected} NOISE]",
+        ]
+        if not modules:
+            lines.append("  no modules assigned")
+        for name, status, detail in modules[:8]:
+            lines.append(f"  {_spinner(status)} {name:<16} {status:<8} {detail[:42]}")
+        self.update("\n".join(lines))
+
+
+class SummaryPanel(Static):
+    def render_summary(self, summary_text: str, risk_tags: list[str]) -> None:
+        tags = " ".join(risk_tags) or "[INFO]"
+        self.update(f"[ Smart AI Summary ]\n{summary_text}\n\nTags: {tags}")
+
+
+class ObservablesPanel(Static):
+    def render_observables(self, session_state: SessionState) -> None:
+        visible = [item for item in session_state.observables if session_state.show_rejected or item.status != "rejected"]
+        hidden_count = sum(1 for item in session_state.observables if item.status == "rejected") if not session_state.show_rejected else 0
+        lines = [
+            "[ Entity Graph / Observables ]",
+            "TYPE       VALUE                      CONF  STATE      SOURCE",
+            "---------------------------------------------------------------",
+        ]
+        if not visible:
+            lines.append("no observables yet")
+        for item in visible[:10]:
+            lines.append(f"{item.kind[:10]:<10} {item.value[:26]:<26} {item.confidence:>4.2f}  {item.status[:10]:<10} {item.source[:16]}")
+        details_state = "open" if session_state.show_rejected else "closed"
+        lines.extend([
+            "",
+            f"<details {details_state}> Rejected / Low Confidence [{hidden_count} hidden] - press v to toggle",
+            f"Last refresh: {datetime.now().isoformat(timespec='seconds')}",
+        ])
+        self.update("\n".join(lines))
 
 
 class SessionScreen(Screen[None]):
@@ -33,40 +112,125 @@ class SessionScreen(Screen[None]):
 
 
 class OverviewScreen(SessionScreen):
+    CSS = """
+    #overview-root {
+        padding: 1 1 0 1;
+        height: 1fr;
+    }
+
+    #ascii-header,
+    #summary-panel,
+    #targets-panel,
+    #fast-lane,
+    #slow-lane,
+    #observables-panel,
+    #security-gauge {
+        border: round #19f9ff;
+        background: #0a0f17;
+        color: #d9f8ff;
+        padding: 1;
+        height: auto;
+    }
+
+    #ascii-header {
+        height: 8;
+        color: #19f9ff;
+        margin-bottom: 1;
+    }
+
+    #overview-grid {
+        height: 1fr;
+    }
+
+    .dashboard-column {
+        width: 1fr;
+        padding-right: 1;
+    }
+
+    .dashboard-column-right {
+        width: 1fr;
+    }
+
+    #summary-panel,
+    #targets-panel,
+    #fast-lane,
+    #slow-lane,
+    #observables-panel,
+    #security-gauge {
+        margin-bottom: 1;
+    }
+
+    #observables-panel {
+        height: 1fr;
+    }
+    """
+
     def __init__(self) -> None:
         super().__init__(name="overview", title="Overview")
 
     def compose(self) -> ComposeResult:
-        yield Static(id="overview-body")
+        with Vertical(id="overview-root"):
+            yield AsciiHeader(id="ascii-header")
+            with Horizontal(id="overview-grid"):
+                with Vertical(classes="dashboard-column"):
+                    yield SummaryPanel(id="summary-panel")
+                    yield Static(id="targets-panel")
+                    yield LaneContainer(id="fast-lane")
+                with Vertical(classes="dashboard-column-right"):
+                    yield LaneContainer(id="slow-lane")
+                    yield ObservablesPanel(id="observables-panel")
+                    yield TerminalGauge(id="security-gauge")
 
     def refresh_screen(self) -> None:
         if not self.session_state:
             return
         target = self.session_state.target
         execution = self.session_state.execution
-        body = (
-            "[Overview]\n"
-            f"Entity: {target.label}\n"
-            f"Phones: {', '.join(target.phones) or 'none'}\n"
-            f"Emails: {', '.join(target.emails) or 'none'}\n"
-            f"Usernames: {', '.join(target.usernames) or 'none'}\n\n"
-            f"Mode: {execution.default_mode}\n"
-            f"Current view: {self.session_state.current_view}\n"
-            f"Running: {'yes' if self.session_state.running else 'no'}\n"
-            f"Confidence: {self.session_state.confidence.level} ({self.session_state.confidence.score:.2f})\n"
-            f"Reason: {self.session_state.confidence.reason}\n\n"
-            f"Export mode: {self.session_state.export.report_mode}\n"
-            f"Formats: {', '.join(self.session_state.export.formats)}\n"
-            f"Export dir: {execution.export_dir or 'default'}\n"
-            f"Proxy: {execution.proxy or 'direct'}\n"
-            f"Leak dir: {execution.leak_dir or 'default'}\n"
-            f"Verify flags: verify={execution.verify} verify_all={execution.verify_all} verify_content={execution.verify_content}\n"
-            f"No preflight: {execution.no_preflight}\n"
-            f"Runs root: {self.session_state.ops.runs_root}\n"
-            f"DB: {self.session_state.ops.db_path}\n\n"
-            "Controls: 1 overview, 2 pipeline, 3 readiness, 4 activity, e edit profile, m manual, a aggregate, c chain, r refresh readiness, x clear timeline, q quit"
+        ai_input = " ".join(
+            [
+                target.label,
+                target.note,
+                " ".join(target.phones),
+                " ".join(target.emails),
+                " ".join(target.usernames),
+                " ".join(item.text for item in self.session_state.activity[-6:]),
+                " ".join(self.session_state.last_result_summary[:4]),
+            ]
+        ).strip()
+        smart = summarize_text(target.label or "No target selected", ai_input or "No active intelligence yet.")
+        risk_tags = [f"[{flag.code.upper()}]" for flag in smart.risk_flags[:3]]
+
+        fast_modules = [
+            (module.name, module.status, module.detail)
+            for module in self.session_state.pipeline.modules
+            if module.lane == "fast"
+        ]
+        slow_modules = [
+            (module.name, module.status, module.detail)
+            for module in self.session_state.pipeline.modules
+            if module.lane == "slow"
+        ]
+        fast_confirmed, fast_pending, fast_rejected = _lane_status_counts(fast_modules)
+        slow_confirmed, slow_pending, slow_rejected = _lane_status_counts(slow_modules)
+
+        target_panel = (
+            "[ Active Targets & Input ]\n"
+            f"Name   : {target.label}\n"
+            f"Phone  : {', '.join(target.phones) or ', '.join(execution.known_phones) or 'none'}\n"
+            f"Email  : {', '.join(target.emails) or 'none'}\n"
+            f"Domain : {_seed_domain(target.label)}\n"
+            f"Users  : {', '.join(target.usernames) or ', '.join(execution.known_usernames) or 'none'}\n\n"
+            f"Mode={execution.default_mode}  Workers={execution.workers}  Export={self.session_state.export.report_mode}\n"
+            f"Proxy={execution.proxy or 'direct'}  DB={self.session_state.ops.db_path}"
         )
-        self.query_one("#overview-body", Static).update(body)
+
+        self.query_one("#ascii-header", AsciiHeader).render_header(self.session_state)
+        self.query_one("#summary-panel", SummaryPanel).render_summary(smart.summary, risk_tags)
+        self.query_one("#targets-panel", Static).update(target_panel)
+        self.query_one("#fast-lane", LaneContainer).render_lane("Fast Lane (P1/P3)", fast_modules, fast_confirmed, fast_pending, fast_rejected)
+        self.query_one("#slow-lane", LaneContainer).render_lane("Slow Lane (P0/P2)", slow_modules, slow_confirmed, slow_pending, slow_rejected)
+        self.query_one("#observables-panel", ObservablesPanel).render_observables(self.session_state)
+        self.query_one("#security-gauge", TerminalGauge).render_gauge(self.session_state.confidence.score * 100, self.session_state.confidence.level, len(smart.risk_flags))
 
 
 class PipelineScreen(SessionScreen):
@@ -264,6 +428,32 @@ class ConfigEditorScreen(ModalScreen[dict[str, str] | None]):
 
 def _bool_text(value: bool) -> str:
     return "yes" if value else "no"
+
+
+def _spinner(status: str) -> str:
+    if status == "running":
+        return ["-", "\\", "|", "/"][datetime.now().second % 4]
+    if status == "done":
+        return "+"
+    if status in {"error", "timeout"}:
+        return "!"
+    if status == "queued":
+        return ">"
+    return "."
+
+
+def _lane_status_counts(modules: list[tuple[str, str, str]]) -> tuple[int, int, int]:
+    confirmed = sum(1 for _, status, _ in modules if status == "done")
+    pending = sum(1 for _, status, _ in modules if status in {"idle", "queued", "running"})
+    rejected = sum(1 for _, status, _ in modules if status in {"error", "timeout"})
+    return confirmed, pending, rejected
+
+
+def _seed_domain(label: str) -> str:
+    lowered = label.strip().lower()
+    if "." in lowered and " " not in lowered:
+        return lowered
+    return "none"
 
 
 def validate_editor_payload(payload: dict[str, str]) -> list[str]:
