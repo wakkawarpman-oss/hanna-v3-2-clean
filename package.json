@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node app.js",
     "start:prod": "node --max-old-space-size=512 app-opt.js",
+    "prestart:check": "bash scripts/prestart.sh",
+    "prestart:start": "bash scripts/prestart.sh --start",
+    "production-readiness": "bash scripts/production-readiness.sh",
     "test": "node --test test/*.spec.js",
     "test:core": "node --test test/core-routes.spec.js test/parser.spec.js",
     "test:parser": "node --test test/parser.spec.js test/parser-files.spec.js",

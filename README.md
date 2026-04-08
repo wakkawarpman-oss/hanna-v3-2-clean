@@ -72,6 +72,15 @@ Ultra performance mode:
 npm run tui:ultra
 ```
 
+Prestart and production readiness:
+
+```bash
+npm run prestart:check
+npm run production-readiness
+# optional one-shot start after checks
+npm run prestart:start
+```
+
 TUI search controls:
 
 - `Ctrl+S` — open OSINT search window and focus input

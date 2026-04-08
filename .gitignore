@@ -22,3 +22,8 @@ runs/
 
 # Node.js
 node_modules/
+
+# Generated perf/debug artifacts
+test/data/*mb.txt
+debug-dumps/
+test/debug-*.json
