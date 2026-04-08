@@ -2,6 +2,7 @@
 
 const blessed = require('blessed')
 const contrib = require('blessed-contrib')
+const { SmartSearch, SearchResults } = require('./smart-search')
 
 class DebugTui {
   constructor (screen, parser, onLog) {
@@ -9,6 +10,8 @@ class DebugTui {
     this.parser = parser
     this.onLog = typeof onLog === 'function' ? onLog : () => {}
     this.visible = false
+    this.smartSearch = new SmartSearch()
+    this.searchResults = new SearchResults()
 
     this.debugInput = blessed.textbox({
       parent: screen,
@@ -145,6 +148,16 @@ class DebugTui {
 
     const result = this.parser.parseSearchInput(input)
     const tools = await this.parser.routeToTools(result)
+    const scored = tools.map((tool) => {
+      const scoring = this.smartSearch.scoreResult(result.parsed, input)
+      return {
+        parsed: result.parsed,
+        tool: tool.name,
+        score: scoring.score,
+        rank: scoring.rank
+      }
+    })
+    const clusters = this.searchResults.groupResults(scored)
 
     const rows = [
       ...Object.entries(result.parsed).map(([k, v]) => [k.toUpperCase(), v || '—', v ? 'OK' : 'MISS']),
@@ -156,12 +169,21 @@ class DebugTui {
       rows.push(['ERRORS', result.errors.join(', '), 'WARN'])
     }
 
+    if (clusters.length > 0) {
+      rows.push(['SMART_TOP', `${clusters[0].score.toFixed(2)} (${clusters[0].bestMatch.rank})`, 'OK'])
+      rows.push(['SMART_CLUSTERS', String(clusters.length), 'OK'])
+    }
+
     this.parseResult.setData({
       headers: ['Field', 'Value', 'Status'],
       data: rows
     })
 
-    this.toolRoutes.setItems(tools.map((t) => `${t.status} ${t.name}`))
+    this.toolRoutes.setItems(
+      clusters.length
+        ? clusters.map((c, idx) => `${idx + 1}. ${c.score.toFixed(2)} ${c.bestMatch.tool}`)
+        : tools.map((t) => `${t.status} ${t.name}`)
+    )
     this.debugTrace.log(`parsed: confidence=${result.confidence}, status=${result.status}`)
     this.onLog(`Debug parse: ${result.confidence}/6 (${tools.length} tools)`)
     this.screen.render()

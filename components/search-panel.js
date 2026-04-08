@@ -3,6 +3,7 @@
 const fs = require('node:fs')
 const blessed = require('blessed')
 const contrib = require('blessed-contrib')
+const { SmartSearch, SearchResults } = require('./smart-search')
 
 class SafeParser {
   safeRegex (text, regex) {
@@ -199,6 +200,8 @@ class SearchPanel extends SafeParser {
     this.api = apiClient || null
     this.onLog = typeof onLog === 'function' ? onLog : () => {}
     this.results = []
+    this.smartSearch = new SmartSearch()
+    this.searchResults = new SearchResults()
 
     if (!this.screen) {
       this.searchBox = null
@@ -288,7 +291,7 @@ class SearchPanel extends SafeParser {
     this.updateToolStatus(activeTools)
 
     const results = await this.fetchToolResults(parsed, activeTools)
-    this.displayResults(results)
+    this.displayResults(results, input)
   }
 
   showParsedData (parsed) {
@@ -318,7 +321,8 @@ class SearchPanel extends SafeParser {
           tool: tool.name,
           status: 'completed',
           data,
-          confidence: Math.floor(Math.random() * 31) + 65
+          confidence: Math.floor(Math.random() * 31) + 65,
+          parsed: parsed.parsed
         }
       })
     )
@@ -355,22 +359,39 @@ class SearchPanel extends SafeParser {
     this.screen.render()
   }
 
-  displayResults (results) {
+  displayResults (results, query = '') {
     if (!this.resultsBox || !this.screen) {
       return
     }
 
-    const rows = results.map((result) => [
-      result.tool,
-      result.data.length > 36 ? `${result.data.slice(0, 33)}...` : result.data,
-      `${result.confidence}%`
-    ])
+    const scored = results.map((result) => {
+      const rank = this.smartSearch.scoreResult(result.parsed || {}, query)
+      return {
+        ...result,
+        score: rank.score,
+        rank: rank.rank,
+        scoreDetails: rank.details
+      }
+    })
+
+    const clusters = this.searchResults.groupResults(scored)
+
+    const rows = clusters.map((cluster, index) => {
+      const best = cluster.bestMatch || {}
+      const snippet = best.data && best.data.length > 26 ? `${best.data.slice(0, 23)}...` : (best.data || '—')
+      return [
+        `${index + 1} ${best.rank || 'D'}`,
+        `${Number(cluster.score || 0).toFixed(2)}`,
+        best.tool || '—',
+        snippet
+      ]
+    })
 
     this.resultsBox.setData({
-      headers: ['Інструмент', 'Результат', 'Точність'],
-      data: rows.length ? rows : [['-', 'Немає результатів', '-']]
+      headers: ['RANK', 'SCORE', 'Інструмент', 'Результат'],
+      data: rows.length ? rows : [['-', '0.00', '-', 'Немає результатів']]
     })
-    this.onLog(`Search completed: ${rows.length} tool results`)
+    this.onLog(`Search completed: ${rows.length} smart clusters`)
     this.screen.render()
   }
 

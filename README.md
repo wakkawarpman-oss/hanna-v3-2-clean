@@ -95,6 +95,16 @@ TUI debug controls:
 - `F2` — clear debug widgets
 - `F12` — toggle debug panel visibility
 
+Smart search and behavioral commands:
+
+```bash
+npm run test:smart
+npm run search:smart
+npm run search:cluster
+npm run behavioral:test
+npm run tui:behavioral
+```
+
 API optimized runtime options:
 
 ```bash

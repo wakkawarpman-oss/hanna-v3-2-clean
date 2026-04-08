@@ -5,6 +5,7 @@ const contrib = require('blessed-contrib')
 const { initSearch, DebugParser } = require('./components/search-panel')
 const { DebugTui } = require('./components/debug-tui')
 const { UltraPerfTui } = require('./components/ultra-perf-tui')
+const { BehavioralMetrics } = require('./components/behavioral-metrics')
 
 const COLORS = {
   primary: 'green',
@@ -162,6 +163,24 @@ function startTui () {
   const ui = buildScreen()
   const { screen, sessions, table, rps, logs, resources, clock } = ui
   const ultraPerf = process.env.TUI_ULTRA === '1' ? new UltraPerfTui(screen) : null
+  const behavioralEnabled = process.env.BEHAVIORAL === '1'
+  const metrics = behavioralEnabled ? new BehavioralMetrics() : null
+  let metricsPanel = null
+
+  if (behavioralEnabled) {
+    metricsPanel = blessed.box({
+      parent: screen,
+      top: 0,
+      left: '70%',
+      width: '30%',
+      height: 6,
+      label: ' BEHAVIORAL ',
+      border: { type: 'line', fg: 'cyan' },
+      style: { fg: 'white' },
+      content: 'Engagement: 0/100\nDwell: 0s\nQueries: 0\nClicks: 0\nScrolls: 0'
+    })
+    metrics.attachPanel(metricsPanel)
+  }
 
   function requestRender (widget) {
     if (ultraPerf) {
@@ -178,6 +197,9 @@ function startTui () {
 
   const searchPanel = initSearch(screen, null, (line) => {
     logs.log(`[${nowIsoMinute()}] ${line}`)
+    if (metrics && line.startsWith('Search completed')) {
+      metrics.trackAction('search')
+    }
   })
 
   const focusables = [sessions, logs]
@@ -252,28 +274,33 @@ function startTui () {
   screen.key(['tab'], () => {
     focusIndex = (focusIndex + 1) % focusables.length
     focusables[focusIndex].focus()
+    if (metrics) metrics.trackAction('navigate')
     requestRender(focusables[focusIndex])
   })
 
   screen.key(['C-a'], () => {
     addLog(`[${nowIsoMinute()}] Manual action: ANALYZE`)
+    if (metrics) metrics.trackAction('result_click')
     requestRender(logs)
   })
 
   screen.key(['C-e'], () => {
     addLog(`[${nowIsoMinute()}] Manual action: EXPORT`)
+    if (metrics) metrics.trackAction('result_click')
     requestRender(logs)
   })
 
   screen.key(['C-s'], () => {
     searchPanel.open()
     addLog(`[${nowIsoMinute()}] Search panel opened`)
+    if (metrics) metrics.trackAction('search')
     requestRender(logs)
   })
 
   screen.key(['C-d'], () => {
     debugTui.open()
     addLog(`[${nowIsoMinute()}] Debug panel opened`)
+    if (metrics) metrics.trackAction('navigate')
     requestRender(logs)
   })
 
@@ -290,7 +317,12 @@ function startTui () {
 
   sessions.on('select item', (item) => {
     addLog(`[${nowIsoMinute()}] Session selected: ${item.getText()}`)
+    if (metrics) metrics.trackAction('navigate')
     requestRender(logs)
+  })
+
+  screen.key(['up', 'down', 'pageup', 'pagedown'], () => {
+    if (metrics) metrics.trackAction('scroll')
   })
 
   setInterval(() => {
