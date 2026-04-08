@@ -244,6 +244,8 @@ It is the orchestration layer that:
 
 ## Next Work
 
+Core Migration Gate 2: see [docs/GATE2_EXECUTION_PLAN.md](docs/GATE2_EXECUTION_PLAN.md).
+
 The next wave is focused on expanding adapter coverage and tightening release discipline:
 
 - integrate the ProjectDiscovery stack as first-class adapters,
