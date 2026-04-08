@@ -28,6 +28,7 @@ Step 2 execution snapshot:
 	- Node route contract tests: 21/21 green
 	- Python regression suite: 171/171 green
 
+
 ## Task 1: Freeze and extend auth contract behavior
 
 - Endpoints in scope:
