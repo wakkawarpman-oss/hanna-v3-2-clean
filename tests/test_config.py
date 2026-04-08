@@ -14,6 +14,7 @@ from config import (
     NUCLEI_DEEP_TARGET_CAP,
     NUCLEI_PROFILE,
     NUCLEI_QUICK_TARGET_CAP,
+    PRIORITY_WORKER_TIMEOUT,
     RETRY_MAX_ATTEMPTS,
     RUNS_ROOT,
     SCHEMA_VERSION,
@@ -49,8 +50,12 @@ class TestConfigDefaults:
         assert SCHEMA_VERSION >= 1
 
     def test_module_worker_timeouts_cover_long_tools(self):
-        assert MODULE_WORKER_TIMEOUT["nuclei"] > WORKER_TIMEOUT
-        assert MODULE_WORKER_TIMEOUT["eyewitness"] >= MODULE_WORKER_TIMEOUT["nuclei"]
+        assert PRIORITY_WORKER_TIMEOUT[0] == 300
+        assert 15 <= PRIORITY_WORKER_TIMEOUT[1] <= 60
+        assert 15 <= PRIORITY_WORKER_TIMEOUT[2] <= 60
+        assert 15 <= PRIORITY_WORKER_TIMEOUT[3] <= 60
+        assert MODULE_WORKER_TIMEOUT["nuclei"] <= 60
+        assert MODULE_WORKER_TIMEOUT["eyewitness"] <= 60
 
     def test_nuclei_profile_config_sane(self):
         assert NUCLEI_PROFILE in {"quick", "deep"}

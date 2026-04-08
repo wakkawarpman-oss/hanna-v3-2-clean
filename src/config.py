@@ -61,19 +61,19 @@ CLI_TIMEOUT_SAFETY_MARGIN = _env_int("HANNA_CLI_TIMEOUT_SAFETY_MARGIN", 5)
 
 PRIORITY_WORKER_TIMEOUT = {
     0: 300,
-    1: 120,
-    2: 120,
-    3: 120,
+    1: 60,
+    2: 45,
+    3: 30,
 }
 
 # Module-specific worker overrides for long-running CLI tools.
 MODULE_WORKER_TIMEOUT_DEFAULTS = {
-    "nuclei": 180,
-    "amass": 180,
-    "social_analyzer": 180,
-    "metagoofil": 240,
-    "reconng": 240,
-    "eyewitness": 300,
+    "nuclei": 60,
+    "amass": 60,
+    "social_analyzer": 45,
+    "metagoofil": 60,
+    "reconng": 60,
+    "eyewitness": 60,
 }
 MODULE_WORKER_TIMEOUT = {
     name: _env_int(f"HANNA_TIMEOUT_{name.upper()}_WORKER", default)

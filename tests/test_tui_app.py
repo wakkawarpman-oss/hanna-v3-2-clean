@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from models import AdapterOutcome, RunResult
 from tui.app import HannaTUIApp
+from tui.screens import OverviewScreen
 from tui.state import build_default_session_state
 
 
@@ -86,3 +87,12 @@ def test_action_clear_timeline_resets_pipeline_history(monkeypatch):
     assert app.session_state.pipeline.phase_counters == {}
     assert app.session_state.pipeline.phase_timeline == []
     assert app.session_state.last_result_summary == []
+
+
+def test_session_screen_update_state_before_mount_does_not_crash():
+    screen = OverviewScreen()
+    state = build_default_session_state(target="Case Entity", modules=["pd-infra"], default_mode="chain")
+
+    screen.update_state(state)
+
+    assert screen.session_state is state

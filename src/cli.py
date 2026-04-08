@@ -29,6 +29,7 @@ from exporters import export_run_result_json, export_run_result_stix, export_run
 from preflight import format_preflight_report, has_hard_failures, run_preflight
 from registry import MODULE_PRESETS, MODULES, resolve_modules
 from runtime_ops import reset_workspace
+from smart_summary import summarize_payload
 
 log = logging.getLogger("hanna.cli")
 
@@ -163,6 +164,11 @@ def _build_parser() -> argparse.ArgumentParser:
     rs.add_argument("--keep-reports", action="store_true", help="Preserve exports/html/dossiers")
     rs.add_argument("--keep-artifacts", action="store_true", help="Preserve exports/artifacts")
     rs.add_argument("--confirm", action="store_true", help="Required acknowledgement to perform cleanup")
+
+    sm = sub.add_parser("summarize", help="Generate a schema-validated smart summary and risk flags from noisy text")
+    sm.add_argument("--target", required=True, help="Target label for the summary payload")
+    sm.add_argument("--input-file", default=None, help="Optional text/HTML file to summarize")
+    sm.add_argument("--text", default=None, help="Inline text payload to summarize")
 
     return root
 
@@ -325,6 +331,15 @@ def _cmd_reset(args: argparse.Namespace) -> None:
         print(f"  missing: {path}")
 
 
+def _cmd_summarize(args: argparse.Namespace) -> None:
+    raw_text = args.text
+    if args.input_file:
+        raw_text = Path(args.input_file).read_text(encoding="utf-8")
+    if not raw_text:
+        raise RuntimeError("summarize requires --text or --input-file")
+    print(summarize_payload(args.target, raw_text))
+
+
 def _cmd_tui(args: argparse.Namespace) -> None:
     try:
         from tui import HannaTUIApp, build_default_session_state
@@ -373,6 +388,7 @@ def main() -> None:
         "list": _cmd_list,
         "preflight": _cmd_preflight,
         "reset": _cmd_reset,
+        "summarize": _cmd_summarize,
     }
 
     handler = dispatch.get(args.mode)

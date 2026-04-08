@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from config import DEFAULT_DB_PATH, RUNS_ROOT
 from discovery_engine import DiscoveryEngine
+from registry import MODULE_PRESETS, MODULES, MODULE_LANE
 
 log = logging.getLogger("hanna.run_discovery")
 
@@ -67,6 +68,7 @@ def main():
     parser.add_argument("--exports-dir", default=str(RUNS_ROOT / "exports"))
     parser.add_argument("--output", default=None, help="Output HTML path")
     parser.add_argument("--db", default=str(DEFAULT_DB_PATH))
+    parser.add_argument("--list-modules", action="store_true", help="List available adapters and presets, then exit")
     parser.add_argument("--confirmed-file", nargs="*", default=[], help="JSON manifest(s) with analyst-confirmed evidence to inject before entity resolution")
 
     # Deep recon options
@@ -88,6 +90,19 @@ def main():
         level=logging.INFO,
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     )
+
+    if args.list_modules:
+        print("\n=== Available Adapters ===")
+        print(f"{'Name':<18} {'Lane':<6} Description")
+        print("-" * 70)
+        for name, adapter_cls in sorted(MODULES.items()):
+            doc = (adapter_cls.__doc__ or "").strip().splitlines()[0] if adapter_cls.__doc__ else ""
+            print(f"{name:<18} {MODULE_LANE.get(name, 'fast'):<6} {doc[:40]}")
+
+        print(f"\n=== Presets ({len(MODULE_PRESETS)}) ===")
+        for name, mods in MODULE_PRESETS.items():
+            print(f"  {name:<20} -> {', '.join(mods)}")
+        return
 
     exports = Path(args.exports_dir)
     metas = sorted(exports.glob("*.json"))

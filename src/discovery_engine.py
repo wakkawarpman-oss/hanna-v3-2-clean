@@ -974,7 +974,17 @@ class DiscoveryEngine:
                 quality_ratio = (confirmed_count * 1.0 + probable_count * 0.5) / total
                 source_tools = {obs.source_tool for obs in obs_list}
                 tool_bonus = min(0.2, 0.05 * len(source_tools))
-                confidence = min(0.95, quality_ratio * 0.7 + tool_bonus + 0.1)
+                cluster_fingerprints = {obs.fingerprint for obs in obs_list}
+                max_link_confidence = 0.0
+                for row in self.db.execute(
+                    "SELECT obs_a_type, obs_a_value, obs_b_type, obs_b_value, confidence FROM entity_links"
+                ):
+                    fp_a = f"{row[0]}:{row[1]}"
+                    fp_b = f"{row[2]}:{row[3]}"
+                    if fp_a in cluster_fingerprints and fp_b in cluster_fingerprints:
+                        max_link_confidence = max(max_link_confidence, float(row[4] or 0.0))
+                link_bonus = 0.05 if max_link_confidence >= 0.9 else 0.0
+                confidence = min(0.95, quality_ratio * 0.7 + tool_bonus + link_bonus + 0.1)
 
             source_tools_set = {obs.source_tool for obs in obs_list}
             cluster = IdentityCluster(

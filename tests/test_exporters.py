@@ -60,7 +60,10 @@ def test_stix_exporter_writes_bundle_with_identity_and_observed_data(tmp_path):
 def test_zip_exporter_packages_manifest_and_artifacts(tmp_path):
     result = _sample_result()
     html_path = tmp_path / "dossier.html"
+    raw_log_path = tmp_path / "ghunt.log"
     html_path.write_text("<html>safe</html>", encoding="utf-8")
+    raw_log_path.write_text("raw task log", encoding="utf-8")
+    result.outcomes[0].log_path = str(raw_log_path)
 
     path = export_run_result_zip(result, tmp_path, html_path=html_path, report_mode="shareable")
 
@@ -71,11 +74,13 @@ def test_zip_exporter_packages_manifest_and_artifacts(tmp_path):
         assert any(name.endswith(".json") for name in names)
         assert any(name.endswith(".stix.json") for name in names)
         assert "dossier.html" in names
+        assert "logs/ghunt.log" in names
 
         manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
         assert manifest["target_name"] == "Test Target"
         assert manifest["report_mode"] == "shareable"
-        assert len(manifest["artifacts"]) >= 3
+        assert len(manifest["artifacts"]) >= 4
+        assert any(item["name"] == "logs/ghunt.log" for item in manifest["artifacts"])
 
 
 def test_zip_exporter_requires_html_when_report_mode_is_declared(tmp_path):

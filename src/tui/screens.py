@@ -21,7 +21,12 @@ class SessionScreen(Screen[None]):
 
     def update_state(self, session_state: SessionState) -> None:
         self.session_state = session_state
-        self.refresh_screen()
+        if getattr(self, "is_mounted", False):
+            self.refresh_screen()
+
+    def on_mount(self) -> None:
+        if self.session_state is not None:
+            self.refresh_screen()
 
     def refresh_screen(self) -> None:
         raise NotImplementedError

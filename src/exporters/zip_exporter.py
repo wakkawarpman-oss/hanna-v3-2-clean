@@ -24,6 +24,39 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _append_file(zf: zipfile.ZipFile, manifest: dict[str, object], path: Path, arcname: str) -> None:
+    zf.write(path, arcname=arcname)
+    manifest["artifacts"].append({"name": arcname, "sha256": _sha256(path)})
+
+
+def _collect_supporting_paths(result: RunResult) -> list[tuple[Path, str]]:
+    collected: list[tuple[Path, str]] = []
+    seen: set[Path] = set()
+
+    for outcome in result.outcomes:
+        if not outcome.log_path:
+            continue
+        path = Path(outcome.log_path)
+        if path.exists() and path not in seen:
+            collected.append((path, f"logs/{path.name}"))
+            seen.add(path)
+
+    extra_artifacts = result.extra.get("artifacts") if isinstance(result.extra, dict) else None
+    artifact_candidates: list[str] = []
+    if isinstance(extra_artifacts, dict):
+        artifact_candidates.extend(str(value) for value in extra_artifacts.values())
+    elif isinstance(extra_artifacts, list):
+        artifact_candidates.extend(str(value) for value in extra_artifacts)
+
+    for raw_path in artifact_candidates:
+        path = Path(raw_path)
+        if path.exists() and path not in seen:
+            collected.append((path, f"artifacts/{path.name}"))
+            seen.add(path)
+
+    return collected
+
+
 def export_run_result_zip(
     result: RunResult,
     output_dir: str | Path,
@@ -49,12 +82,13 @@ def export_run_result_zip(
 
     with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for path in [json_path, stix_path]:
-            zf.write(path, arcname=path.name)
-            manifest["artifacts"].append({"name": path.name, "sha256": _sha256(path)})
+            _append_file(zf, manifest, path, path.name)
 
         if html_file and html_file.exists():
-            zf.write(html_file, arcname=html_file.name)
-            manifest["artifacts"].append({"name": html_file.name, "sha256": _sha256(html_file)})
+            _append_file(zf, manifest, html_file, html_file.name)
+
+        for path, arcname in _collect_supporting_paths(result):
+            _append_file(zf, manifest, path, arcname)
 
         manifest_bytes = json.dumps(manifest, indent=2, ensure_ascii=False).encode("utf-8")
         zf.writestr("manifest.json", manifest_bytes)

@@ -163,6 +163,25 @@ class TestEntityResolution:
         obs = self._register("example.com")
         assert obs is None
 
+    def test_same_business_record_links_push_cluster_confidence_above_threshold(self):
+        phone = "+380991234598"
+        target = "Test FOP Persona"
+        ua = self.eng._classify_and_register(phone, "deep_recon:ua_phone", target, "ua.json", depth=0)
+        fop = self.eng._classify_and_register(target, "deep_recon:opendatabot", target, "odb.json", depth=0, is_original_target=True)
+        phone2 = self.eng._classify_and_register(phone, "deep_recon:opendatabot", target, "odb.json", depth=1)
+
+        assert ua is not None
+        assert fop is not None
+        assert phone2 is not None
+
+        self.eng._link_observables(fop, phone2, "same_business_record", 0.95)
+        self.eng._link_observables(fop, ua, "same_business_record", 0.95)
+
+        clusters = self.eng.resolve_entities()
+
+        assert clusters
+        assert clusters[0].confidence > 0.90
+
 
 # ── Schema versioning ────────────────────────────────────────────
 

@@ -14,8 +14,15 @@ Core platform capabilities are already present:
 - Discovery engine with ingestion, observable registration, entity resolution, and verification flows
 - Safe-by-default HTML dossier generation with `internal`, `shareable`, and `strict` redaction modes
 - Canonical export surface for JSON, STIX-like bundles, and ZIP evidence packs
+- Schema-validated smart summaries and deterministic risk-flag extraction for noisy analyst text
 - Operator cleanup workflow for runtime DB, logs, reports, and generated artifacts
 - Regression coverage for report redaction, export contracts, and reset behavior
+
+Not yet shipped in the current runtime:
+
+- LLM-backed smart summaries
+- automated AI risk-flag extraction
+- schema-validated prompt orchestration for analyst narratives
 
 ## Architecture
 
