@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from adapters.base import ReconAdapter, ReconHit
+from adapters.base import AdapterExecutionError, ReconAdapter, ReconHit
 from config import (
     ADAPTER_REQ_CAP,
     LOG_ENCRYPT,
@@ -57,6 +57,7 @@ class TaskResult:
     lane: str
     hits: list[ReconHit]
     error: str | None
+    error_kind: str | None
     elapsed_sec: float
     raw_log_path: str
 
@@ -65,6 +66,7 @@ class TaskResult:
             "module": self.module_name,
             "hits": [h.to_dict() for h in self.hits],
             "error": self.error,
+            "error_kind": self.error_kind,
             "elapsed": self.elapsed_sec,
             "log_path": self.raw_log_path,
         }
@@ -76,6 +78,7 @@ class TaskResult:
             lane=lane,
             hits=[ReconHit.from_dict(h) for h in payload.get("hits", [])],
             error=payload.get("error"),
+            error_kind=payload.get("error_kind"),
             elapsed_sec=float(payload.get("elapsed", 0.0)),
             raw_log_path=str(payload.get("log_path", "")),
         )
@@ -96,7 +99,7 @@ def build_tasks(
     for mod_name in module_names:
         adapter_cls = MODULES.get(mod_name)
         if not adapter_cls:
-            errors.append({"module": mod_name, "error": f"Unknown module: {mod_name}"})
+            errors.append({"module": mod_name, "error": f"Unknown module: {mod_name}", "error_kind": "unknown_module"})
             continue
         tasks.append(ReconTask(
             module_name=mod_name,
@@ -146,7 +149,7 @@ def _run_adapter_isolated(
     mod_name = adapter_cls_name
     adapter_cls = _MODS.get(mod_name)
     if not adapter_cls:
-        return {"module": mod_name, "hits": [], "error": f"Unknown module: {mod_name}", "elapsed": 0.0, "log_path": ""}
+        return {"module": mod_name, "hits": [], "error": f"Unknown module: {mod_name}", "error_kind": "unknown_module", "elapsed": 0.0, "log_path": ""}
 
     log_path = str(Path(log_dir) / f"task_{mod_name}_{datetime.now().strftime('%H%M%S')}.log")
     lines: list[str] = [f"[{mod_name}] START  region={region}  {datetime.now().isoformat()}\n"]
@@ -176,6 +179,21 @@ def _run_adapter_isolated(
             lane="fast",
             hits=hits,
             error=None,
+            error_kind=None,
+            elapsed_sec=elapsed,
+            raw_log_path=log_path,
+        ).to_dict()
+    except AdapterExecutionError as exc:
+        if worker_timeout > 0 and hasattr(signal, "setitimer"):
+            signal.setitimer(signal.ITIMER_REAL, 0.0)
+        elapsed = time.monotonic() - t0
+        lines.append(f"[{mod_name}] SKIP  {exc}\n")
+        result = TaskResult(
+            module_name=mod_name,
+            lane="fast",
+            hits=[],
+            error=str(exc),
+            error_kind=getattr(exc, "error_kind", "adapter_error"),
             elapsed_sec=elapsed,
             raw_log_path=log_path,
         ).to_dict()
@@ -190,6 +208,7 @@ def _run_adapter_isolated(
             lane="fast",
             hits=[],
             error=str(exc),
+            error_kind="adapter_error",
             elapsed_sec=elapsed,
             raw_log_path=log_path,
         ).to_dict()

@@ -107,12 +107,13 @@ class LaneScheduler:
                             result_dict = fut.result(timeout=10)
                         except Exception as exc:
                             msg = f"worker_crash: {exc}"
-                            result.errors.append({"module": task.module_name, "error": msg})
+                            result.errors.append({"module": task.module_name, "error": msg, "error_kind": "worker_crash"})
                             result.task_results.append(TaskResult(
                                 module_name=task.module_name,
                                 lane=task.lane,
                                 hits=[],
                                 error=msg,
+                                error_kind="worker_crash",
                                 elapsed_sec=0.0,
                                 raw_log_path="",
                             ))
@@ -133,7 +134,7 @@ class LaneScheduler:
                         result.task_results.append(tr)
                         result.modules_run.append(tr.module_name)
                         if tr.error:
-                            result.errors.append({"module": tr.module_name, "error": tr.error})
+                            result.errors.append({"module": tr.module_name, "error": tr.error, "error_kind": tr.error_kind})
                             print(f"  [{tr.module_name}] ERROR: {tr.error}  ({tr.elapsed_sec:.1f}s)")
                             LaneScheduler._emit(
                                 event_callback,
@@ -172,12 +173,13 @@ class LaneScheduler:
                         task = future_map[fut]
                         fut.cancel()
                         msg = f"TIMEOUT ({int(task.worker_timeout)}s)"
-                        result.errors.append({"module": task.module_name, "error": msg})
+                        result.errors.append({"module": task.module_name, "error": msg, "error_kind": "timeout"})
                         result.task_results.append(TaskResult(
                             module_name=task.module_name,
                             lane=task.lane,
                             hits=[],
                             error=msg,
+                            error_kind="timeout",
                             elapsed_sec=float(task.worker_timeout),
                             raw_log_path="",
                         ))

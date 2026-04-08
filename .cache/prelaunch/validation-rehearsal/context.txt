@@ -1,0 +1,3 @@
+root=/Users/admin/Desktop/hanna-v3-2-clean
+python=/Users/admin/Desktop/hanna-v3-2-clean/.venv/bin/python3
+out_dir=/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal

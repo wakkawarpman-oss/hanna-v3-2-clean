@@ -1,0 +1,60 @@
+[prelaunch] Legacy wrapper inventory
+
+=== Available Adapters ===
+Name               Lane   Description
+----------------------------------------------------------------------
+amass              slow   Enumerate subdomains and ASN-linked asse
+ashok              slow   Ashok — infrastructure reconnaissance to
+avito              fast   Search Avito.ru and Yula for seller prof
+blackbird          fast   Find usernames across modern platforms u
+censys             fast   Use Censys API for hosts, certificates, 
+eyewitness         slow   Capture screenshots for discovered URLs 
+firms              slow   NASA FIRMS thermal-anomaly corroboration
+getcontact         fast   Reverse phone lookup through UA-specific
+ghunt              fast   GHunt — Google account reconnaissance.
+holehe             fast   Map an email address to services where i
+httpx_probe        fast   Probe domains/URLs and return live web s
+katana             slow   Discover URLs, endpoints, JS references,
+maryam             fast   OWASP Maryam — modular OSINT framework i
+metagoofil         slow   Collect emails and usernames leaked via 
+naabu              fast   Fast port scan for domains and IPs.
+nmap               slow   Top-ports scan with service/version dete
+nuclei             slow   Nuclei template-based vulnerability scan
+opendatabot        fast   Ukrainian business-registry (ЄДР) deanon
+reconng            slow   Execute recon-ng modules against domain/
+ru_leak            fast   Search Russian leak databases.
+satintel           fast   Satellite Intelligence + EXIF GEOINT ada
+search4faces       fast   Search4Faces — facial recognition pivot 
+shodan             fast   Query Shodan for internet-facing service
+social_analyzer    slow   Social-Analyzer — 1000+ social network u
+subfinder          fast   Enumerate passive subdomains for a root 
+ua_leak            fast   Search Ukrainian leak databases and mark
+ua_phone           fast   Reverse phone lookup through UA-specific
+vk_graph           slow   Analyze VK/OK social graph — friend list
+web_search         slow   Web search adapter — DuckDuckGo queries 
+
+=== Presets (24) ===
+  deep-ua              -> ua_leak, ua_phone, opendatabot
+  deep-ru              -> ru_leak, vk_graph, avito
+  deep-all             -> ua_leak, ua_phone, ru_leak, vk_graph, avito
+  leaks_all            -> ua_leak, ru_leak
+  milint               -> maryam, ashok, ghunt, social_analyzer, satintel, search4faces, opendatabot
+  infra                -> ashok, maryam
+  geoint               -> satintel, firms
+  social-deep          -> social_analyzer, search4faces, ghunt
+  fast-lane            -> ua_phone, ua_leak, ru_leak, ghunt, satintel, avito, maryam, search4faces, opendatabot
+  slow-lane            -> ashok, vk_graph, social_analyzer, web_search, firms
+  pd-infra-quick       -> httpx_probe, katana, nuclei, naabu
+  pd-infra-deep        -> httpx_probe, katana, nuclei, naabu
+  pd-infra             -> httpx_probe, katana, nuclei, naabu
+  pd-full              -> httpx_probe, katana, nuclei, naabu, ashok
+  person-deep          -> ua_phone, ghunt, holehe, blackbird, search4faces, social_analyzer
+  email-chain          -> holehe, ghunt, metagoofil
+  subdomain-full       -> subfinder, amass, ashok
+  port-scan            -> naabu, nmap
+  infra-deep           -> subfinder, httpx_probe, nuclei, nmap, shodan, censys
+  recon-auto-quick     -> subfinder, httpx_probe, nuclei, katana, naabu
+  recon-auto-deep      -> subfinder, httpx_probe, nuclei, katana, naabu
+  recon-auto           -> subfinder, httpx_probe, nuclei, katana, naabu
+  full-spectrum-2026   -> ua_leak, ru_leak, vk_graph, avito, ua_phone, maryam, ashok, ghunt, social_analyzer, satintel, search4faces, web_search, opendatabot, firms, nuclei, katana, httpx_probe, naabu, blackbird, holehe, censys, metagoofil, subfinder, amass, nmap, shodan, reconng, eyewitness
+  full-spectrum        -> ua_leak, ru_leak, vk_graph, avito, ua_phone, maryam, ashok, ghunt, social_analyzer, satintel, search4faces, web_search, opendatabot, firms, nuclei, katana, httpx_probe, naabu, blackbird, holehe, censys, metagoofil, subfinder, amass, nmap, shodan, reconng, eyewitness

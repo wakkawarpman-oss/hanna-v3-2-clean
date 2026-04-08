@@ -7,7 +7,7 @@ import re
 import urllib.parse
 from datetime import datetime
 
-from adapters.base import ReconAdapter, ReconHit
+from adapters.base import DependencyUnavailableError, MissingBinaryError, ReconAdapter, ReconHit
 from adapters.cli_common import run_cli
 
 
@@ -55,7 +55,10 @@ class SocialAnalyzerAdapter(ReconAdapter):
             "--metadata",
             "--output", "json",
         ]
-        proc = run_cli(cmd, timeout=self.timeout * 10, proxy=self.proxy)
+        try:
+            proc = run_cli(cmd, timeout=self.timeout * 10, proxy=self.proxy)
+        except (MissingBinaryError, DependencyUnavailableError):
+            return None
         if proc and proc.returncode == 0 and proc.stdout.strip():
             return self._parse_sa_output(username, proc.stdout.strip())
         return None

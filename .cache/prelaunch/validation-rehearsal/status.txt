@@ -1,0 +1,8 @@
+PASS Legacy wrapper inventory
+PASS Root UI wrapper help
+PASS Canonical inventory JSON
+PASS Canonical preflight JSON
+PASS Summary schema smoke
+PASS Focused regression pack
+PASS Optional full rollout rehearsal
+PASS Optional rehearsal artifact verification

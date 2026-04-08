@@ -30,16 +30,21 @@ from tui.state import (
 )
 
 
+STARTUP_BANNER_TEXT = "HANNA cockpit active. Enter commands in hanna > below. Press / to refocus input. Press q to quit."
+STARTUP_NOTIFY_TEXT = "You are inside HANNA. Type commands in hanna > below. Press / if focus leaves the input."
+HELP_NOTIFICATION_TEXT = "Keys: / focus command line, 1-4 switch views, e edit profile, m manual, a aggregate, c chain, r refresh readiness, x clear timeline, v toggle noise, q quit"
+
+
 class HannaTUIApp(App[None]):
     CSS = """
     App {
-        background: #05070b;
-        color: #d9f8ff;
+        background: #07060d;
+        color: #e8f7ff;
     }
 
     Screen {
-        background: #05070b;
-        color: #d9f8ff;
+        background: #07060d;
+        color: #e8f7ff;
     }
 
     #topbar {
@@ -48,16 +53,26 @@ class HannaTUIApp(App[None]):
         border: tall #19f9ff;
         color: #19f9ff;
         padding: 0 1;
-        background: #081019;
+        background: #140b18;
     }
 
     #command-bar {
         dock: bottom;
         height: 3;
-        border: tall #19f9ff;
-        background: #081019;
+        border: tall #20d5ff;
+        background: #0b1018;
         padding: 0 1;
         align: left middle;
+    }
+
+    #startup-banner {
+        dock: bottom;
+        height: 2;
+        border: tall #f1e6a8;
+        background: #100c14;
+        color: #f1e6a8;
+        padding: 0 1;
+        content-align: left middle;
     }
 
     #command-prompt {
@@ -69,14 +84,17 @@ class HannaTUIApp(App[None]):
     #command-input {
         width: 1fr;
         margin-right: 1;
-        background: #05070b;
-        color: #d9f8ff;
-        border: round #19f9ff;
+        background: #09060d;
+        color: #e8f7ff;
+        border: round #20d5ff;
     }
 
     .export-button {
         margin-right: 1;
         min-width: 16;
+        background: #15101b;
+        color: #f2f1f5;
+        border: round #db7cff;
     }
 
     #command-status {
@@ -89,6 +107,7 @@ class HannaTUIApp(App[None]):
     BINDINGS = [
         ("q", "quit", "Quit"),
         ("?", "help", "Help"),
+        ("/", "focus_command", "Command"),
         ("1", "view_overview", "Overview"),
         ("2", "view_pipeline", "Pipeline"),
         ("3", "view_readiness", "Readiness"),
@@ -117,6 +136,7 @@ class HannaTUIApp(App[None]):
 
     def compose(self) -> ComposeResult:
         yield Static(self._render_topbar(), id="topbar")
+        yield Static(self._render_startup_banner(), id="startup-banner")
         with Horizontal(id="command-bar"):
             yield Static("hanna >", id="command-prompt")
             yield Input(placeholder='run --mode full-spectrum --target "Ivan"', id="command-input")
@@ -130,6 +150,8 @@ class HannaTUIApp(App[None]):
             self.install_screen(screen, name=name)
             screen.update_state(self.session_state)
         self.push_screen("overview")
+        self._focus_command_input()
+        self.notify(STARTUP_NOTIFY_TEXT, title="HANNA")
         self._start_mock_lane_stream()
 
     def action_view_overview(self) -> None:
@@ -175,7 +197,15 @@ class HannaTUIApp(App[None]):
         self._refresh_views()
 
     def action_help(self) -> None:
-        self.notify("Keys: 1-4 switch views, e edit profile, m manual, a aggregate, c chain, r refresh readiness, x clear timeline, v toggle noise, q quit", title="HANNA")
+        self.notify(HELP_NOTIFICATION_TEXT, title="HANNA")
+
+    def action_focus_command(self) -> None:
+        self._focus_command_input()
+
+    def _focus_command_input(self) -> None:
+        if not self.is_mounted:
+            return
+        self.query_one("#command-input", Input).focus()
 
     def _render_topbar(self) -> str:
         tor_status = "TOR" if self.session_state.execution.proxy and "socks" in self.session_state.execution.proxy else "DIRECT"
@@ -183,13 +213,16 @@ class HannaTUIApp(App[None]):
         total = ready + len(self.session_state.readiness.secrets_missing)
         db_size = _human_size(self.session_state.ops.db_path)
         return (
-            f"HANNA v3.2.0 | Intelligence Control Plane | TOR={tor_status} | API keys={ready}/{total} | DB={db_size}\n"
-            f"View={self.session_state.current_view} | Mode={self.session_state.execution.default_mode} | Runs root={self.session_state.ops.runs_root}\n"
+            f"HANNA // OSINT & КІБЕРРОЗВІДКА | TOR={tor_status} | keys={ready}/{total} | DB={db_size}\n"
+            f"View={self.session_state.current_view} | Mode={self.session_state.execution.default_mode} | Runs={self.session_state.ops.runs_root}\n"
             f"{self._render_compact_chain_status()}"
         )
 
     def _render_command_status(self) -> str:
         return f"[{self.session_state.prompt_status.upper()}]"
+
+    def _render_startup_banner(self) -> str:
+        return STARTUP_BANNER_TEXT
 
     def _render_compact_chain_status(self) -> str:
         total = len(self.session_state.pipeline.modules)
@@ -288,6 +321,7 @@ class HannaTUIApp(App[None]):
             return
         command = event.value.strip()
         event.input.value = ""
+        event.input.focus()
         if not command:
             return
         append_activity(self.session_state, "info", f"$ {command}")

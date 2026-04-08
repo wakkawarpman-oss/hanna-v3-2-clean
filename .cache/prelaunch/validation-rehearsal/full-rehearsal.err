@@ -1,0 +1,4 @@
+2026-04-08 06:43:23,594 [hanna.runners.chain] INFO: Ingest: 28 ok, 35 rejected, 11 skipped
+2026-04-08 06:43:23,597 [hanna.runners.chain] INFO: Entity resolution: 5 cluster(s)
+nuclei scan timed out for target: https://example.com
+2026-04-08 06:44:51,884 [hanna.runners.chain] INFO: Dossier: /Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/full-rehearsal.html

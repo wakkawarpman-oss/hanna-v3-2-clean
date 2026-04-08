@@ -1,0 +1,1 @@
+{"target_name":"example.com","mode":"chain","queued":4,"completed":4,"failed":0,"timed_out":0,"skipped_missing_credentials":0,"missing_binary":0,"dependency_unavailable":0,"worker_crash":0,"exports":["json","metadata","stix","zip"],"report_mode":"shareable"}

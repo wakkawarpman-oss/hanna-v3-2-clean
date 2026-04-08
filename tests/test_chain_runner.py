@@ -100,3 +100,36 @@ def test_chain_runner_passes_explicit_report_mode(monkeypatch, tmp_path):
     )
 
     assert render_calls == ["internal"]
+
+
+def test_chain_runner_exposes_runtime_summary(monkeypatch, tmp_path):
+    from discovery_engine import DiscoveryEngine
+
+    monkeypatch.setattr(DiscoveryEngine, "resolve_entities", lambda self: [])
+    monkeypatch.setattr(DiscoveryEngine, "ingest_metadata", lambda self, _p: {"status": "skipped"})
+    monkeypatch.setattr(DiscoveryEngine, "get_stats", lambda self: {"ok": True})
+    monkeypatch.setattr(DiscoveryEngine, "render_graph_report", lambda self, output_path, redaction_mode="shareable": Path(output_path).write_text("ok", encoding="utf-8"))
+    monkeypatch.setattr(
+        DiscoveryEngine,
+        "run_deep_recon",
+        lambda self, **_kwargs: ({"modules_run": ["ua_leak", "ghunt"], "new_observables": 0, "new_phones": [], "new_emails": [], "errors": [{"module": "ghunt", "error": "missing credentials: GHUNT_CREDS_DIR", "error_kind": "missing_credentials"}]}, None),
+    )
+
+    exports_dir = tmp_path / "exports"
+    exports_dir.mkdir(parents=True, exist_ok=True)
+    out = tmp_path / "dossier.html"
+
+    runner = ChainRunner(db_path=str(tmp_path / "chain.db"))
+    result = runner.run(
+        exports_dir=str(exports_dir),
+        target_name="target",
+        modules=["ua_leak", "ghunt"],
+        output_path=str(out),
+        report_mode="strict",
+    )
+
+    summary = result.runtime_summary()
+    assert summary["queued"] == 2
+    assert summary["completed"] == 1
+    assert summary["skipped_missing_credentials"] == 1
+    assert summary["report_mode"] == "strict"

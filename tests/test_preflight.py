@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from preflight import format_preflight_report, has_hard_failures, run_preflight
+from preflight import format_preflight_report, has_hard_failures, preflight_summary, run_preflight
 
 
 def test_preflight_returns_named_checks():
@@ -39,3 +39,12 @@ def test_preflight_can_filter_getcontact_alias_live_requirements():
     checks = run_preflight(modules=["getcontact"])
     names = {check.name for check in checks}
     assert names == {"telegram_bot_token", "getcontact_token", "getcontact_aes_key"}
+
+
+def test_preflight_summary_returns_counts_and_checks():
+    checks = run_preflight(modules=["ua_phone"])
+    payload = preflight_summary(checks, modules=["ua_phone"])
+
+    assert payload["modules"] == ["ua_phone"]
+    assert payload["summary"]["total"] == len(checks)
+    assert len(payload["checks"]) == len(checks)

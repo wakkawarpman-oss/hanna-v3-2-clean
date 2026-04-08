@@ -76,6 +76,7 @@ class AggregateRunner:
                 lane=tr.lane,
                 hits=tr.hits,
                 error=tr.error,
+                error_kind=tr.error_kind,
                 elapsed_sec=tr.elapsed_sec,
                 log_path=tr.raw_log_path,
             ))
@@ -96,4 +97,5 @@ class AggregateRunner:
             errors=errors,
             started_at=started,
             finished_at=datetime.now().isoformat(),
+            extra={"queued_modules": module_names},
         )

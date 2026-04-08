@@ -1,0 +1,36 @@
+[prelaunch] Root UI wrapper help
+usage: hanna tui [-h] [--target TARGET] [--modules MODULES]
+                 [--run-mode {idle,manual,aggregate,chain}] [--module MODULE]
+                 [--phones PHONES] [--usernames USERNAMES] [--workers WORKERS]
+                 [--db DB] [--exports-dir EXPORTS_DIR] [--output OUTPUT]
+                 [--verify] [--verify-all] [--verify-content] [--proxy PROXY]
+                 [--leak-dir LEAK_DIR] [--no-preflight]
+                 [--export-formats EXPORT_FORMATS] [--export-dir EXPORT_DIR]
+                 [--report-mode {internal,shareable,strict}] [--plain]
+
+options:
+  -h, --help            show this help message and exit
+  --target TARGET       Optional target label to preload into the cockpit
+  --modules MODULES     Comma-separated modules or preset name for cockpit
+                        context
+  --run-mode {idle,manual,aggregate,chain}
+  --module MODULE       Manual-mode adapter name
+  --phones PHONES       Comma-separated known phones
+  --usernames USERNAMES
+                        Comma-separated known usernames
+  --workers WORKERS
+  --db DB
+  --exports-dir EXPORTS_DIR
+  --output OUTPUT       Optional HTML dossier path for chain mode
+  --verify
+  --verify-all
+  --verify-content
+  --proxy PROXY
+  --leak-dir LEAK_DIR
+  --no-preflight
+  --export-formats EXPORT_FORMATS
+                        Comma-separated export formats: json,metadata,stix,zip
+  --export-dir EXPORT_DIR
+                        Directory for machine-readable exports
+  --report-mode {internal,shareable,strict}
+  --plain               Reserve a plain-mode flag for low-capability terminals

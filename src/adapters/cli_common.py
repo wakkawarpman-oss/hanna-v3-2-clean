@@ -7,6 +7,7 @@ import subprocess
 from shutil import which
 from pathlib import Path
 
+from adapters.base import DependencyUnavailableError, MissingBinaryError
 from config import CLI_TIMEOUT_SAFETY_MARGIN, MODULE_WORKER_TIMEOUT, REQUIRE_PROXY, WORKER_TIMEOUT
 
 
@@ -32,7 +33,9 @@ def _resolve_executable(exe: str, path_value: str) -> str:
     if not exe or "/" in exe:
         return exe
     resolved = which(exe, path=path_value)
-    return resolved or exe
+    if not resolved:
+        raise MissingBinaryError(exe)
+    return resolved
 
 
 def resolve_cli_timeout(module_name: str, adapter_timeout: float, multiplier: float) -> float:
@@ -104,6 +107,8 @@ def run_cli(
             stdout=exc.stdout or "",
             stderr=((exc.stderr or "") + "\n[timeout]"),
         )
-    except (FileNotFoundError, OSError):
-        return None
+    except FileNotFoundError as exc:
+        raise MissingBinaryError(final_cmd[0] if final_cmd else "unknown") from exc
+    except OSError as exc:
+        raise DependencyUnavailableError(str(exc)) from exc
     return None

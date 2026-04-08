@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import os
+import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
 
 from adapters.base import ReconAdapter, ReconHit
 from adapters.cli_common import resolve_cli_timeout, run_cli
+from config import EXPORTS_DIR
 
 
 class EyewitnessAdapter(ReconAdapter):
@@ -53,6 +55,8 @@ class EyewitnessAdapter(ReconAdapter):
         if chrome_bin:
             env["EYEWITNESS_CHROME_BIN"] = chrome_bin
         env.setdefault("PYTHONUNBUFFERED", "1")
+        artifact_stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
+        persistent_root = EXPORTS_DIR / "artifacts" / f"eyewitness-{artifact_stamp}"
         with tempfile.TemporaryDirectory(prefix="hanna-eyewitness-") as tmpdir:
             url_file = Path(tmpdir) / "urls.txt"
             out_dir = Path(tmpdir) / "out"
@@ -88,7 +92,12 @@ class EyewitnessAdapter(ReconAdapter):
             report = out_dir / "report.html"
             if not report.exists():
                 return []
-            html = report.read_text(encoding="utf-8", errors="replace")
+            persistent_root.parent.mkdir(parents=True, exist_ok=True)
+            if persistent_root.exists():
+                shutil.rmtree(persistent_root)
+            shutil.copytree(out_dir, persistent_root)
+            persistent_report = persistent_root / "report.html"
+            html = persistent_report.read_text(encoding="utf-8", errors="replace")
             hits: list[ReconHit] = []
             for url in urls:
                 if url in html:
@@ -98,8 +107,11 @@ class EyewitnessAdapter(ReconAdapter):
                         source_module=self.name,
                         source_detail="eyewitness:screenshot",
                         confidence=0.52,
-                        raw_record={"report": str(report)},
+                        raw_record={
+                            "report": str(persistent_report),
+                            "artifact_root": str(persistent_root),
+                        },
                         timestamp=datetime.now().isoformat(),
-                        cross_refs=[str(report)],
+                        cross_refs=[str(persistent_report), str(persistent_root)],
                     ))
             return hits

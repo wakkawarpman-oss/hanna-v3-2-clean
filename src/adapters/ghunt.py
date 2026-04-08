@@ -7,7 +7,7 @@ import re
 import urllib.parse
 from datetime import datetime
 
-from adapters.base import ReconAdapter, ReconHit, extract_validated_phones
+from adapters.base import DependencyUnavailableError, MissingBinaryError, ReconAdapter, ReconHit, extract_validated_phones
 from adapters.cli_common import run_cli
 
 
@@ -67,7 +67,10 @@ class GHuntAdapter(ReconAdapter):
         cmd = [ghunt_bin, "email", email]
         if creds:
             cmd += ["--creds", creds]
-        proc = run_cli(cmd, timeout=self.timeout * 5, proxy=self.proxy)
+        try:
+            proc = run_cli(cmd, timeout=self.timeout * 5, proxy=self.proxy)
+        except (MissingBinaryError, DependencyUnavailableError):
+            return None
         if proc and proc.returncode == 0 and proc.stdout.strip():
             return proc.stdout.strip()
         return None

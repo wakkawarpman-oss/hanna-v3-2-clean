@@ -1,0 +1,16 @@
+[prelaunch] Focused regression pack
+============================= test session starts ==============================
+platform darwin -- Python 3.11.15, pytest-9.0.3, pluggy-1.6.0
+rootdir: /Users/admin/Desktop/hanna-v3-2-clean
+configfile: pytest.ini
+plugins: cov-7.1.0
+collected 39 items
+
+tests/test_exporters.py .......                                          [ 17%]
+tests/test_legacy_entrypoints.py ...                                     [ 25%]
+tests/test_run_discovery.py ...                                          [ 33%]
+tests/test_cli_contracts.py ........................                     [ 94%]
+tests/test_integration_runtime_smokes.py .                               [ 97%]
+tests/test_discovery_engine.py .                                         [100%]
+
+============================== 39 passed in 6.53s ==============================

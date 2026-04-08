@@ -16,6 +16,13 @@ class PreflightCheck:
     status: str
     detail: str
 
+    def to_dict(self) -> dict[str, str]:
+        return {
+            "name": self.name,
+            "status": self.status,
+            "detail": self.detail,
+        }
+
 
 MODULE_CHECKS: dict[str, set[str]] = {
     "ua_phone": {"telegram_bot_token", "getcontact_token", "getcontact_aes_key"},
@@ -146,6 +153,20 @@ def run_preflight(modules: list[str] | None = None) -> list[PreflightCheck]:
 
 def has_hard_failures(checks: list[PreflightCheck]) -> bool:
     return any(check.status == "fail" for check in checks)
+
+
+def preflight_summary(checks: list[PreflightCheck], modules: list[str] | None = None) -> dict[str, object]:
+    return {
+        "modules": modules or [],
+        "checks": [check.to_dict() for check in checks],
+        "summary": {
+            "total": len(checks),
+            "ok": sum(1 for check in checks if check.status == "ok"),
+            "warn": sum(1 for check in checks if check.status == "warn"),
+            "fail": sum(1 for check in checks if check.status == "fail"),
+            "has_hard_failures": has_hard_failures(checks),
+        },
+    }
 
 
 def format_preflight_report(checks: list[PreflightCheck]) -> str:

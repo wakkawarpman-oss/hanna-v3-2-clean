@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 """
-run_discovery.py — Run the DiscoveryEngine on all legacy exports.
+run_discovery.py — Legacy DiscoveryEngine entrypoint.
 
 Usage:
     python3 run_discovery.py [--exports-dir DIR] [--output HTML_PATH] [--db DB_PATH]
@@ -10,6 +10,10 @@ Usage:
 Deep recon mode:
     python3 run_discovery.py --target "Hanna Dosenko" --modules "ua_leak,ru_leak,vk_graph" --verify
     python3 run_discovery.py --target "Hanna Dosenko" --mode deep-all --verify
+
+Preferred operator path:
+    ./scripts/hanna list
+    ./scripts/hanna chain --target "Hanna Dosenko" --modules full-spectrum
 """
 import argparse
 import json
@@ -23,6 +27,11 @@ from discovery_engine import DiscoveryEngine
 from registry import MODULE_PRESETS, MODULES, MODULE_LANE
 
 log = logging.getLogger("hanna.run_discovery")
+
+LEGACY_WARNING = (
+    "[legacy] run_discovery.py is kept for compatibility. "
+    "Prefer './scripts/hanna' or 'python3 src/cli.py' for operator workflows."
+)
 
 
 def _parse_targets_file(path: str) -> list[dict[str, list[str] | str]]:
@@ -64,7 +73,10 @@ def _parse_targets_file(path: str) -> list[dict[str, list[str] | str]]:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run recursive discovery engine on legacy OSINT exports")
+    parser = argparse.ArgumentParser(
+        description="Run recursive discovery engine on legacy OSINT exports",
+        epilog="Legacy compatibility path. Prefer './scripts/hanna list|chain|aggregate|manual|preflight'.",
+    )
     parser.add_argument("--exports-dir", default=str(RUNS_ROOT / "exports"))
     parser.add_argument("--output", default=None, help="Output HTML path")
     parser.add_argument("--db", default=str(DEFAULT_DB_PATH))
@@ -83,6 +95,7 @@ def main():
     parser.add_argument("--phone-resolve", action="store_true", help="Run live phone resolution for known numbers")
     parser.add_argument("--proxy", default=None, help="SOCKS5 proxy for deep recon (e.g. socks5h://127.0.0.1:9050)")
     parser.add_argument("--report-mode", choices=["internal", "shareable", "strict"], default="shareable", help="HTML dossier redaction level")
+    parser.add_argument("--no-legacy-warning", action="store_true", help="Suppress compatibility warning for scripted legacy usage")
 
     args = parser.parse_args()
 
@@ -90,6 +103,9 @@ def main():
         level=logging.INFO,
         format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     )
+
+    if not args.no_legacy_warning:
+        print(LEGACY_WARNING, file=sys.stderr)
 
     if args.list_modules:
         print("\n=== Available Adapters ===")

@@ -1,0 +1,4 @@
+usage: hanna [-h]
+             {chain,ch,aggregate,agg,manual,man,tui,ui,list,ls,preflight,pf,reset,rs,summarize,sum}
+             ...
+hanna: error: unrecognized arguments: --output-file /Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/20260408T060155/preflight.json

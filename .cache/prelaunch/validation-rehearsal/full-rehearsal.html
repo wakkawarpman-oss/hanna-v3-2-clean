@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang='uk'>
+<head>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>Gonzo Evidence Pack v3.0.2 — Ha**********o</title>
+<style>
+:root {--bg:#f1f4f3;--card:#fff;--border:#d3dbd6;--accent:#1a6b56;--accent2:#112b45;--text:#171f2b;--muted:#5c6e64;--red:#b84c2e;--green:#2a7d3f;--yellow:#b8860b;}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI','Noto Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.55}
+.wrap{max-width:1280px;margin:0 auto;padding:24px 20px 60px}
+.hero{background:linear-gradient(135deg,var(--accent2),var(--accent) 65%,#99622d);color:#fff;border-radius:18px;padding:28px 26px}
+.hero h1{margin:0;font-size:24px;letter-spacing:.5px}
+.hero-sub{opacity:.85;font-size:13px;margin:4px 0 0}
+.hero-grid{display:grid;grid-template-columns:1.4fr .6fr;gap:14px;align-items:start}
+.hero-meta{text-align:right;font-size:12px;opacity:.8}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-top:16px}
+.card{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px;text-align:center}
+.card .k{font-size:10px;text-transform:uppercase;opacity:.72}
+.card .v{font-size:24px;font-weight:800;margin-top:1px}
+.section{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-top:14px;overflow:hidden}
+.section h2{margin:0;padding:12px 16px;background:#eaf2ed;border-bottom:1px solid var(--border);font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--accent2)}
+.pad{padding:14px 16px}
+.exec p{margin:4px 0;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:#f4f7f5;font-weight:600;font-size:11px;text-transform:uppercase;color:var(--muted)}
+code{background:#e8ecea;padding:1px 5px;border-radius:4px;font-size:12px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;word-break:break-all}
+a{color:var(--accent)}
+.badge{display:inline-block;padding:2px 8px;border-radius:7px;font-size:11px;font-weight:600;margin:1px 3px 1px 0;background:#e0ede7;color:var(--accent2)}
+.badge-phone{background:#dde8f7;color:#1a3a6b}.badge-email{background:#f0e6fa;color:#5a2d82}.badge-username{background:#e6f0e8;color:#1a5a2e}.badge-domain{background:#fce6d5;color:#7a3d1a}.badge-url{background:#f5f5dc;color:#444}.badge-ok{background:#d4edda;color:var(--green)}.badge-warn{background:#fff3cd;color:#856404}.badge-dead{background:#f8d7da;color:var(--red)}
+.platform{font-weight:600;color:var(--accent);text-transform:capitalize}
+.edge-reason{font-style:italic;color:var(--muted)}
+details{margin-bottom:6px} summary{cursor:pointer;font-weight:600;padding:3px 0}
+.hint{color:var(--muted);font-size:12px}
+.graph-grid{display:flex;flex-wrap:wrap;gap:8px;padding:8px 0}
+.gnode{padding:8px 14px;border-radius:10px;font-size:13px;font-weight:500;border:2px solid var(--border);background:#fafcfb}
+.gnode-phone{border-color:#4a90d9;background:#eaf1fb}.gnode-email{border-color:#9b59b6;background:#f4ecf9}.gnode-username{border-color:var(--green);background:#e8f5e9}.gnode-domain{border-color:#e67e22;background:#fdf2e5}.gnode-url{border-color:#95a5a6;background:#f9f9f9}
+.identity-anchor{text-align:center;padding:16px;margin-bottom:12px}
+.identity-anchor .name{font-size:22px;font-weight:800;color:var(--accent2)}
+.identity-anchor .sub{font-size:13px;color:var(--muted)}
+.tier-badge{display:inline-block;padding:1px 6px;border-radius:5px;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:4px}
+.tier-confirmed{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+.tier-probable{background:#fff3cd;color:#856404;border:1px solid #ffeaa7}
+.tier-unverified{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+.tier-rejected{background:#eceff3;color:#4b5563;border:1px solid #cfd8e3}
+.lane-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.lane-card{border:1px solid var(--border);border-radius:12px;padding:14px;background:linear-gradient(180deg,#fff, #f8fbf9)}
+.lane-fast{border-top:5px solid #228b5a}
+.lane-slow{border-top:5px solid #8c5a2b}
+.lane-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.lane-head h3{margin:0;font-size:16px;color:var(--accent2)}
+.lane-snr{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.lane-snr-badge{display:inline-block;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.25px}
+.lane-snr-confirmed{background:#dff3e5;color:#1f6a35}
+.lane-snr-rejected{background:#eceff3;color:#55606c}
+.lane-snr-dead{background:#f6e6dc;color:#8b4f2a}
+.lane-metrics{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;font-size:12px;color:var(--muted)}
+.lane-metrics span{background:#eef3f0;border-radius:999px;padding:4px 8px}
+.lane-modules,.lane-highlights,.lane-errors{margin-top:10px}
+.lane-highlights ul,.lane-errors ul{margin:8px 0 0 18px;padding:0}
+.lane-evidence-block{margin-top:8px;padding:10px 12px;border-radius:10px}
+.lane-evidence-confirmed{background:#eef8f1;border-left:4px solid var(--green)}
+.lane-evidence-confirmed ul{margin:8px 0 0 18px;padding:0}
+.lane-dead-ends{margin-top:10px;border:1px dashed #c8d0d8;border-radius:10px;background:#f5f7f8}
+.lane-dead-ends summary{padding:10px 12px;color:#5f6b76;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.lane-muted-list{margin:0;padding:0 12px 12px 30px;opacity:.6;font-size:12px}
+.lane-muted-list li{margin:6px 0}
+.badge-lane-module{background:#edf3f7;color:#23405e}
+@media(max-width:980px){.hero-grid,.cards{grid-template-columns:1fr}.cards{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class='wrap'>
+
+<div class='hero'>
+  <div class='hero-grid'>
+    <div>
+      <h1>GONZO EVIDENCE PACK v3.0.2</h1>
+      <p class='hero-sub'>Phase 8 Atomic Event-Driven Discovery: verification-first architecture with lane-aware deep recon, fast tactical signal, slow strategic depth, and explicit signal-to-noise control.</p>
+    </div>
+    <div class='hero-meta'>Generated: 2026-04-08 06:44:51<br>Engine: discovery_engine v3.0.2<br>Clusters: 7</div>
+  </div>
+  <div class='cards'>
+    <div class='card'><div class='k'>Sources</div><div class='v'>28</div></div>
+    <div class='card'><div class='k'>Confirmed</div><div class='v' style='color:#2a7d3f'>8</div></div>
+    <div class='card'><div class='k'>Probable</div><div class='v' style='color:#b8860b'>0</div></div>
+    <div class='card'><div class='k'>Unverified</div><div class='v' style='color:#b84c2e'>2</div></div>
+    <div class='card'><div class='k'>Rejected</div><div class='v'>35</div></div>
+    <div class='card'><div class='k'>Profiles</div><div class='v'>736</div></div>
+    <div class='card'><div class='k'>Pivots</div><div class='v'>2</div></div>
+  </div>
+</div>
+
+<section class='section'><h2>📋 Executive Summary</h2><div class='pad exec'>
+  <p><strong>Primary Identity:</strong> Ha**********o</p><p><strong>Phone(s):</strong> +380*******98</p><p><strong>Username(s):</strong> AN*********O, Ha**********o, ha*********o</p><p><strong>Cluster confidence:</strong> 90% (4 confirmed, 0 probable, 0 unverified)</p><p><strong>Social profiles found:</strong> 254</p>
+  <p style='margin-top:10px'><strong>Source coverage:</strong> <span class='badge badge-warn'>dnsenum: 0/1 OK, 0 obs</span> <span class='badge badge-warn'>domain: 20/25 OK, 0 obs</span> <span class='badge badge-ok'>health: 9/9 OK, 0 obs</span> <span class='badge badge-warn'>oneshot_batch: 4/5 OK, 0 obs</span> <span class='badge badge-warn'>phone: 16/18 OK, 49 obs</span> <span class='badge badge-warn'>unknown: 0/1 OK, 0 obs</span> <span class='badge badge-ok'>username: 13/13 OK, 9 obs</span> <span class='badge badge-ok'>whatweb: 2/2 OK, 0 obs</span> </p>
+  <p class='hint'>v2 verification-first resolution across 28 tool outputs. 35 target(s) filtered (hashes, placeholders, type mismatches).</p>
+</div></section>
+
+<section class='section'><h2>🏎️ Fast / Slow Lane Summary</h2><div class='pad'>
+  <p class='hint'>Operational split of deep recon outputs into hot-path tactical findings and cold-path strategic expansion.</p>
+  <p class='hint'>Latest deep recon artifact: <span class='mono'>deep_recon_20260408_064451.json</span> (2026-04-08T06:43:23.598507 → 2026-04-08T06:44:51.863034)</p>
+  <p class='hint'>Legend: <span class='lane-snr-badge lane-snr-confirmed' title='Confirmed: corroborated or validated evidence ready for analyst attention.'>confirmed</span> <span class='lane-snr-badge lane-snr-rejected' title='Rejected: filtered false positives, such as platform artefacts or invalid profile hits.'>rejected</span> <span class='lane-snr-badge lane-snr-dead' title='Dead-end: leads that did not confirm and currently terminate without escalation.'>dead-end</span></p>
+  <div class='lane-grid'>
+    <div class='lane-card lane-fast'><div class='lane-head'><div><h3>Fast Lane</h3><div class='lane-snr'><span class='lane-snr-badge lane-snr-confirmed' title='Confirmed: corroborated or validated evidence ready for analyst attention.'>0 confirmed</span><span class='lane-snr-badge lane-snr-rejected' title='Rejected: filtered false positives, such as platform artefacts or invalid profile hits.'>0 rejected</span><span class='lane-snr-badge lane-snr-dead' title='Dead-end: leads that did not confirm and currently terminate without escalation.'>2 dead-end</span></div><p class='hint'>Hot-path pivots, low-noise surface acquisition.</p></div><div class='lane-metrics'><span><strong>2</strong> modules</span><span><strong>0</strong> raw hits</span><span><strong>2</strong> dossier observables</span><span><strong>0</strong> faults</span></div></div><div class='lane-modules'><strong>Modules run:</strong> <span class='badge badge-lane-module'>httpx_probe</span> <span class='badge badge-lane-module'>naabu</span></div><div class='lane-highlights'><strong>Highlights:</strong><ul><li><span class='badge badge-url'>url</span> <code>https://e******example.com</code> <span class='tier-badge tier-unverified'>UNVERIFIED</span></li><li><span class='badge badge-url'>url</span> <code>https://e******example.com | status=200 | title=example domain | tech=cloudflare</code> <span class='tier-badge tier-unverified'>UNVERIFIED</span></li></ul></div></div><div class='lane-card lane-slow'><div class='lane-head'><div><h3>Slow Lane</h3><div class='lane-snr'><span class='lane-snr-badge lane-snr-confirmed' title='Confirmed: corroborated or validated evidence ready for analyst attention.'>0 confirmed</span><span class='lane-snr-badge lane-snr-rejected' title='Rejected: filtered false positives, such as platform artefacts or invalid profile hits.'>0 rejected</span><span class='lane-snr-badge lane-snr-dead' title='Dead-end: leads that did not confirm and currently terminate without escalation.'>0 dead-end</span></div><p class='hint'>Deep infrastructure, archive, and wide-network enumeration.</p></div><div class='lane-metrics'><span><strong>2</strong> modules</span><span><strong>0</strong> raw hits</span><span><strong>0</strong> dossier observables</span><span><strong>0</strong> faults</span></div></div><div class='lane-modules'><strong>Modules run:</strong> <span class='badge badge-lane-module'>katana</span> <span class='badge badge-lane-module'>nuclei</span></div><div class='lane-highlights'><strong>Highlights:</strong><ul><li class='hint'>No lane-correlated findings registered in this dossier.</li></ul></div></div>
+  </div>
+</div></section>
+
+<section class='section'><h2>🎯 Identity Anchor</h2><div class='pad'>
+  <div class='identity-anchor'><div class='name'>Ha**********o</div><div class='sub'>Person ID: <code>3e188a8c-93e...</code> Confidence: 90% 4 confirmed, 0 probable, 0 unverified</div></div>
+  <div class='graph-grid'>
+    <div class='gnode gnode-phone tier-confirmed'>📱 +380*******98 <span class='tier-badge tier-confirmed'>CONFIRMED</span></div>
+<div class='gnode gnode-username tier-confirmed'>👤 AN*********O <span class='tier-badge tier-confirmed'>CONFIRMED</span></div>
+<div class='gnode gnode-username tier-confirmed'>👤 Ha**********o <span class='tier-badge tier-confirmed'>CONFIRMED</span></div>
+<div class='gnode gnode-username tier-confirmed'>👤 ha*********o <span class='tier-badge tier-confirmed'>CONFIRMED</span></div>
+
+  </div>
+</div></section>
+
+<section class='section'><h2>🔗 Entity Link Graph</h2><div class='pad'>
+  <p class='hint'>Links between observables — only applied when at least one side is confirmed/probable.</p>
+  <table><tr><th>Observable A</th><th>Link Reason</th><th>Observable B</th><th>Confidence</th></tr>
+  <tr><td>AN*********O</td><td class='edge-reason'>name match</td><td>Ha**********o</td><td>60%</td></tr>
+<tr><td>AN*********O</td><td class='edge-reason'>name match</td><td>ha*********o</td><td>60%</td></tr>
+<tr><td>Ha**********o</td><td class='edge-reason'>name match</td><td>ha*********o</td><td>60%</td></tr>
+<tr><td>+380*******98</td><td class='edge-reason'>same pipeline run</td><td>Ha**********o</td><td>45%</td></tr>
+
+  </table>
+</div></section>
+
+<section class='section'><h2>🌐 Social Profiles (254)</h2><div class='pad'>
+  <p class='hint'>Profile URLs discovered by sherlock/maigret. Status: VERIFIED (HTTP 200 + content), SOFT (HTTP 200, low content), DEAD (4xx/5xx/timeout), UNCHECKED (not yet verified).</p>
+  <table><tr><th>Platform</th><th>URL</th><th>Status</th></tr>
+  <tr><td class='platform'>1001mem</td><td><code>http://1******1001mem.ru/H**************Hanna%20Dosenko</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>1001mem</td><td><code>http://1******1001mem.ru/h***********hannadosenko</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>aktualno</td><td><code>http://a*******aktualno.lv/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>apelmon</td><td><code>http://a******apelmon.o*od.ua/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>bbs</td><td><code>http://b**bbs.e****evony.com/m*********member.php</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>bbs</td><td><code>http://b**bbs.e****evony.com/m*********member.php</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>boxing</td><td><code>http://b*****boxing.ru/f****forum/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>boxing</td><td><code>http://b*****boxing.ru/f****forum/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>chan4chan</td><td><code>http://c********chan4chan.com/p******profile/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>cs-strikez</td><td><code>http://c*********cs-strikez.org/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>forum-mil</td><td><code>http://f********forum-mil.ru/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>forum</td><td><code>http://f****forum.c***********caravelgames.com/m*********member.php</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>forum</td><td><code>http://f****forum.c***********caravelgames.com/m*********member.php</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>forum</td><td><code>http://f****forum.q*****quake2.c**com.ru/p**********profile.php</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>forum</td><td><code>http://f****forum.q*****quake2.c**com.ru/p**********profile.php</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>forum</td><td><code>http://f****forum.u****u-hiv.ru/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>forums</td><td><code>http://f*****forums.b**********bulbagarden.net/m******members</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>forums</td><td><code>http://f*****forums.b**********bulbagarden.net/m******members</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>forums</td><td><code>http://f*****forums.v********vkmonline.com/m*********member.php</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>forums</td><td><code>http://f*****forums.v********vkmonline.com/m*********member.php</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>gcup</td><td><code>http://g***gcup.ru/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>intoclassics</td><td><code>http://i***********intoclassics.net/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>izmailonline</td><td><code>http://i***********izmailonline.com/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>kazamuza</td><td><code>http://k*******kazamuza.net/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>mednolit</td><td><code>http://m*******mednolit.ru/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>mikele-loconte</td><td><code>http://m*************mikele-loconte.ru/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>naruto-base</td><td><code>http://n**********naruto-base.tv/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>phrack</td><td><code>http://p*****phrack.org/a**************************author_Hanna%20Dosenko.html</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>phrack</td><td><code>http://p*****phrack.org/a***********************author_hannadosenko.html</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>pinboard</td><td><code>http://p*******pinboard.in/u*************u:hannadosenko</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>porschec</td><td><code>http://p*******porschec.ru/m*********member.php</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>porschec</td><td><code>http://p*******porschec.ru/m*********member.php</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>relasko</td><td><code>http://r******relasko.ru/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>rugby-forum</td><td><code>http://r**********rugby-forum.ru/p**********polzovateli/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>rugby-forum</td><td><code>http://r**********rugby-forum.ru/p**********polzovateli/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>sa-mp</td><td><code>http://s****sa-mp.u***ucoz.de/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>shoppingzone</td><td><code>http://s***********shoppingzone.ru/f****forum/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>shoppingzone</td><td><code>http://s***********shoppingzone.ru/f****forum/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>sstalkers</td><td><code>http://s********sstalkers.ru/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>syktforum</td><td><code>http://s********syktforum.ru/p******profile/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>syktforum</td><td><code>http://s********syktforum.ru/p******profile/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>uaodessa</td><td><code>http://u*******uaodessa.com/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>vishivalochka</td><td><code>http://v************vishivalochka.ru/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>wedding-image</td><td><code>http://w************wedding-image.ru/i****index/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>authorstream</td><td><code>http://w**www.a***********authorstream.com/a*****author/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>authorstream</td><td><code>http://w**www.a***********authorstream.com/a*****author/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>coolminiornot</td><td><code>http://w**www.c************coolminiornot.com/f*****forums/...</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>hi5</td><td><code>http://w**www.h**hi5.com/H**************Hanna%20Dosenko</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>hi5</td><td><code>http://w**www.h**hi5.com/h***********hannadosenko</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+<tr><td class='platform'>mfarmer</td><td><code>http://w**www.m******mfarmer.ru/m*********member.php</code></td><td><span class='badge'>UNCHECKED</span></td></tr>
+
+  </table>
+</div></section>
+
+<section class='section'><h2>🔄 Auto-Pivot Queue (0)</h2><div class='pad'>
+  <p class='hint'>Observables needing further investigation. Reasons explain WHY each pivot is suggested.</p>
+  <table><tr><th>Type</th><th>Value</th><th>Suggested Tools</th><th>Reason</th><th>Tier</th></tr>
+  <tr><td colspan='5'>No pending pivots</td></tr>
+  </table>
+</div></section>
+
+<section class='section'><h2>📊 All Observables (10)</h2><div class='pad'>
+  <table><tr><th>Type</th><th>Value</th><th>Source Tool</th><th>Target</th><th>Depth</th><th>Tier</th></tr>
+  <tr><td><span class='badge badge-phone'>phone</span></td><td><code>+067*****84</code></td><td>phone</td><td>06******84</td><td>0</td><td><span class='tier-badge tier-confirmed'>CONFIRMED</span></td></tr>
+<tr><td><span class='badge badge-phone'>phone</span></td><td><code>+380*******98</code></td><td>phone</td><td>+380*******98</td><td>0</td><td><span class='tier-badge tier-confirmed'>CONFIRMED</span></td></tr>
+<tr><td><span class='badge badge-phone'>phone</span></td><td><code>+380*******84</code></td><td>phone</td><td>+380*******84</td><td>0</td><td><span class='tier-badge tier-confirmed'>CONFIRMED</span></td></tr>
+<tr><td><span class='badge badge-phone'>phone</span></td><td><code>+380*******98</code></td><td>phone</td><td>+380*******98</td><td>0</td><td><span class='tier-badge tier-confirmed'>CONFIRMED</span></td></tr>
+<tr><td><span class='badge badge-username'>username</span></td><td><code>AN*********O</code></td><td>username</td><td>AN*********O</td><td>0</td><td><span class='tier-badge tier-confirmed'>CONFIRMED</span></td></tr>
+<tr><td><span class='badge badge-username'>username</span></td><td><code>Ha**********o</code></td><td>username</td><td>Ha**********o</td><td>0</td><td><span class='tier-badge tier-confirmed'>CONFIRMED</span></td></tr>
+<tr><td><span class='badge badge-username'>username</span></td><td><code>ha*********o</code></td><td>username</td><td>ha*********o</td><td>0</td><td><span class='tier-badge tier-confirmed'>CONFIRMED</span></td></tr>
+<tr><td><span class='badge badge-username'>username</span></td><td><code>va********o</code></td><td>username</td><td>va********o</td><td>0</td><td><span class='tier-badge tier-confirmed'>CONFIRMED</span></td></tr>
+<tr><td><span class='badge badge-url'>url</span></td><td><code>https://e******example.com</code></td><td>deep_recon:httpx_probe</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-url'>url</span></td><td><code>https://e******example.com | status=200 | title=example domain | tech=cloudflare</code></td><td>deep_recon:httpx_probe</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+
+  </table>
+</div></section>
+
+<section class='section'><h2>👥 Secondary Clusters (6)</h2><div class='pad'><table><tr><th>Label</th><th>Observables</th><th>Confidence</th><th>Values</th></tr><tr><td>+380*******98</td><td>1</td><td>85%</td><td class='mono'>+380*******98</td></tr>
+<tr><td>va********o</td><td>1</td><td>85%</td><td class='mono'>va********o</td></tr>
+<tr><td>+067*****84</td><td>1</td><td>85%</td><td class='mono'>+067*****84</td></tr>
+<tr><td>+380*******84</td><td>1</td><td>85%</td><td class='mono'>+380*******84</td></tr>
+<tr><td>https://e******example.com | status=200 | title=example domain | tech=cloudflare</td><td>1</td><td>15%</td><td class='mono'>https://e******example.com | status=200 | title=example domain | tech=cloudflare</td></tr>
+<tr><td>https://e******example.com</td><td>1</td><td>15%</td><td class='mono'>https://e******example.com</td></tr>
+</table></div></section>
+
+<section class='section'><h2>🚫 Rejected Targets (35)</h2><div class='pad'><p class='hint'>Filtered by input validation: garbage strings, SHA hashes used as targets, profile-target type mismatches, placeholder domains, high-entropy tokens.</p><table><tr><th>Raw Target</th><th>Reason</th><th>Source</th></tr><tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_004127_dossier_domain_theHarvester_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_004537_dossier_domain_amass_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_004925_dossier_domain_subfinder_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_004959_dossier_domain_dnsx_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_005010_dossier_domain_whois_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_005645_dossier_domain_theHarvester_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_010110_dossier_domain_amass_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_010418_dossier_domain_subfinder_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_010457_dossier_domain_dnsx_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_010505_dossier_domain_whois_example.com_.json</td></tr>
+<tr><td><code>5**************************************************************c</code></td><td>hex_hash_target</td><td class='mono'>20260406_021238_dossier_phone_phoneinfoga_5f0e25b4b1d4680586498282c6b20408ac38ecae21490133f2942426fed0186c_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_021620_dossier_domain_theHarvester_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_022841_dossier_domain_amass_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_023015_dossier_domain_subfinder_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_023056_dossier_domain_dnsx_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_023108_dossier_domain_whois_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_042402_dossier_domain_theHarvester_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_043011_dossier_domain_amass_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_043339_dossier_domain_subfinder_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_043435_dossier_domain_dnsx_example.com_.json</td></tr>
+</table></div></section>
+
+</div>
+</body>
+</html>

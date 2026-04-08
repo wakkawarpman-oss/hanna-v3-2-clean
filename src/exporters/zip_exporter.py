@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable
 import re
 import zipfile
 from pathlib import Path
@@ -29,17 +30,64 @@ def _append_file(zf: zipfile.ZipFile, manifest: dict[str, object], path: Path, a
     manifest["artifacts"].append({"name": arcname, "sha256": _sha256(path)})
 
 
+_ARTIFACT_KEY_RE = re.compile(r"(?:artifact|report|screenshot|capture|media|output|export|file)$", re.IGNORECASE)
+
+
+def _iter_path_strings(value: object, *, parent_key: str | None = None) -> Iterable[str]:
+    if isinstance(value, (str, Path)):
+        if parent_key and _ARTIFACT_KEY_RE.search(parent_key):
+            yield str(value)
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            key_name = str(key)
+            if isinstance(item, dict):
+                yield from _iter_path_strings(item, parent_key=key_name)
+                continue
+            if isinstance(item, (list, tuple, set)):
+                if _ARTIFACT_KEY_RE.search(key_name):
+                    yield from _iter_path_strings(item, parent_key=key_name)
+                continue
+            if _ARTIFACT_KEY_RE.search(key_name):
+                yield from _iter_path_strings(item, parent_key=key_name)
+        return
+    if isinstance(value, (list, tuple, set)):
+        for item in value:
+            yield from _iter_path_strings(item, parent_key=parent_key)
+
+
+def _collect_tree(path: Path, prefix: str) -> list[tuple[Path, str]]:
+    if path.is_file():
+        return [(path, f"{prefix}/{path.name}")]
+
+    collected: list[tuple[Path, str]] = []
+    try:
+        for child in sorted(path.rglob("*")):
+            if child.is_file():
+                collected.append((child, f"{prefix}/{path.name}/{child.relative_to(path).as_posix()}"))
+    except OSError:
+        return []
+    return collected
+
+
 def _collect_supporting_paths(result: RunResult) -> list[tuple[Path, str]]:
     collected: list[tuple[Path, str]] = []
     seen: set[Path] = set()
+
+    def _remember(path: Path, prefix: str) -> None:
+        for file_path, arcname in _collect_tree(path, prefix):
+            resolved = file_path.resolve()
+            if resolved in seen:
+                continue
+            collected.append((file_path, arcname))
+            seen.add(resolved)
 
     for outcome in result.outcomes:
         if not outcome.log_path:
             continue
         path = Path(outcome.log_path)
-        if path.exists() and path not in seen:
-            collected.append((path, f"logs/{path.name}"))
-            seen.add(path)
+        if path.exists():
+            _remember(path, "logs")
 
     extra_artifacts = result.extra.get("artifacts") if isinstance(result.extra, dict) else None
     artifact_candidates: list[str] = []
@@ -50,9 +98,23 @@ def _collect_supporting_paths(result: RunResult) -> list[tuple[Path, str]]:
 
     for raw_path in artifact_candidates:
         path = Path(raw_path)
-        if path.exists() and path not in seen:
-            collected.append((path, f"artifacts/{path.name}"))
-            seen.add(path)
+        if path.exists():
+            _remember(path, "artifacts")
+
+    hit_candidates = list(result.all_hits)
+    if not hit_candidates:
+        for outcome in result.outcomes:
+            hit_candidates.extend(outcome.hits)
+
+    for hit in hit_candidates:
+        for raw_path in _iter_path_strings(hit.raw_record):
+            path = Path(raw_path)
+            if path.exists():
+                _remember(path, "artifacts")
+        for raw_path in hit.cross_refs:
+            path = Path(raw_path)
+            if path.exists():
+                _remember(path, "artifacts")
 
     return collected
 

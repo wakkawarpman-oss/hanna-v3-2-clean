@@ -28,6 +28,42 @@ from config import (
 log = logging.getLogger("hanna.recon")
 
 
+class AdapterExecutionError(RuntimeError):
+    """Base exception for structured adapter execution failures."""
+
+    error_kind = "adapter_error"
+
+
+class MissingCredentialsError(AdapterExecutionError):
+    """Raised when an adapter cannot run because required credentials are absent."""
+
+    error_kind = "missing_credentials"
+
+    def __init__(self, *credential_names: str):
+        self.credential_names = [name for name in credential_names if name]
+        detail = ", ".join(self.credential_names) if self.credential_names else "credentials"
+        super().__init__(f"missing credentials: {detail}")
+
+
+class MissingBinaryError(AdapterExecutionError):
+    """Raised when a required CLI binary cannot be found."""
+
+    error_kind = "missing_binary"
+
+    def __init__(self, binary_name: str):
+        self.binary_name = binary_name
+        super().__init__(f"missing binary: {binary_name}")
+
+
+class DependencyUnavailableError(AdapterExecutionError):
+    """Raised when an external dependency exists but cannot be executed."""
+
+    error_kind = "dependency_unavailable"
+
+    def __init__(self, detail: str):
+        super().__init__(f"dependency unavailable: {detail}")
+
+
 # ── Data structures ──────────────────────────────────────────────
 
 @dataclass

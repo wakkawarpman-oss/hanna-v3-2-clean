@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "target_name": "example.com",
+  "mode": "chain",
+  "started_at": "2026-04-08T06:43:23.539481",
+  "finished_at": "2026-04-08T06:44:51.884965",
+  "modules_run": [
+    "httpx_probe",
+    "naabu",
+    "katana",
+    "nuclei"
+  ],
+  "queued_modules": [
+    "httpx_probe",
+    "katana",
+    "nuclei",
+    "naabu"
+  ],
+  "runtime_summary": {
+    "target_name": "example.com",
+    "mode": "chain",
+    "queued": 4,
+    "completed": 4,
+    "failed": 0,
+    "timed_out": 0,
+    "skipped_missing_credentials": 0,
+    "missing_binary": 0,
+    "dependency_unavailable": 0,
+    "worker_crash": 0,
+    "exports": [
+      "json",
+      "stix",
+      "zip"
+    ],
+    "report_mode": "shareable"
+  },
+  "outcomes": [
+    {
+      "module_name": "httpx_probe",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 2,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "naabu",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 4,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "katana",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "nuclei",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    }
+  ],
+  "errors": [],
+  "artifacts": {
+    "exports": {
+      "json": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/rehearsal-artifacts/example-com-chain-20260408064451.json",
+      "stix": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/rehearsal-artifacts/example-com-chain-20260408064451.stix.json",
+      "zip": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/rehearsal-artifacts/example-com-chain-20260408064451.zip"
+    },
+    "output_path": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/full-rehearsal.html",
+    "report_mode": "shareable"
+  },
+  "extra": {
+    "queued_modules": [
+      "httpx_probe",
+      "katana",
+      "nuclei",
+      "naabu"
+    ],
+    "ingestion": {
+      "ingested": 28,
+      "rejected": 35,
+      "skipped": 11
+    },
+    "clusters": 7,
+    "output_path": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/full-rehearsal.html",
+    "report_mode": "shareable",
+    "stats": {
+      "total_metadata_files": 28,
+      "total_observables": 10,
+      "confirmed_observables": 8,
+      "probable_observables": 0,
+      "unverified_observables": 2,
+      "rejected_targets": 35,
+      "entity_links": 4,
+      "profile_urls": 736,
+      "profile_verification": {
+        "unchecked": 736
+      },
+      "identity_clusters": 7,
+      "pending_pivots": 2,
+      "tool_stats": {
+        "phone": {
+          "success": 16,
+          "failed": 2,
+          "observables": 49
+        },
+        "domain": {
+          "success": 20,
+          "failed": 5,
+          "observables": 0
+        },
+        "health": {
+          "success": 9,
+          "failed": 0,
+          "observables": 0
+        },
+        "username": {
+          "success": 13,
+          "failed": 0,
+          "observables": 9
+        },
+        "whatweb": {
+          "success": 2,
+          "failed": 0,
+          "observables": 0
+        },
+        "dnsenum": {
+          "success": 0,
+          "failed": 1,
+          "observables": 0
+        },
+        "oneshot_batch": {
+          "success": 4,
+          "failed": 1,
+          "observables": 0
+        },
+        "unknown": {
+          "success": 0,
+          "failed": 1,
+          "observables": 0
+        }
+      }
+    },
+    "exports": {
+      "json": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/rehearsal-artifacts/example-com-chain-20260408064451.json",
+      "stix": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/rehearsal-artifacts/example-com-chain-20260408064451.stix.json",
+      "zip": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/rehearsal-artifacts/example-com-chain-20260408064451.zip"
+    }
+  }
+}

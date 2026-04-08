@@ -246,21 +246,13 @@ class DiscoveryEngine:
             "extract_generic": self._extract_generic,
             "platform_from_url": self._platform_from_url,
         })
-        self.verifier = ProfileVerifier({
-            "verify_profiles": self.verify_profiles,
-            "reverify_expired": self.reverify_expired,
-            "get_profile_stats": self.get_profile_stats,
-            "verify_content": self.verify_content,
-        })
-        self.renderer = ReportRenderer({
-            "get_stats": self.get_stats,
-            "get_runs_dir": self._get_runs_dir,
-            "get_lane_registry": self._get_lane_registry,
-            "lane_from_source_tool": self._lane_from_source_tool,
-            "load_latest_deep_recon_report": self._load_latest_deep_recon_report,
-            "build_lane_summary": self._build_lane_summary,
-            "render_graph_report": self.render_graph_report,
-        })
+        self.verifier = ProfileVerifier(self, false_positive_platforms=_FALSE_POSITIVE_PLATFORMS)
+        self.renderer = ReportRenderer(
+            self,
+            placeholder_domains=_PLACEHOLDER_DOMAINS,
+            redaction_modes=_REDACTION_MODES,
+            strip_ansi=strip_ansi,
+        )
 
     def _init_schema(self):
         self.db.execute("PRAGMA journal_mode = WAL")
@@ -1062,152 +1054,18 @@ class DiscoveryEngine:
     # ── 4.  Profile Verification ─────────────────────────────────
 
     def verify_profiles(self, max_checks: int = 50, timeout: float = 5.0, proxy: str | None = None):
-        """HTTP HEAD check for profile URLs. Marks verified/dead/soft_match."""
-        rows = self.db.execute(
-            "SELECT id, url, username FROM profile_urls WHERE status = 'unchecked' LIMIT ?",
-            (max_checks,),
-        ).fetchall()
-        if not rows:
-            return
-
-        def _check_url(row):
-            url_id, url, _username = row[0], row[1], row[2]
-            try:
-                status_code, headers, _body = proxy_aware_request(
-                    url,
-                    method="HEAD",
-                    timeout=timeout,
-                    proxy=proxy,
-                )
-                content_length = int(headers.get("Content-Length", "0") or "0")
-
-                # Check platform blacklist — sites returning 200 for any username
-                platform = DiscoveryEngine._platform_from_url(url)
-                if platform in _FALSE_POSITIVE_PLATFORMS:
-                    return (url_id, "soft_match")  # downgrade: can't trust HTTP from these
-
-                if status_code == 200 and content_length > 500:
-                    return (url_id, "verified")
-                elif status_code == 200:
-                    return (url_id, "soft_match")
-                else:
-                    return (url_id, "dead")
-            except Exception:
-                return (url_id, "dead")
-
-        with ThreadPoolExecutor(max_workers=VERIFY_WORKERS) as executor:
-            futures = {executor.submit(_check_url, r): r for r in rows}
-            for future in as_completed(futures):
-                url_id, status = future.result()
-                # TTL: verified/dead valid for 24h, soft_match for 12h
-                ttl_hours = 24 if status in ("verified", "dead") else 12
-                self.db.execute(
-                    """UPDATE profile_urls
-                       SET status = ?, checked_at = datetime('now'),
-                           last_checked_at = datetime('now'),
-                           valid_until = datetime('now', '+' || ? || ' hours')
-                       WHERE id = ?""",
-                    (status, ttl_hours, url_id),
-                )
-        self.db.commit()
+        return self.verifier.verify_profiles(max_checks=max_checks, timeout=timeout, proxy=proxy)
 
     def reverify_expired(self, max_checks: int = 50, timeout: float = 5.0, proxy: str | None = None) -> dict[str, int]:
-        """
-        Re-verify profile URLs whose TTL has expired.
-
-        Profiles with valid_until < NOW are eligible for re-check.
-        This prevents Snapshot Staleness — yesterday's 404 might be 200 today.
-        Returns counts: {rechecked, upgraded, downgraded, unchanged}.
-        """
-        rows = self.db.execute(
-            """SELECT id, url, username, status FROM profile_urls
-               WHERE valid_until IS NOT NULL
-                 AND valid_until < datetime('now')
-                 AND status IN ('verified', 'dead', 'soft_match')
-               LIMIT ?""",
-            (max_checks,),
-        ).fetchall()
-
-        if not rows:
-            return {"rechecked": 0, "upgraded": 0, "downgraded": 0, "unchanged": 0}
-
-        counts = {"rechecked": 0, "upgraded": 0, "downgraded": 0, "unchanged": 0}
-
-        def _recheck(row):
-            url_id, url, _user, old_status = row[0], row[1], row[2], row[3]
-            try:
-                status_code, headers, _body = proxy_aware_request(
-                    url,
-                    method="HEAD",
-                    timeout=timeout,
-                    proxy=proxy,
-                )
-                content_length = int(headers.get("Content-Length", "0") or "0")
-
-                platform = DiscoveryEngine._platform_from_url(url)
-                if platform in _FALSE_POSITIVE_PLATFORMS:
-                    new_status = "soft_match"
-                elif status_code == 200 and content_length > 500:
-                    new_status = "verified"
-                elif status_code == 200:
-                    new_status = "soft_match"
-                else:
-                    new_status = "dead"
-                return (url_id, old_status, new_status)
-            except Exception:
-                return (url_id, old_status, "dead")
-
-        with ThreadPoolExecutor(max_workers=VERIFY_WORKERS) as executor:
-            futures = {executor.submit(_recheck, r): r for r in rows}
-            for future in as_completed(futures):
-                url_id, old_status, new_status = future.result()
-                counts["rechecked"] += 1
-                if new_status != old_status:
-                    if new_status == "verified" and old_status == "dead":
-                        counts["upgraded"] += 1
-                    elif new_status == "dead" and old_status in ("verified", "soft_match"):
-                        counts["downgraded"] += 1
-                    else:
-                        counts["unchanged"] += 1
-                else:
-                    counts["unchanged"] += 1
-                ttl_hours = 24 if new_status in ("verified", "dead") else 12
-                self.db.execute(
-                    """UPDATE profile_urls
-                       SET status = ?, checked_at = datetime('now'),
-                           last_checked_at = datetime('now'),
-                           valid_until = datetime('now', '+' || ? || ' hours')
-                       WHERE id = ?""",
-                    (new_status, ttl_hours, url_id),
-                )
-        self.db.commit()
-        return counts
+        return self.verifier.reverify_expired(max_checks=max_checks, timeout=timeout, proxy=proxy)
 
     def get_profile_stats(self) -> dict[str, int]:
-        """Profile URL counts by verification status."""
-        result = {}
-        for row in self.db.execute("SELECT status, COUNT(*) FROM profile_urls GROUP BY status"):
-            result[row[0]] = row[1]
-        return result
+        return self.verifier.get_profile_stats()
 
     # ── 4a. Content Verification ──────────────────────────────────
 
     def verify_content(self, max_checks: int = 100, timeout: float = 8.0, proxy: str | None = None) -> dict[str, int]:
-        """
-        Full HTTP GET + name-token matching for soft_match URLs.
-
-        Upgrades soft_match → verified if target name found in page body.
-        Downgrades soft_match → dead if page shows 'not found' / empty result.
-        Keeps soft_match if page is ambiguous.
-
-        Returns dict with counts: {upgraded, killed, unchanged, errors, skipped_blacklisted}.
-        """
-        rows = self.db.execute(
-            "SELECT id, url, username FROM profile_urls WHERE status = 'soft_match' LIMIT ?",
-            (max_checks,),
-        ).fetchall()
-        if not rows:
-            return {"upgraded": 0, "killed": 0, "unchanged": 0, "errors": 0, "skipped_blacklisted": 0}
+        return self.verifier.verify_content(max_checks=max_checks, timeout=timeout, proxy=proxy)
 
         # Gather all known name tokens from confirmed observables
         name_tokens: set[str] = set()
@@ -1636,18 +1494,8 @@ class DiscoveryEngine:
         return self._redact_generic_text(value, mode)
 
     def render_graph_report(self, output_path: str | Path | None = None, redaction_mode: str = "shareable") -> str:
-        """Render a person-centric intelligence dossier as HTML — v2 with tiered display."""
-        if redaction_mode not in _REDACTION_MODES:
-            raise ValueError(f"Unsupported redaction_mode: {redaction_mode}")
-        stats = self.get_stats()
-        pivot_queue = self.get_pivot_queue()
-
-        primary = self.clusters[0] if self.clusters else None
-
-        esc = html_mod.escape
-
-        # ── Executive summary ──
-        if primary:
+        return self.renderer.render_graph_report(output_path=output_path, redaction_mode=redaction_mode)
+        r'''
             obs_by_type: dict[str, list[str]] = {}
             for obs in primary.observables:
                 obs_by_type.setdefault(obs.obs_type, []).append(obs.value)
@@ -2136,6 +1984,7 @@ details{{margin-bottom:6px}} summary{{cursor:pointer;font-weight:600;padding:3px
             output_path.write_text(page, encoding="utf-8")
 
         return page
+        '''
 
 
 # ── CLI entry point ──────────────────────────────────────────────

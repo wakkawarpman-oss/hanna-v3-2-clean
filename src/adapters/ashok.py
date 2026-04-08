@@ -8,6 +8,8 @@ import urllib.parse
 from datetime import datetime
 
 from adapters.base import (
+    DependencyUnavailableError,
+    MissingBinaryError,
     ReconAdapter,
     ReconHit,
     extract_validated_phones,
@@ -88,7 +90,10 @@ class AshokAdapter(ReconAdapter):
         """Run Ashok CLI tool with given arguments."""
         ashok_bin = os.environ.get("ASHOK_BIN", "ashok")
         cmd = [ashok_bin] + args
-        proc = run_cli(cmd, timeout=self.timeout * 5, proxy=self.proxy)
+        try:
+            proc = run_cli(cmd, timeout=self.timeout * 5, proxy=self.proxy)
+        except (MissingBinaryError, DependencyUnavailableError):
+            return None
         if proc and proc.returncode == 0 and proc.stdout.strip():
             return proc.stdout.strip()
         return None

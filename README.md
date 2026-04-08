@@ -13,7 +13,7 @@ Core platform capabilities are already present:
 - Canonical CLI for `chain`, `aggregate`, `manual`, `preflight`, `list`, and `reset`
 - Discovery engine with ingestion, observable registration, entity resolution, and verification flows
 - Safe-by-default HTML dossier generation with `internal`, `shareable`, and `strict` redaction modes
-- Canonical export surface for JSON, STIX-like bundles, and ZIP evidence packs
+- Canonical export surface for JSON, run metadata JSON, STIX-like bundles, and ZIP evidence packs
 - Schema-validated smart summaries and deterministic risk-flag extraction for noisy analyst text
 - Operator cleanup workflow for runtime DB, logs, reports, and generated artifacts
 - Regression coverage for report redaction, export contracts, and reset behavior
@@ -54,45 +54,84 @@ The repository is organized around four layers:
 
 ```bash
 cd hanna-v3-2-clean
-python3 -m venv .venv
+./scripts/setup_hanna.sh
 source .venv/bin/activate
-pip install -r requirements.txt
-python3 src/cli.py preflight
+./scripts/hanna pf
 ```
 
 Use strict preflight before operational runs:
 
 ```bash
-python3 src/cli.py preflight --strict
+./scripts/hanna pf --strict
 ```
+
+For fully automated operator shells, preflight can emit structured JSON only:
+
+```bash
+./scripts/hanna pf --modules ua_phone --json-only
+./scripts/hanna ls --json-only --output-file ./runs/exports/inventory.json
+```
+
+For a shorter operator workflow, use the repo-local wrapper:
+
+```bash
+./scripts/hanna ls
+./scripts/hanna ui --plain --target "Ivan" --modules full-spectrum
+source scripts/hanna-aliases.sh
+```
+
+Canonical cockpit launch on macOS and in the VS Code integrated terminal:
+
+```bash
+./scripts/hanna ui --plain
+```
+
+To install a global `hanna` command without `source`, run:
+
+```bash
+./scripts/install_hanna_command.sh
+```
+
+This installs a symlink into `$HOME/.local/bin/hanna` and, by default, adds that directory to `$HOME/.zshrc` if needed.
+
+Canonical operator entrypoint: `./scripts/hanna`.
+
+Legacy compatibility entrypoint: `python3 src/run_discovery.py`.
+Use it only for older scripts or legacy batch flows.
+
+Root compatibility wrappers are also available for older automation that still expects repo-root scripts:
+
+- `python3 run_discovery.py` → legacy discovery entrypoint
+- `python3 hanna_ui.py` → forwards to `tui`
 
 ## Main Workflows
 
 Run the full discovery pipeline and render a sanitized dossier:
 
 ```bash
-python3 src/cli.py chain \
+./scripts/hanna ch \
   --target "Example Target" \
   --modules ua_leak,ghunt,opendatabot \
   --verify \
   --report-mode shareable \
-  --export-formats json,stix,zip
+  --export-formats json,metadata,stix,zip
 ```
 
 Run selected adapters in parallel without dossier rendering:
 
 ```bash
-python3 src/cli.py aggregate \
+./scripts/hanna agg \
   --target example.com \
   --modules full-spectrum \
   --workers 4 \
-  --export-formats json,stix
+  --export-formats json,metadata,stix \
+  --metadata-file ./runs/exports/artifacts/example.aggregate.metadata.json
 ```
 
 Run a single adapter directly:
 
 ```bash
-python3 src/cli.py manual \
+./scripts/hanna man \
   --module ua_phone \
   --target "Phone pivot" \
   --phones "+380991234567"
@@ -113,13 +152,13 @@ Without those values, `ua_phone` still runs, but it falls back to passive or man
 Check the live prerequisites explicitly with:
 
 ```bash
-python3 src/cli.py preflight --modules ua_phone
+./scripts/hanna pf --modules ua_phone
 ```
 
 Clean runtime state while preserving selected outputs:
 
 ```bash
-python3 src/cli.py reset --confirm --keep-reports
+./scripts/hanna rs --confirm --keep-reports
 ```
 
 ## Report Modes
@@ -137,17 +176,52 @@ When `chain` exports ZIP artifacts, the ZIP carries the rendered dossier that ma
 The machine-readable export layer supports:
 
 - `json` — serialized `RunResult` envelope
+- `metadata` — run-level metadata JSON for automation, timings, errors, counters, and generated artifact paths
 - `stix` — STIX-like bundle for downstream systems
 - `zip` — evidence pack containing JSON, STIX, manifest, and the rendered chain dossier when available
 
 Example:
 
 ```bash
-python3 src/cli.py chain \
+./scripts/hanna ch \
   --target "Example Target" \
   --report-mode strict \
-  --export-formats zip \
+  --export-formats metadata,zip \
+  --metadata-file ./runs/exports/artifacts/example.chain.metadata.json \
   --export-dir ./runs/exports/artifacts
+```
+
+For shell orchestration, `list` and `reset` also support JSON-only output:
+
+```bash
+./scripts/hanna ls --json-only --output-file ./runs/exports/inventory.json
+./scripts/hanna rs --confirm --json-only --output-file ./runs/exports/reset-result.json
+```
+
+## Launch Discipline
+
+Before a controlled rollout, run the bundled pre-launch workflow:
+
+```bash
+./scripts/prelaunch_check.sh
+```
+
+For a longer operational rehearsal that includes the no-credential chain smoke:
+
+```bash
+HANNA_RUN_LIVE_SMOKE=1 ./scripts/prelaunch_check.sh
+```
+
+See [docs/LAUNCH_RUNBOOK.md](docs/LAUNCH_RUNBOOK.md) for the rollout order and pass criteria.
+See [docs/RESET_RECOVERY_RUNBOOK.md](docs/RESET_RECOVERY_RUNBOOK.md) for post-launch cleanup and recovery procedures.
+See [docs/PRELAUNCH_SUMMARY_SCHEMA.md](docs/PRELAUNCH_SUMMARY_SCHEMA.md) for the `final-summary.json` contract and CI gate usage.
+
+CI-friendly prelaunch gate entrypoints:
+
+```bash
+./scripts/prelaunch_gate.sh .cache/prelaunch/<timestamp>/final-summary.json
+make prelaunch-gate SUMMARY=.cache/prelaunch/<timestamp>/final-summary.json
+make prelaunch-gate SUMMARY=.cache/prelaunch/<timestamp>/final-summary.json ARGS='--require-check full_rollout_rehearsal'
 ```
 
 ## External Tooling Policy

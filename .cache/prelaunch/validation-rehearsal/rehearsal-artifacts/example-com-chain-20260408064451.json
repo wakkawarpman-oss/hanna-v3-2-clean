@@ -1,0 +1,512 @@
+{
+  "schema_version": 1,
+  "target_name": "example.com",
+  "mode": "chain",
+  "modules_run": [
+    "httpx_probe",
+    "naabu",
+    "katana",
+    "nuclei"
+  ],
+  "outcomes": [
+    {
+      "module_name": "httpx_probe",
+      "lane": "chain",
+      "hits": [
+        {
+          "observable_type": "infrastructure",
+          "value": "https://example.com | status=200 | title=Example Domain | tech=Cloudflare",
+          "source_module": "httpx_probe",
+          "source_detail": "httpx:200:cloudflare",
+          "confidence": 0.7,
+          "raw_record": {
+            "timestamp": "2026-04-08T06:43:24.926077+03:00",
+            "cdn_name": "cloudflare",
+            "cdn_type": "waf",
+            "port": "443",
+            "url": "https://example.com",
+            "input": "example.com",
+            "title": "Example Domain",
+            "scheme": "https",
+            "webserver": "cloudflare",
+            "content_type": "text/html",
+            "method": "GET",
+            "host": "example.com",
+            "host_ip": "104.18.26.120",
+            "path": "/",
+            "time": "153.599167ms",
+            "a": [
+              "104.18.27.120",
+              "104.18.26.120"
+            ],
+            "aaaa": [
+              "2606:4700::6812:1a78",
+              "2606:4700::6812:1b78"
+            ],
+            "tech": [
+              "Cloudflare"
+            ],
+            "words": 25,
+            "lines": 1,
+            "status_code": 200,
+            "content_length": 528,
+            "failed": false,
+            "cdn": true,
+            "knowledgebase": {
+              "PageType": "nonerror",
+              "pHash": 0
+            },
+            "resolvers": [
+              "2.56.168.110:53",
+              "192.168.0.1:53"
+            ]
+          },
+          "timestamp": "2026-04-08T06:43:24.933403",
+          "cross_refs": [
+            "example.com"
+          ]
+        },
+        {
+          "observable_type": "url",
+          "value": "https://example.com",
+          "source_module": "httpx_probe",
+          "source_detail": "httpx:url",
+          "confidence": 0.8,
+          "raw_record": {
+            "timestamp": "2026-04-08T06:43:24.926077+03:00",
+            "cdn_name": "cloudflare",
+            "cdn_type": "waf",
+            "port": "443",
+            "url": "https://example.com",
+            "input": "example.com",
+            "title": "Example Domain",
+            "scheme": "https",
+            "webserver": "cloudflare",
+            "content_type": "text/html",
+            "method": "GET",
+            "host": "example.com",
+            "host_ip": "104.18.26.120",
+            "path": "/",
+            "time": "153.599167ms",
+            "a": [
+              "104.18.27.120",
+              "104.18.26.120"
+            ],
+            "aaaa": [
+              "2606:4700::6812:1a78",
+              "2606:4700::6812:1b78"
+            ],
+            "tech": [
+              "Cloudflare"
+            ],
+            "words": 25,
+            "lines": 1,
+            "status_code": 200,
+            "content_length": 528,
+            "failed": false,
+            "cdn": true,
+            "knowledgebase": {
+              "PageType": "nonerror",
+              "pHash": 0
+            },
+            "resolvers": [
+              "2.56.168.110:53",
+              "192.168.0.1:53"
+            ]
+          },
+          "timestamp": "2026-04-08T06:43:24.933456",
+          "cross_refs": [
+            "https://example.com",
+            "example.com"
+          ]
+        }
+      ],
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "naabu",
+      "lane": "chain",
+      "hits": [
+        {
+          "observable_type": "infrastructure",
+          "value": "example.com:443",
+          "source_module": "naabu",
+          "source_detail": "naabu:port:443",
+          "confidence": 0.72,
+          "raw_record": {
+            "host": "example.com",
+            "ip": "104.18.26.120",
+            "timestamp": "2026-04-08T03:43:24.614334Z",
+            "port": 443,
+            "protocol": "tcp",
+            "tls": false
+          },
+          "timestamp": "2026-04-08T06:43:56.595611",
+          "cross_refs": [
+            "example.com"
+          ]
+        },
+        {
+          "observable_type": "infrastructure",
+          "value": "example.com:80",
+          "source_module": "naabu",
+          "source_detail": "naabu:port:80",
+          "confidence": 0.72,
+          "raw_record": {
+            "host": "example.com",
+            "ip": "104.18.26.120",
+            "timestamp": "2026-04-08T03:43:24.614673Z",
+            "port": 80,
+            "protocol": "tcp",
+            "tls": false
+          },
+          "timestamp": "2026-04-08T06:43:56.595765",
+          "cross_refs": [
+            "example.com"
+          ]
+        },
+        {
+          "observable_type": "infrastructure",
+          "value": "example.com:8443",
+          "source_module": "naabu",
+          "source_detail": "naabu:port:8443",
+          "confidence": 0.72,
+          "raw_record": {
+            "host": "example.com",
+            "ip": "104.18.26.120",
+            "timestamp": "2026-04-08T03:43:24.632479Z",
+            "port": 8443,
+            "protocol": "tcp",
+            "tls": false
+          },
+          "timestamp": "2026-04-08T06:43:56.595789",
+          "cross_refs": [
+            "example.com"
+          ]
+        },
+        {
+          "observable_type": "infrastructure",
+          "value": "example.com:8080",
+          "source_module": "naabu",
+          "source_detail": "naabu:port:8080",
+          "confidence": 0.72,
+          "raw_record": {
+            "host": "example.com",
+            "ip": "104.18.26.120",
+            "timestamp": "2026-04-08T03:43:24.632564Z",
+            "port": 8080,
+            "protocol": "tcp",
+            "tls": false
+          },
+          "timestamp": "2026-04-08T06:43:56.595797",
+          "cross_refs": [
+            "example.com"
+          ]
+        }
+      ],
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "katana",
+      "lane": "chain",
+      "hits": [],
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "nuclei",
+      "lane": "chain",
+      "hits": [],
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    }
+  ],
+  "all_hits": [
+    {
+      "observable_type": "infrastructure",
+      "value": "https://example.com | status=200 | title=Example Domain | tech=Cloudflare",
+      "source_module": "httpx_probe",
+      "source_detail": "httpx:200:cloudflare",
+      "confidence": 0.7,
+      "raw_record": {
+        "timestamp": "2026-04-08T06:43:24.926077+03:00",
+        "cdn_name": "cloudflare",
+        "cdn_type": "waf",
+        "port": "443",
+        "url": "https://example.com",
+        "input": "example.com",
+        "title": "Example Domain",
+        "scheme": "https",
+        "webserver": "cloudflare",
+        "content_type": "text/html",
+        "method": "GET",
+        "host": "example.com",
+        "host_ip": "104.18.26.120",
+        "path": "/",
+        "time": "153.599167ms",
+        "a": [
+          "104.18.27.120",
+          "104.18.26.120"
+        ],
+        "aaaa": [
+          "2606:4700::6812:1a78",
+          "2606:4700::6812:1b78"
+        ],
+        "tech": [
+          "Cloudflare"
+        ],
+        "words": 25,
+        "lines": 1,
+        "status_code": 200,
+        "content_length": 528,
+        "failed": false,
+        "cdn": true,
+        "knowledgebase": {
+          "PageType": "nonerror",
+          "pHash": 0
+        },
+        "resolvers": [
+          "2.56.168.110:53",
+          "192.168.0.1:53"
+        ]
+      },
+      "timestamp": "2026-04-08T06:43:24.933403",
+      "cross_refs": [
+        "example.com"
+      ]
+    },
+    {
+      "observable_type": "url",
+      "value": "https://example.com",
+      "source_module": "httpx_probe",
+      "source_detail": "httpx:url",
+      "confidence": 0.8,
+      "raw_record": {
+        "timestamp": "2026-04-08T06:43:24.926077+03:00",
+        "cdn_name": "cloudflare",
+        "cdn_type": "waf",
+        "port": "443",
+        "url": "https://example.com",
+        "input": "example.com",
+        "title": "Example Domain",
+        "scheme": "https",
+        "webserver": "cloudflare",
+        "content_type": "text/html",
+        "method": "GET",
+        "host": "example.com",
+        "host_ip": "104.18.26.120",
+        "path": "/",
+        "time": "153.599167ms",
+        "a": [
+          "104.18.27.120",
+          "104.18.26.120"
+        ],
+        "aaaa": [
+          "2606:4700::6812:1a78",
+          "2606:4700::6812:1b78"
+        ],
+        "tech": [
+          "Cloudflare"
+        ],
+        "words": 25,
+        "lines": 1,
+        "status_code": 200,
+        "content_length": 528,
+        "failed": false,
+        "cdn": true,
+        "knowledgebase": {
+          "PageType": "nonerror",
+          "pHash": 0
+        },
+        "resolvers": [
+          "2.56.168.110:53",
+          "192.168.0.1:53"
+        ]
+      },
+      "timestamp": "2026-04-08T06:43:24.933456",
+      "cross_refs": [
+        "https://example.com",
+        "example.com"
+      ]
+    },
+    {
+      "observable_type": "infrastructure",
+      "value": "example.com:443",
+      "source_module": "naabu",
+      "source_detail": "naabu:port:443",
+      "confidence": 0.72,
+      "raw_record": {
+        "host": "example.com",
+        "ip": "104.18.26.120",
+        "timestamp": "2026-04-08T03:43:24.614334Z",
+        "port": 443,
+        "protocol": "tcp",
+        "tls": false
+      },
+      "timestamp": "2026-04-08T06:43:56.595611",
+      "cross_refs": [
+        "example.com"
+      ]
+    },
+    {
+      "observable_type": "infrastructure",
+      "value": "example.com:80",
+      "source_module": "naabu",
+      "source_detail": "naabu:port:80",
+      "confidence": 0.72,
+      "raw_record": {
+        "host": "example.com",
+        "ip": "104.18.26.120",
+        "timestamp": "2026-04-08T03:43:24.614673Z",
+        "port": 80,
+        "protocol": "tcp",
+        "tls": false
+      },
+      "timestamp": "2026-04-08T06:43:56.595765",
+      "cross_refs": [
+        "example.com"
+      ]
+    },
+    {
+      "observable_type": "infrastructure",
+      "value": "example.com:8443",
+      "source_module": "naabu",
+      "source_detail": "naabu:port:8443",
+      "confidence": 0.72,
+      "raw_record": {
+        "host": "example.com",
+        "ip": "104.18.26.120",
+        "timestamp": "2026-04-08T03:43:24.632479Z",
+        "port": 8443,
+        "protocol": "tcp",
+        "tls": false
+      },
+      "timestamp": "2026-04-08T06:43:56.595789",
+      "cross_refs": [
+        "example.com"
+      ]
+    },
+    {
+      "observable_type": "infrastructure",
+      "value": "example.com:8080",
+      "source_module": "naabu",
+      "source_detail": "naabu:port:8080",
+      "confidence": 0.72,
+      "raw_record": {
+        "host": "example.com",
+        "ip": "104.18.26.120",
+        "timestamp": "2026-04-08T03:43:24.632564Z",
+        "port": 8080,
+        "protocol": "tcp",
+        "tls": false
+      },
+      "timestamp": "2026-04-08T06:43:56.595797",
+      "cross_refs": [
+        "example.com"
+      ]
+    }
+  ],
+  "cross_confirmed": [],
+  "new_phones": [],
+  "new_emails": [],
+  "errors": [],
+  "started_at": "2026-04-08T06:43:23.539481",
+  "finished_at": "2026-04-08T06:44:51.884965",
+  "runtime_summary": {
+    "target_name": "example.com",
+    "mode": "chain",
+    "queued": 4,
+    "completed": 4,
+    "failed": 0,
+    "timed_out": 0,
+    "skipped_missing_credentials": 0,
+    "missing_binary": 0,
+    "dependency_unavailable": 0,
+    "worker_crash": 0,
+    "exports": [],
+    "report_mode": "shareable"
+  },
+  "extra": {
+    "queued_modules": [
+      "httpx_probe",
+      "katana",
+      "nuclei",
+      "naabu"
+    ],
+    "ingestion": {
+      "ingested": 28,
+      "rejected": 35,
+      "skipped": 11
+    },
+    "clusters": 7,
+    "output_path": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/full-rehearsal.html",
+    "report_mode": "shareable",
+    "stats": {
+      "total_metadata_files": 28,
+      "total_observables": 10,
+      "confirmed_observables": 8,
+      "probable_observables": 0,
+      "unverified_observables": 2,
+      "rejected_targets": 35,
+      "entity_links": 4,
+      "profile_urls": 736,
+      "profile_verification": {
+        "unchecked": 736
+      },
+      "identity_clusters": 7,
+      "pending_pivots": 2,
+      "tool_stats": {
+        "phone": {
+          "success": 16,
+          "failed": 2,
+          "observables": 49
+        },
+        "domain": {
+          "success": 20,
+          "failed": 5,
+          "observables": 0
+        },
+        "health": {
+          "success": 9,
+          "failed": 0,
+          "observables": 0
+        },
+        "username": {
+          "success": 13,
+          "failed": 0,
+          "observables": 9
+        },
+        "whatweb": {
+          "success": 2,
+          "failed": 0,
+          "observables": 0
+        },
+        "dnsenum": {
+          "success": 0,
+          "failed": 1,
+          "observables": 0
+        },
+        "oneshot_batch": {
+          "success": 4,
+          "failed": 1,
+          "observables": 0
+        },
+        "unknown": {
+          "success": 0,
+          "failed": 1,
+          "observables": 0
+        }
+      }
+    }
+  }
+}

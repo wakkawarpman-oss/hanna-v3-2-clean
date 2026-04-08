@@ -8,7 +8,7 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from adapters.base import ReconAdapter, ReconHit
+from adapters.base import MissingCredentialsError, ReconAdapter, ReconHit
 
 log = logging.getLogger("hanna.recon")
 
@@ -53,8 +53,7 @@ class FIRMSAdapter(ReconAdapter):
     ) -> list[ReconHit]:
         map_key = os.environ.get("FIRMS_MAP_KEY", "")
         if not map_key:
-            log.warning("FIRMS: FIRMS_MAP_KEY not set — skipping")
-            return []
+            raise MissingCredentialsError("FIRMS_MAP_KEY")
 
         coords = self._gather_coordinates()
         if not coords:

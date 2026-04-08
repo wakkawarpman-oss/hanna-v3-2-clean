@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "bundle_root": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-default",
+  "generated_from": "scripts/prelaunch_check.sh",
+  "overall_status": "pass",
+  "failure_count": 0,
+  "stage_count": 6,
+  "nonempty_error_files": {
+    "count": 1,
+    "files": [
+      "run_discovery.list.err"
+    ]
+  },
+  "stages": [
+    {
+      "name": "Canonical inventory JSON",
+      "slug": "canonical-inventory-json",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:42:37Z",
+      "finished_at": "2026-04-08T03:42:37Z"
+    },
+    {
+      "name": "Canonical preflight JSON",
+      "slug": "canonical-preflight-json",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:42:37Z",
+      "finished_at": "2026-04-08T03:42:37Z"
+    },
+    {
+      "name": "Focused regression pack",
+      "slug": "focused-regression-pack",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:42:38Z",
+      "finished_at": "2026-04-08T03:42:38Z"
+    },
+    {
+      "name": "Legacy wrapper inventory",
+      "slug": "legacy-wrapper-inventory",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:42:36Z",
+      "finished_at": "2026-04-08T03:42:36Z"
+    },
+    {
+      "name": "Root UI wrapper help",
+      "slug": "root-ui-wrapper-help",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:42:37Z",
+      "finished_at": "2026-04-08T03:42:37Z"
+    },
+    {
+      "name": "Summary schema smoke",
+      "slug": "summary-schema-smoke",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:42:37Z",
+      "finished_at": "2026-04-08T03:42:37Z"
+    }
+  ],
+  "checks": {
+    "preflight": {
+      "status": "pass",
+      "summary": {
+        "total": 20,
+        "ok": 14,
+        "warn": 6,
+        "fail": 0,
+        "has_hard_failures": false
+      },
+      "modules": [
+        "full-spectrum"
+      ],
+      "path": "preflight.json"
+    },
+    "smart_summary": {
+      "status": "pass",
+      "path": "smart-summary.json",
+      "risk_flag_codes": [
+        "credential_leak",
+        "military_association"
+      ],
+      "observable_counts": {
+        "phones": 0,
+        "emails": 1,
+        "urls": 0
+      }
+    },
+    "focused_regression": {
+      "status": "pass",
+      "path": "pytest.txt",
+      "summary": {
+        "passed": 40,
+        "failed": 0,
+        "skipped": 0,
+        "duration_seconds": 0.38
+      }
+    },
+    "live_smoke": {
+      "enabled": false,
+      "status": "not-run",
+      "path": null,
+      "runtime_summary": null
+    },
+    "full_rollout_rehearsal": {
+      "enabled": false,
+      "status": "not-run",
+      "artifact_verification_status": "not-run",
+      "target": null,
+      "modules": null,
+      "runtime_path": null,
+      "verification_path": null,
+      "verification": null
+    }
+  }
+}

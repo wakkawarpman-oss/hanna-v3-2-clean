@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "bundle_root": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal",
+  "generated_from": "scripts/prelaunch_check.sh",
+  "overall_status": "pass",
+  "failure_count": 0,
+  "stage_count": 8,
+  "nonempty_error_files": {
+    "count": 2,
+    "files": [
+      "full-rehearsal.err",
+      "run_discovery.list.err"
+    ]
+  },
+  "stages": [
+    {
+      "name": "Canonical inventory JSON",
+      "slug": "canonical-inventory-json",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:43:22Z",
+      "finished_at": "2026-04-08T03:43:22Z"
+    },
+    {
+      "name": "Canonical preflight JSON",
+      "slug": "canonical-preflight-json",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:43:22Z",
+      "finished_at": "2026-04-08T03:43:22Z"
+    },
+    {
+      "name": "Focused regression pack",
+      "slug": "focused-regression-pack",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:43:22Z",
+      "finished_at": "2026-04-08T03:43:23Z"
+    },
+    {
+      "name": "Legacy wrapper inventory",
+      "slug": "legacy-wrapper-inventory",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:43:21Z",
+      "finished_at": "2026-04-08T03:43:21Z"
+    },
+    {
+      "name": "Optional full rollout rehearsal",
+      "slug": "optional-full-rollout-rehearsal",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:43:23Z",
+      "finished_at": "2026-04-08T03:44:51Z"
+    },
+    {
+      "name": "Optional rehearsal artifact verification",
+      "slug": "optional-rehearsal-artifact-verification",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:44:52Z",
+      "finished_at": "2026-04-08T03:44:52Z"
+    },
+    {
+      "name": "Root UI wrapper help",
+      "slug": "root-ui-wrapper-help",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:43:21Z",
+      "finished_at": "2026-04-08T03:43:22Z"
+    },
+    {
+      "name": "Summary schema smoke",
+      "slug": "summary-schema-smoke",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-08T03:43:22Z",
+      "finished_at": "2026-04-08T03:43:22Z"
+    }
+  ],
+  "checks": {
+    "preflight": {
+      "status": "pass",
+      "summary": {
+        "total": 20,
+        "ok": 14,
+        "warn": 6,
+        "fail": 0,
+        "has_hard_failures": false
+      },
+      "modules": [
+        "full-spectrum"
+      ],
+      "path": "preflight.json"
+    },
+    "smart_summary": {
+      "status": "pass",
+      "path": "smart-summary.json",
+      "risk_flag_codes": [
+        "credential_leak",
+        "military_association"
+      ],
+      "observable_counts": {
+        "phones": 0,
+        "emails": 1,
+        "urls": 0
+      }
+    },
+    "focused_regression": {
+      "status": "pass",
+      "path": "pytest.txt",
+      "summary": {
+        "passed": 40,
+        "failed": 0,
+        "skipped": 0,
+        "duration_seconds": 0.33
+      }
+    },
+    "live_smoke": {
+      "enabled": false,
+      "status": "not-run",
+      "path": null,
+      "runtime_summary": null
+    },
+    "full_rollout_rehearsal": {
+      "enabled": true,
+      "status": "pass",
+      "artifact_verification_status": "pass",
+      "target": "example.com",
+      "modules": "pd-infra-quick",
+      "runtime_path": "full-rehearsal.runtime.json",
+      "verification_path": "full-rehearsal.verification.json",
+      "verification": {
+        "status": "pass",
+        "target_name": "example.com",
+        "modules_run": [
+          "httpx_probe",
+          "naabu",
+          "katana",
+          "nuclei"
+        ],
+        "runtime_summary": {
+          "target_name": "example.com",
+          "mode": "chain",
+          "queued": 4,
+          "completed": 4,
+          "failed": 0,
+          "timed_out": 0,
+          "skipped_missing_credentials": 0,
+          "missing_binary": 0,
+          "dependency_unavailable": 0,
+          "worker_crash": 0,
+          "exports": [
+            "json",
+            "metadata",
+            "stix",
+            "zip"
+          ],
+          "report_mode": "shareable"
+        },
+        "artifacts": {
+          "metadata_path": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/full-rehearsal.metadata.json",
+          "metadata_path_exists": true,
+          "output_path": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/full-rehearsal.html",
+          "output_path_exists": true,
+          "exports": {
+            "json": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/rehearsal-artifacts/example-com-chain-20260408064451.json",
+            "stix": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/rehearsal-artifacts/example-com-chain-20260408064451.stix.json",
+            "zip": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/rehearsal-artifacts/example-com-chain-20260408064451.zip"
+          },
+          "existing": {
+            "json": true,
+            "stix": true,
+            "zip": true
+          },
+          "missing_export_keys": []
+        }
+      }
+    }
+  }
+}

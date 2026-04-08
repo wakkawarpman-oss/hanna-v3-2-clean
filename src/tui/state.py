@@ -64,7 +64,7 @@ class ExecutionConfig:
     db_path: str = str(DEFAULT_DB_PATH)
     exports_dir: str = str(RUNS_ROOT / "exports")
     output_path: str | None = None
-    export_formats: list[str] = field(default_factory=lambda: ["json", "stix", "zip"])
+    export_formats: list[str] = field(default_factory=lambda: ["json", "metadata", "stix", "zip"])
     export_dir: str | None = None
     report_mode: str = "shareable"
     verify: bool = False
@@ -184,7 +184,7 @@ def build_default_session_state(
         ),
         export=ExportState(
             report_mode=report_mode,
-            formats=export_formats or ["json", "stix", "zip"],
+            formats=export_formats or ["json", "metadata", "stix", "zip"],
             html_dir=str(HTML_DIR),
             artifacts_dir=str(RUNS_ROOT / "exports" / "artifacts"),
         ),
@@ -205,7 +205,7 @@ def build_default_session_state(
             db_path=db_path or str(DEFAULT_DB_PATH),
             exports_dir=exports_dir or str(RUNS_ROOT / "exports"),
             output_path=output_path,
-            export_formats=list(export_formats or ["json", "stix", "zip"]),
+            export_formats=list(export_formats or ["json", "metadata", "stix", "zip"]),
             export_dir=export_dir,
             report_mode=report_mode,
             verify=verify,

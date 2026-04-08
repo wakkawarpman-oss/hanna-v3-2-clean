@@ -1,0 +1,2 @@
+[prelaunch] Legacy wrapper inventory
+[legacy] run_discovery.py is kept for compatibility. Prefer './scripts/hanna' or 'python3 src/cli.py' for operator workflows.

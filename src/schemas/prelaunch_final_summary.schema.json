@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hanna.local/schemas/prelaunch_final_summary.schema.json",
+  "title": "HANNA Prelaunch Final Summary",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "bundle_root",
+    "generated_from",
+    "overall_status",
+    "failure_count",
+    "stage_count",
+    "nonempty_error_files",
+    "stages",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "bundle_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_from": {
+      "type": "string",
+      "minLength": 1
+    },
+    "overall_status": {
+      "type": "string",
+      "enum": ["pass", "fail"]
+    },
+    "failure_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "stage_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "nonempty_error_files": {
+      "type": "object",
+      "required": ["count", "files"],
+      "properties": {
+        "count": {"type": "integer", "minimum": 0},
+        "files": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": true
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "slug", "status", "exit_code", "started_at", "finished_at"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "slug": {"type": "string", "minLength": 1},
+          "status": {"type": "string", "enum": ["pass", "fail"]},
+          "exit_code": {"type": "integer", "minimum": 0},
+          "started_at": {"type": "string", "minLength": 1},
+          "finished_at": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": true
+      }
+    },
+    "checks": {
+      "type": "object",
+      "required": [
+        "preflight",
+        "smart_summary",
+        "focused_regression",
+        "live_smoke",
+        "full_rollout_rehearsal"
+      ],
+      "properties": {
+        "preflight": {"type": "object"},
+        "smart_summary": {"type": "object"},
+        "focused_regression": {"type": "object"},
+        "live_smoke": {"type": "object"},
+        "full_rollout_rehearsal": {"type": "object"}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

@@ -117,7 +117,14 @@ class ChainRunner:
             all_hits = list(recon_report.hits) if recon_report else []
             for mod in (recon_result or {}).get("modules_run", []):
                 module_hits = [h for h in all_hits if h.source_module == mod]
-                outcomes.append(AdapterOutcome(module_name=mod, lane="chain", hits=module_hits))
+                module_error = next((item for item in errors if item.get("module") == mod), None)
+                outcomes.append(AdapterOutcome(
+                    module_name=mod,
+                    lane="chain",
+                    hits=module_hits,
+                    error=module_error.get("error") if module_error else None,
+                    error_kind=module_error.get("error_kind") if module_error else None,
+                ))
 
         # ── Stage 4: Verification ──
         if verify or verify_all:
@@ -142,6 +149,7 @@ class ChainRunner:
             new_phones=(recon_result or {}).get("new_phones", []),
             new_emails=(recon_result or {}).get("new_emails", []),
             extra={
+                "queued_modules": module_names,
                 "ingestion": ing,
                 "clusters": len(clusters),
                 "output_path": output_path,

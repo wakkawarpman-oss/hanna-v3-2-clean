@@ -7,7 +7,7 @@ import re
 import urllib.parse
 from datetime import datetime
 
-from adapters.base import ReconAdapter, ReconHit
+from adapters.base import DependencyUnavailableError, MissingBinaryError, ReconAdapter, ReconHit
 from adapters.cli_common import run_cli
 
 
@@ -58,7 +58,10 @@ class MaryamAdapter(ReconAdapter):
         """Execute a Maryam module via CLI and capture JSON output."""
         maryam_bin = os.environ.get("MARYAM_BIN", "maryam")
         cmd = [maryam_bin, "-e", module, "-q", query, "-o", "json"]
-        proc = run_cli(cmd, timeout=self.timeout * 3, proxy=self.proxy)
+        try:
+            proc = run_cli(cmd, timeout=self.timeout * 3, proxy=self.proxy)
+        except (MissingBinaryError, DependencyUnavailableError):
+            return None
         if proc and proc.returncode == 0 and proc.stdout.strip():
             return proc.stdout.strip()
         return None

@@ -1,0 +1,46 @@
+{
+  "status": "pass",
+  "target_name": "example.com",
+  "modules_run": [
+    "httpx_probe",
+    "naabu",
+    "katana",
+    "nuclei"
+  ],
+  "runtime_summary": {
+    "target_name": "example.com",
+    "mode": "chain",
+    "queued": 4,
+    "completed": 4,
+    "failed": 0,
+    "timed_out": 0,
+    "skipped_missing_credentials": 0,
+    "missing_binary": 0,
+    "dependency_unavailable": 0,
+    "worker_crash": 0,
+    "exports": [
+      "json",
+      "metadata",
+      "stix",
+      "zip"
+    ],
+    "report_mode": "shareable"
+  },
+  "artifacts": {
+    "metadata_path": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/full-rehearsal.metadata.json",
+    "metadata_path_exists": true,
+    "output_path": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/full-rehearsal.html",
+    "output_path_exists": true,
+    "exports": {
+      "json": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/rehearsal-artifacts/example-com-chain-20260408064451.json",
+      "stix": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/rehearsal-artifacts/example-com-chain-20260408064451.stix.json",
+      "zip": "/Users/admin/Desktop/hanna-v3-2-clean/.cache/prelaunch/validation-rehearsal/rehearsal-artifacts/example-com-chain-20260408064451.zip"
+    },
+    "existing": {
+      "json": true,
+      "stix": true,
+      "zip": true
+    },
+    "missing_export_keys": []
+  }
+}
