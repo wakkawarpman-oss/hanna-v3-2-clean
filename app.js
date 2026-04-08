@@ -5,6 +5,9 @@ const rateLimit = require('@fastify/rate-limit')
 const jwtRbac = require('./plugins/jwt-rbac')
 const authRoutes = require('./routes/auth')
 const adapterRoutes = require('./routes/adapters')
+const userRoutes = require('./routes/users')
+const reportRoutes = require('./routes/reports')
+const metricsRoutes = require('./routes/metrics')
 
 /**
  * Build the Fastify application.
@@ -26,6 +29,9 @@ async function buildApp (opts = {}) {
   // 2. Routes
   await app.register(authRoutes)
   await app.register(adapterRoutes)
+  await app.register(userRoutes)
+  await app.register(reportRoutes)
+  await app.register(metricsRoutes)
 
   return app
 }

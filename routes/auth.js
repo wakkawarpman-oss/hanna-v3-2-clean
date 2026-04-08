@@ -26,14 +26,21 @@ const USERS = {
     password: 'analyst-secret',
     sub: 'user-analyst-002',
     roles: ['analyst'],
-    permissions: ['evidence:read:tenant1', 'adapter:run:shodan'],
+    permissions: [
+      'evidence:read:tenant1',
+      'adapter:run:shodan',
+      'user:list:tenant1',
+      'reports:read:tenant1',
+      'reports:export:tenant1',
+      'metrics:read:tenant1'
+    ],
     tenantId: 'tenant1'
   },
   'guest@tenant2.com': {
     password: 'guest-secret',
     sub: 'user-guest-003',
     roles: ['viewer'],
-    permissions: ['evidence:read:tenant2'],
+    permissions: ['evidence:read:tenant2', 'metrics:read:tenant2'],
     tenantId: 'tenant2'
   }
 }
