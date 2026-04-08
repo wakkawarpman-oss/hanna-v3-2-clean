@@ -7,11 +7,11 @@
     "test": "tap test/vertical-slice.spec.js"
   },
   "dependencies": {
-    "@fastify/jwt": "^9.1.0",
-    "fastify": "^5.0.0",
-    "fastify-plugin": "^5.0.1"
+    "@fastify/jwt": "^8.0.1",
+    "fastify": "^4.29.0",
+    "fastify-plugin": "^4.5.1"
   },
   "devDependencies": {
-    "tap": "^20.0.3"
+    "tap": "^18.8.0"
   }
 }
