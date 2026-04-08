@@ -258,6 +258,135 @@ Required follow-through after implementation:
 - clean docs,
 - repeatable smoke checks,
 - stable folder and naming conventions,
+
+## QA Remediation Plan (2026-04-08)
+
+This section converts the latest production QA findings into an execution backlog. The order is severity-first: restore operator entrypoints, close evidence-pack gaps, then tighten runtime policy and acceptance coverage.
+
+### Remediation Wave 1 — Release Blockers
+
+#### 1. TUI startup crash
+
+Problem:
+
+- `hanna tui` currently crashes during screen installation because `update_state()` triggers `refresh_screen()` before screen widgets are mounted.
+
+Execution plan:
+
+1. Move the initial state hydration to a post-mount-safe point in the app lifecycle.
+2. Make screen refresh tolerant of pre-compose / pre-mount states.
+3. Add a regression test that launches the app shell far enough to exercise screen installation without `NoMatches` failures.
+4. Re-run focused TUI tests and the full suite.
+
+Acceptance criteria:
+
+- `python3 src/cli.py tui --plain --target "QA Smoke Target"` initializes without traceback.
+- All TUI tests remain green.
+
+#### 2. Dispatcher module listing mismatch
+
+Problem:
+
+- `run_discovery.py --list-modules` is referenced operationally but is not supported in the current parser.
+
+Execution plan:
+
+1. Add a read-only `--list-modules` path to `run_discovery.py`, or explicitly route operators to `hanna list` from the legacy entrypoint.
+2. Keep legacy behavior non-breaking for existing ingestion and render flows.
+3. Add contract coverage for the supported listing path.
+
+Acceptance criteria:
+
+- Legacy dispatcher surfaces module inventory without parser failure.
+
+#### 3. Evidence ZIP incompleteness
+
+Problem:
+
+- ZIP exports currently include JSON, STIX, HTML, and manifest only; raw logs and supporting artifacts are omitted.
+
+Execution plan:
+
+1. Extend ZIP export to include adapter raw logs referenced by `RunResult.outcomes` when present.
+2. Include generated media or supplemental artifacts when a resolved path is available.
+3. Record every included file in the manifest with checksum metadata.
+4. Add regression coverage for raw-log inclusion and manifest completeness.
+
+Acceptance criteria:
+
+- ZIP contains JSON, STIX, HTML when available, and referenced raw logs.
+- Manifest enumerates all bundled artifacts.
+
+### Remediation Wave 2 — Runtime Policy Corrections
+
+#### 4. Timeout policy alignment
+
+Problem:
+
+- Priority defaults and per-module overrides currently exceed the operational target for P1-P3 modules.
+
+Execution plan:
+
+1. Rework `PRIORITY_WORKER_TIMEOUT` defaults to align with the intended P0 vs P1-P3 policy.
+2. Revisit long-running module overrides and keep only justified exceptions.
+3. Update config tests to lock the expected bounds.
+4. Revalidate aggregate and chain behavior under the revised timeout envelope.
+
+Acceptance criteria:
+
+- P0 modules retain extended timeout.
+- Standard P1-P3 runtime stays within the approved operational window unless explicitly overridden and documented.
+
+#### 5. Entity-confidence threshold hardening
+
+Problem:
+
+- The cross-module FOP + phone correlation scenario reaches `0.90`, but not strictly greater than `0.90`.
+
+Execution plan:
+
+1. Review confidence composition for confirmed same-record links.
+2. Increase the score only where corroboration semantics justify it.
+3. Add a scenario test that locks the expected threshold for the control case.
+
+Acceptance criteria:
+
+- The controlled FOP + shared phone scenario resolves above `0.90` confidence without inflating unrelated cases.
+
+### Remediation Wave 3 — Capability Gaps
+
+#### 6. AI filtering / risk-flag pipeline
+
+Problem:
+
+- Production code currently does not implement the claimed LLM summarization and risk-flag path.
+
+Execution plan:
+
+1. Decide whether to implement this capability in-tree now or explicitly de-scope it from release claims.
+2. If implemented, define the prompt contract, strict JSON schema, and red-flag taxonomy.
+3. Add deterministic tests with stubbed model responses for malformed input, schema enforcement, and risk-flag triggering.
+4. If deferred, remove the capability from operational documentation and release criteria until it exists.
+
+Acceptance criteria:
+
+- Release claims match shipped capability.
+- If enabled, AI summaries are schema-validated and test-covered.
+
+### Remediation Wave 4 — Final Acceptance
+
+#### 7. Full production re-validation
+
+Execution plan:
+
+1. Re-run smoke checks for list, aggregate degradation, TUI, dossier generation, and reset.
+2. Re-run the full automated suite.
+3. Reissue Go / No-Go with residual risks only.
+
+Acceptance criteria:
+
+- No release blockers remain.
+- Final QA report can be downgraded from `No-Go` to `Go` or `Go with known low-risk exceptions`.
 - explicit runbooks for internal vs shareable outputs.
 
 ## Bottom Line
