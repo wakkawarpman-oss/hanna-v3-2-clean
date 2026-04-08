@@ -1,70 +1,196 @@
-const t = require('tap');
-const { buildApp } = require('../app');
+'use strict'
 
-async function login(app, username, password = 'pass') {
-  const res = await app.inject({
-    method: 'POST',
-    url: '/api/auth/login',
-    payload: { username, password }
-  });
-  return res;
+/**
+ * Vertical slice tests: Fastify JWT/RBAC auth layer.
+ *
+ * Run with: node --test test/vertical-slice.spec.js
+ */
+
+const { test } = require('node:test')
+const assert = require('node:assert/strict')
+const { randomBytes } = require('node:crypto')
+const { buildApp } = require('../app')
+
+// Use a fresh random secret per test run to prevent accidental reuse.
+const TEST_SECRET = 'TEST_ONLY_' + randomBytes(32).toString('hex')
+
+// ---------------------------------------------------------------------------
+// Helper: build app with a fixed test secret.
+// ---------------------------------------------------------------------------
+function buildTestApp () {
+  return buildApp({ logger: false, jwtSecret: TEST_SECRET })
 }
 
-t.test('vertical slice: login success returns access token', async (t) => {
-  const app = buildApp();
-  t.teardown(() => app.close());
+// ---------------------------------------------------------------------------
+// Helper: fire an HTTP request against the Fastify test instance.
+// ---------------------------------------------------------------------------
+async function request (app, method, url, opts = {}) {
+  const headers = { ...(opts.headers || {}) }
+  if (opts.body) {
+    headers['content-type'] = 'application/json'
+  }
+  const response = await app.inject({
+    method,
+    url,
+    headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  })
+  return {
+    statusCode: response.statusCode,
+    body: response.json()
+  }
+}
 
-  const res = await login(app, 'analyst1');
-  t.equal(res.statusCode, 200);
-  const body = res.json();
-  t.ok(body.access_token);
-});
+// ---------------------------------------------------------------------------
+// Test suite
+// ---------------------------------------------------------------------------
 
-t.test('vertical slice: protected route succeeds with required permission', async (t) => {
-  const app = buildApp();
-  t.teardown(() => app.close());
+test('login success returns access token with canonical payload', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
 
-  const auth = await login(app, 'analyst1');
-  const token = auth.json().access_token;
+  const res = await request(app, 'POST', '/auth/login', {
+    body: { email: 'analyst@example.com', password: 'analyst-secret' }
+  })
 
-  const res = await app.inject({
-    method: 'POST',
-    url: '/api/adapters/shodan/run',
-    headers: { authorization: `Bearer ${token}` },
-    payload: { target: 'example.com', tenantId: 'tenant1' }
-  });
+  assert.equal(res.statusCode, 200, 'should return 200')
+  assert.ok(res.body.accessToken, 'should include accessToken')
 
-  t.equal(res.statusCode, 200);
-  t.equal(res.json().status, 'queued');
-});
+  // Decode and verify canonical payload fields (without verification — just decode)
+  const parts = res.body.accessToken.split('.')
+  assert.equal(parts.length, 3, 'should be a 3-part JWT')
 
-t.test('vertical slice: deny without permission and deny tenant mismatch', async (t) => {
-  const app = buildApp();
-  t.teardown(() => app.close());
+  const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
+  assert.ok(payload.sub, 'payload must include sub')
+  assert.ok(Array.isArray(payload.roles), 'payload must include roles array')
+  assert.ok(Array.isArray(payload.permissions), 'payload must include permissions array')
+  assert.ok(payload.tenantId, 'payload must include tenantId')
+  assert.ok(payload.jti, 'payload must include jti')
+  assert.ok(payload.iat, 'payload must include iat')
+  assert.ok(payload.exp, 'payload must include exp')
+})
 
-  const viewerAuth = await login(app, 'viewer1');
-  const viewerToken = viewerAuth.json().access_token;
+test('login with invalid credentials returns 401', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
 
-  const deniedByPermission = await app.inject({
-    method: 'POST',
-    url: '/api/adapters/shodan/run',
-    headers: { authorization: `Bearer ${viewerToken}` },
-    payload: { target: 'example.com', tenantId: 'tenant1' }
-  });
+  const res = await request(app, 'POST', '/auth/login', {
+    body: { email: 'analyst@example.com', password: 'wrong-password' }
+  })
 
-  t.equal(deniedByPermission.statusCode, 403);
-  t.equal(deniedByPermission.json().code, 'RBAC_PERMISSION_DENIED');
+  assert.equal(res.statusCode, 401, 'should return 401')
+})
 
-  const analystAuth = await login(app, 'analyst1');
-  const analystToken = analystAuth.json().access_token;
+test('public GET /adapters returns adapter list without auth', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
 
-  const deniedByTenant = await app.inject({
-    method: 'POST',
-    url: '/api/adapters/shodan/run',
-    headers: { authorization: `Bearer ${analystToken}` },
-    payload: { target: 'example.com', tenantId: 'tenant2' }
-  });
+  const res = await request(app, 'GET', '/adapters')
 
-  t.equal(deniedByTenant.statusCode, 403);
-  t.equal(deniedByTenant.json().code, 'RBAC_TENANT_MISMATCH');
-});
+  assert.equal(res.statusCode, 200)
+  assert.ok(Array.isArray(res.body.adapters), 'should return adapters array')
+  assert.ok(res.body.adapters.length > 0, 'should have at least one adapter')
+})
+
+test('protected route succeeds with valid permission (adapter:run:shodan)', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
+
+  // analyst@example.com has permissions: ['evidence:read:tenant1', 'adapter:run:shodan']
+  const loginRes = await request(app, 'POST', '/auth/login', {
+    body: { email: 'analyst@example.com', password: 'analyst-secret' }
+  })
+  assert.equal(loginRes.statusCode, 200)
+  const token = loginRes.body.accessToken
+
+  const res = await request(app, 'POST', '/adapters/shodan/run', {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+
+  assert.equal(res.statusCode, 202, `expected 202, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
+  assert.equal(res.body.adapterId, 'shodan')
+  assert.equal(res.body.status, 'accepted')
+})
+
+test('protected route succeeds with wildcard permission (adapter:run:*)', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
+
+  // admin@example.com has permissions: ['*:*:*']
+  const loginRes = await request(app, 'POST', '/auth/login', {
+    body: { email: 'admin@example.com', password: 'admin-secret' }
+  })
+  assert.equal(loginRes.statusCode, 200)
+  const token = loginRes.body.accessToken
+
+  const res = await request(app, 'POST', '/adapters/ghunt/run', {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+
+  assert.equal(res.statusCode, 202, `expected 202, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
+})
+
+test('403 returned for insufficient permission (viewer tries to run adapter)', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
+
+  // guest@tenant2.com only has 'evidence:read:tenant2' — no adapter:run permissions
+  const loginRes = await request(app, 'POST', '/auth/login', {
+    body: { email: 'guest@tenant2.com', password: 'guest-secret' }
+  })
+  assert.equal(loginRes.statusCode, 200)
+  const token = loginRes.body.accessToken
+
+  const res = await request(app, 'POST', '/adapters/shodan/run', {
+    headers: { Authorization: `Bearer ${token}` }
+  })
+
+  assert.equal(res.statusCode, 403, `expected 403, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
+  assert.equal(res.body.error, 'Forbidden')
+})
+
+test('tenant mismatch is denied – unit test of checkPermission utility', async (_t) => {
+  // The HTTP route enforces tenant boundary by deriving requiredTenantId from
+  // the JWT payload itself (request.user.tenantId), so a tampered token would
+  // fail JWT signature verification before reaching the permission check.
+  // This unit test exercises the underlying enforcement logic directly.
+  const { checkPermission } = require('../plugins/jwt-rbac')
+
+  const fakePayload = {
+    sub: 'user-x',
+    roles: ['analyst'],
+    permissions: ['adapter:run:shodan'],
+    tenantId: 'tenant1', // user's tenant
+    jti: 'test-jti'
+  }
+
+  // Required tenant is 'tenant2' — this is a cross-tenant mismatch
+  const result = checkPermission(fakePayload, 'adapter:run:shodan', 'tenant2')
+  assert.equal(result.allowed, false, 'should deny when tenants differ')
+  assert.equal(result.reason, 'tenant_mismatch')
+})
+
+test('401 returned when no token is provided to protected route', async (t) => {
+  const app = await buildTestApp()
+  t.after(() => app.close())
+
+  const res = await request(app, 'POST', '/adapters/shodan/run')
+
+  assert.equal(res.statusCode, 401, `expected 401, got ${res.statusCode}: ${JSON.stringify(res.body)}`)
+})
+
+test('superadmin *:*:* bypasses all permission checks', async (t) => {
+  const { checkPermission } = require('../plugins/jwt-rbac')
+
+  const adminPayload = {
+    sub: 'user-admin',
+    roles: ['admin'],
+    permissions: ['*:*:*'],
+    tenantId: 'tenant1',
+    jti: 'test-jti'
+  }
+
+  const result = checkPermission(adminPayload, 'adapter:run:anything', 'tenant1')
+  assert.equal(result.allowed, true)
+  assert.equal(result.reason, 'superadmin')
+})

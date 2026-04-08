@@ -1,53 +1,94 @@
+'use strict'
+
+/**
+ * Auth routes – login endpoint that issues a canonical JWT.
+ *
+ * The user store is intentionally stubbed so it can be swapped for a real
+ * database or identity provider without touching the JWT contract.
+ *
+ * ⚠️  STUB ONLY – NOT FOR PRODUCTION USE.
+ * Replace USERS with real DB lookups and use bcrypt/argon2 for password
+ * hashing with constant-time comparison before any deployment.
+ */
+
+// ---------------------------------------------------------------------------
+// Stub user store – replace with a real lookup in production.
+// ---------------------------------------------------------------------------
 const USERS = {
-  analyst1: {
-    id: 'user-analyst-1',
-    username: 'analyst1',
-    password: 'pass',
-    roles: ['analyst'],
-    permissions: ['adapter:run:*', 'evidence:read:tenant1'],
-    tenantId: 'tenant1'
-  },
-  viewer1: {
-    id: 'user-viewer-1',
-    username: 'viewer1',
-    password: 'pass',
-    roles: ['viewer'],
-    permissions: ['evidence:read:tenant1'],
-    tenantId: 'tenant1'
-  },
-  root1: {
-    id: 'user-root-1',
-    username: 'root1',
-    password: 'pass',
-    roles: ['superadmin'],
+  'admin@example.com': {
+    password: 'admin-secret',
+    sub: 'user-admin-001',
+    roles: ['admin'],
     permissions: ['*:*:*'],
-    tenantId: 'tenantX'
+    tenantId: 'tenant1'
+  },
+  'analyst@example.com': {
+    password: 'analyst-secret',
+    sub: 'user-analyst-002',
+    roles: ['analyst'],
+    permissions: ['evidence:read:tenant1', 'adapter:run:shodan'],
+    tenantId: 'tenant1'
+  },
+  'guest@tenant2.com': {
+    password: 'guest-secret',
+    sub: 'user-guest-003',
+    roles: ['viewer'],
+    permissions: ['evidence:read:tenant2'],
+    tenantId: 'tenant2'
   }
-};
-
-function findUser(username) {
-  return USERS[username] || null;
 }
 
-function validPassword(password, expected) {
-  return String(password || '') === String(expected || '');
+// ---------------------------------------------------------------------------
+// Route schema
+// ---------------------------------------------------------------------------
+const loginSchema = {
+  body: {
+    type: 'object',
+    required: ['email', 'password'],
+    properties: {
+      email: { type: 'string', format: 'email' },
+      password: { type: 'string', minLength: 1 }
+    }
+  }
 }
 
-async function authRoutes(fastify) {
-  fastify.post('/login', async (request, reply) => {
-    const { username, password } = request.body || {};
-    const user = findUser(username);
+// ---------------------------------------------------------------------------
+// Route plugin
+// ---------------------------------------------------------------------------
+async function authRoutes (fastify, _opts) {
+  fastify.post('/auth/login', {
+    schema: loginSchema,
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+  }, async (request, reply) => {
+    const { email, password } = request.body
 
-    if (!user || !validPassword(password, user.password)) {
+    const user = USERS[email]
+    // NOTE: Plain equality is acceptable here because USERS is a stub.
+    // A real implementation must use bcrypt/argon2 with constant-time comparison.
+    if (!user || user.password !== password) {
       return reply.code(401).send({
-        error: 'UNAUTHORIZED',
-        code: 'AUTH_INVALID_CREDENTIALS'
-      });
+        statusCode: 401,
+        error: 'Unauthorized',
+        message: 'Invalid credentials'
+      })
     }
 
-    const accessToken = fastify.issueToken(user);
-    return reply.send({ access_token: accessToken });
-  });
+    // jti is a unique token id using cryptographically secure randomness.
+    const jti = require('node:crypto').randomUUID()
+
+    const payload = {
+      sub: user.sub,
+      roles: user.roles,
+      permissions: user.permissions,
+      tenantId: user.tenantId,
+      jti
+    }
+
+    // @fastify/jwt respects expiresIn via sign options.
+    const token = await reply.jwtSign(payload, { expiresIn: '1h' })
+
+    return reply.code(200).send({ accessToken: token })
+  })
 }
 
-module.exports = authRoutes;
+module.exports = authRoutes

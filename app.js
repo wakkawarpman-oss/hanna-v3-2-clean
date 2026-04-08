@@ -1,27 +1,44 @@
-const Fastify = require('fastify');
-const jwtRbacPlugin = require('./plugins/jwt-rbac');
-const authRoutes = require('./routes/auth');
-const adapterRoutes = require('./routes/adapters');
+'use strict'
 
-function buildApp() {
-  const app = Fastify({ logger: false });
+const fastify = require('fastify')
+const rateLimit = require('@fastify/rate-limit')
+const jwtRbac = require('./plugins/jwt-rbac')
+const authRoutes = require('./routes/auth')
+const adapterRoutes = require('./routes/adapters')
 
-  app.register(jwtRbacPlugin);
-  app.register(authRoutes, { prefix: '/api/auth' });
-  app.register(adapterRoutes, { prefix: '/api' });
+/**
+ * Build the Fastify application.
+ *
+ * Accepts an opts object so the same factory is usable in tests
+ * (with logger: false) and in production (with logger: true).
+ *
+ * @param {import('fastify').FastifyServerOptions} opts
+ * @returns {Promise<import('fastify').FastifyInstance>}
+ */
+async function buildApp (opts = {}) {
+  const { jwtSecret, ...fastifyOpts } = opts
+  const app = fastify(fastifyOpts)
 
-  app.get('/health', async () => ({ ok: true }));
+  // 1. Plugins (must be registered before routes that depend on them)
+  await app.register(rateLimit, { global: false })
+  await app.register(jwtRbac, { jwtSecret })
 
-  return app;
+  // 2. Routes
+  await app.register(authRoutes)
+  await app.register(adapterRoutes)
+
+  return app
 }
 
-module.exports = { buildApp };
+module.exports = { buildApp }
 
+// Allow running directly: `node app.js`
 if (require.main === module) {
-  const app = buildApp();
-  const port = Number(process.env.PORT || 3000);
-  app.listen({ port, host: '0.0.0.0' }).catch((err) => {
-    app.log.error(err);
-    process.exit(1);
-  });
+  buildApp({ logger: true })
+    .then((app) => app.listen({ port: 3000, host: '0.0.0.0' }))
+    .then(() => console.log('HANNA Fastify auth service listening on port 3000'))
+    .catch((err) => {
+      console.error(err)
+      process.exit(1)
+    })
 }
