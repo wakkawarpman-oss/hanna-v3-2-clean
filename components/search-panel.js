@@ -5,10 +5,17 @@ const contrib = require('blessed-contrib')
 
 class SearchPanel {
   constructor (screen, apiClient, onLog) {
-    this.screen = screen
+    this.screen = screen || null
     this.api = apiClient || null
     this.onLog = typeof onLog === 'function' ? onLog : () => {}
     this.results = []
+
+    if (!this.screen) {
+      this.searchBox = null
+      this.resultsBox = null
+      this.toolStatus = null
+      return
+    }
 
     this.searchBox = blessed.textbox({
       parent: screen,
@@ -60,19 +67,61 @@ class SearchPanel {
   }
 
   setEmptyResults () {
+    if (!this.resultsBox) {
+      return
+    }
+
     this.resultsBox.setData({
       headers: ['Інструмент', 'Результат', 'Точність'],
       data: [['-', 'Готово до пошуку', '-']]
     })
   }
 
+  extractPhone (text) {
+    const candidates = [
+      ...(text.match(/\+\d[\d\s().-]{8,20}\d/g) || []),
+      ...(text.match(/\b0\d(?:[\s().-]?\d){8}\b/g) || [])
+    ]
+
+    for (const rawCandidate of candidates) {
+      const compactDigits = rawCandidate.replace(/\D/g, '')
+      const normalized = rawCandidate.trim().startsWith('+')
+        ? `+${compactDigits}`
+        : compactDigits
+
+      if (/^\+\d{10,15}$/.test(normalized) || /^0\d{9}$/.test(normalized)) {
+        return normalized
+      }
+    }
+
+    return ''
+  }
+
   parseSearchInput (text) {
-    const fio = text.match(/([A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+\s+){1,3}[A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+/u)?.[0] || ''
+    const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+    let fioCandidate = ''
+
+    for (const line of lines) {
+      const match = line.match(/^([A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+(?:\s+[A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+){1,3})/u)
+      if (match && !/\d/.test(match[1])) {
+        fioCandidate = match[1]
+        break
+      }
+    }
+
+    if (!fioCandidate) {
+      fioCandidate = text.match(/([A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+\s+){1,3}[A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+/u)?.[0] || ''
+    }
+
     const birthYear = text.match(/\b(19|20)\d{2}\b/)?.[0] || ''
-    const address = text.match(/(вул\.?|ул\.?|просп\.?|пр\.?|street|st\.?)\s*[^,\n]+/iu)?.[0] || ''
-    const city = text.match(/Київ|Kharkiv|Харків|Одеса|Львів|Дніпро|Dnipro|Lviv|Odesa/iu)?.[0] || ''
-    const phone = text.match(/(?:\+?380|0)\d{9}|\+\d{10,15}/)?.[0] || ''
-    const fop = text.match(/\bФОП\b|\bFOP\b|підприємець|entrepreneur/iu)?.[0] || ''
+    const address = text.match(/(вул\.?|ул\.?|вулиця|улица|просп\.?|проспект|street|st\.?)\s*[^,\n]+/iu)?.[0] || ''
+    const city = text.match(/Київ|Киев|Kharkiv|Kharkov|Харків|Харьков|Одеса|Одесса|Львів|Львов|Дніпро|Днепр|Dnipro|Lviv|Odesa/iu)?.[0] || ''
+    const phone = this.extractPhone(text)
+    const fopRaw = text.match(/ФОП|FOP|підприємець|предприниматель|entrepreneur/iu)?.[0] || ''
+    const fop = fopRaw ? 'ФОП' : ''
+
+    const hasStreetTokenInFio = /(вул\.?|ул\.?|вулиця|улица|street|st\.?|просп\.?|проспект)/iu.test(fioCandidate)
+    const fio = fioCandidate && (hasStreetTokenInFio || (address && address.includes(fioCandidate))) ? '' : fioCandidate
 
     const parsed = { fio, birthYear, address, city, phone, fop }
     const confidence = Object.values(parsed).filter(Boolean).length
@@ -107,6 +156,10 @@ class SearchPanel {
   }
 
   async executeSearch (input) {
+    if (!this.screen || !this.resultsBox || !this.toolStatus) {
+      return
+    }
+
     const parsed = this.parseSearchInput(input)
     this.showParsedData(parsed)
 
@@ -127,6 +180,10 @@ class SearchPanel {
   }
 
   showParsedData (parsed) {
+    if (!this.toolStatus || !this.screen) {
+      return
+    }
+
     const lines = [
       `{bold}Сирий запит{/}: ${parsed.raw || '—'}`,
       '',
@@ -174,6 +231,10 @@ class SearchPanel {
   }
 
   updateToolStatus (tools) {
+    if (!this.toolStatus || !this.screen) {
+      return
+    }
+
     const statusLines = tools.length
       ? tools.map((tool) => `${tool.status} ${tool.name}`)
       : ['Інструменти не визначені']
@@ -183,6 +244,10 @@ class SearchPanel {
   }
 
   displayResults (results) {
+    if (!this.resultsBox || !this.screen) {
+      return
+    }
+
     const rows = results.map((result) => [
       result.tool,
       result.data.length > 36 ? `${result.data.slice(0, 33)}...` : result.data,
@@ -198,6 +263,10 @@ class SearchPanel {
   }
 
   open () {
+    if (!this.searchBox || !this.resultsBox || !this.toolStatus || !this.screen) {
+      return
+    }
+
     this.searchBox.show()
     this.resultsBox.show()
     this.toolStatus.show()
@@ -206,6 +275,10 @@ class SearchPanel {
   }
 
   close () {
+    if (!this.searchBox || !this.resultsBox || !this.toolStatus || !this.screen) {
+      return
+    }
+
     this.searchBox.hide()
     this.resultsBox.hide()
     this.toolStatus.hide()
@@ -213,6 +286,10 @@ class SearchPanel {
   }
 
   bindEvents () {
+    if (!this.searchBox || !this.toolStatus || !this.screen) {
+      return
+    }
+
     this.searchBox.key(['enter'], async () => {
       const query = this.searchBox.getValue()
       if (!query.trim()) {

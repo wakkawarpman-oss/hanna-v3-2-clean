@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-04-08T15:44:55.011Z",
+  "totalCases": 3,
+  "cases": [
+    {
+      "id": 1,
+      "confidence": 5,
+      "parsed": {
+        "fio": "Пелешенко Дмитро Валерійович",
+        "birthYear": "1972",
+        "address": "Ул. Гв. Широнинцев 49 (49А",
+        "city": "Харьков",
+        "phone": "",
+        "fop": "ФОП"
+      },
+      "status": "HIGH"
+    },
+    {
+      "id": 2,
+      "confidence": 4,
+      "parsed": {
+        "fio": "",
+        "birthYear": "1973",
+        "address": "ул. Бучмы",
+        "city": "Харьков",
+        "phone": "0958042036",
+        "fop": ""
+      },
+      "status": "HIGH"
+    },
+    {
+      "id": 3,
+      "confidence": 5,
+      "parsed": {
+        "fio": "Коваленко Олена Василівна",
+        "birthYear": "2015",
+        "address": "вул. Шевченка 15",
+        "city": "",
+        "phone": "+380671234567",
+        "fop": "ФОП"
+      },
+      "status": "HIGH"
+    }
+  ],
+  "averageConfidence": 4.67
+}
