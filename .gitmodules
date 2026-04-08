@@ -10,3 +10,6 @@
 [submodule "tools/recon-ng"]
 	path = tools/recon-ng
 	url = https://github.com/lanmaster53/recon-ng.git
+[submodule "tools/GetContactAPI"]
+	path = tools/GetContactAPI
+	url = https://github.com/SijyKijy/GetContactAPI.git
