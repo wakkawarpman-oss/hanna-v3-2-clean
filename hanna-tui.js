@@ -2,7 +2,8 @@
 
 const blessed = require('blessed')
 const contrib = require('blessed-contrib')
-const { initSearch } = require('./components/search-panel')
+const { initSearch, DebugParser } = require('./components/search-panel')
+const { DebugTui } = require('./components/debug-tui')
 
 const COLORS = {
   primary: 'green',
@@ -159,6 +160,11 @@ function buildScreen () {
 function startTui () {
   const ui = buildScreen()
   const { screen, sessions, table, rps, logs, resources, clock } = ui
+  const debugParser = new DebugParser(process.env.DEBUG === '1' || process.env.TUI_DEBUG === '1')
+  const debugTui = new DebugTui(screen, debugParser, (line) => {
+    logs.log(`[${nowIsoMinute()}] ${line}`)
+  })
+  let debugMode = process.env.TUI_DEBUG === '1'
 
   const searchPanel = initSearch(screen, null, (line) => {
     logs.log(`[${nowIsoMinute()}] ${line}`)
@@ -252,6 +258,23 @@ function startTui () {
   screen.key(['C-s'], () => {
     searchPanel.open()
     addLog(`[${nowIsoMinute()}] Search panel opened`)
+    screen.render()
+  })
+
+  screen.key(['C-d'], () => {
+    debugTui.open()
+    addLog(`[${nowIsoMinute()}] Debug panel opened`)
+    screen.render()
+  })
+
+  screen.key(['f12'], () => {
+    debugMode = !debugMode
+    if (debugMode) {
+      debugTui.open()
+    } else {
+      debugTui.close()
+    }
+    addLog(`[${nowIsoMinute()}] Debug mode ${debugMode ? 'ON' : 'OFF'}`)
     screen.render()
   })
 

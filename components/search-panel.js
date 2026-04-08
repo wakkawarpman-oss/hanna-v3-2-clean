@@ -1,10 +1,200 @@
 'use strict'
 
+const fs = require('node:fs')
 const blessed = require('blessed')
 const contrib = require('blessed-contrib')
 
-class SearchPanel {
+class SafeParser {
+  safeRegex (text, regex) {
+    try {
+      const match = text.match(regex)
+      return match ? match[0] : ''
+    } catch {
+      return ''
+    }
+  }
+
+  sanitizeInput (input) {
+    if (input == null) {
+      throw new Error('INVALID_INPUT: input is null or undefined')
+    }
+
+    const raw = Buffer.isBuffer(input) ? input.toString('utf8') : input
+    if (typeof raw !== 'string') {
+      throw new Error('INVALID_INPUT: expected string or Buffer')
+    }
+
+    return raw
+      .normalize('NFC')
+      .replace(/[\uFEFF]/g, '')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ' ')
+      .replace(/[ \t]+/g, ' ')
+      .trim()
+  }
+
+  extractPhone (text) {
+    const candidates = [
+      ...(text.match(/\+\d[\d\s().-]{8,20}\d/g) || []),
+      ...(text.match(/\b0\d(?:[\s().-]?\d){8}\b/g) || [])
+    ]
+
+    for (const rawCandidate of candidates) {
+      const compactDigits = rawCandidate.replace(/\D/g, '')
+      const normalized = rawCandidate.trim().startsWith('+') ? `+${compactDigits}` : compactDigits
+
+      if (/^\+\d{10,15}$/.test(normalized) || /^0\d{9}$/.test(normalized)) {
+        return normalized
+      }
+    }
+
+    return ''
+  }
+
+  collectErrors (parsed) {
+    const errors = []
+    if (!parsed.fio) errors.push('NO_FIO')
+    if (!parsed.address) errors.push('NO_ADDRESS')
+    if (!parsed.phone) errors.push('NO_PHONE')
+    if (parsed.fio && parsed.fio.length > 100) errors.push('FIO_TOO_LONG')
+    return errors
+  }
+
+  parseSearchInput (input) {
+    try {
+      const cleanText = this.sanitizeInput(input)
+      const emptyParsed = { fio: '', birthYear: '', address: '', city: '', phone: '', fop: '' }
+
+      if (cleanText.length === 0) {
+        return {
+          raw: '',
+          parsed: emptyParsed,
+          confidence: 0,
+          errors: ['EMPTY_INPUT'],
+          status: 'EMPTY'
+        }
+      }
+
+      const lines = cleanText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
+      let fioCandidate = ''
+
+      for (const line of lines) {
+        const match = line.match(/^([A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+(?:\s+[A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+){1,3})/u)
+        if (match && !/\d/.test(match[1])) {
+          fioCandidate = match[1]
+          break
+        }
+      }
+
+      if (!fioCandidate) {
+        fioCandidate = this.safeRegex(cleanText, /([A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+\s+){1,3}[A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+/u)
+      }
+
+      const birthYear = this.safeRegex(cleanText, /\b(19|20)\d{2}\b/)
+      const address = this.safeRegex(cleanText, /(вул\.?|ул\.?|вулиця|улица|просп\.?|проспект|street|st\.?)\s*[^,\n]+/iu)
+      const city = this.safeRegex(cleanText, /Київ|Киев|Kharkiv|Kharkov|Харків|Харьков|Одеса|Одесса|Львів|Львов|Дніпро|Днепр|Dnipro|Lviv|Odesa/iu)
+      const phone = this.extractPhone(cleanText)
+      const fopRaw = this.safeRegex(cleanText, /ФОП|FOP|підприємець|предприниматель|entrepreneur/iu)
+      const fop = fopRaw ? 'ФОП' : ''
+
+      const hasStreetTokenInFio = /(вул\.?|ул\.?|вулиця|улица|street|st\.?|просп\.?|проспект)/iu.test(fioCandidate)
+      const fio = fioCandidate && (hasStreetTokenInFio || (address && address.includes(fioCandidate))) ? '' : fioCandidate
+
+      const parsed = { fio, birthYear, address, city, phone, fop }
+      const confidence = Object.values(parsed).filter(Boolean).length
+      const errors = confidence === 0 ? ['NO_MATCHES'] : this.collectErrors(parsed)
+      const status = confidence >= 3 ? 'HIGH' : confidence >= 1 ? 'LOW' : 'EMPTY'
+
+      return {
+        raw: cleanText,
+        parsed,
+        confidence,
+        errors,
+        status
+      }
+    } catch (error) {
+      return {
+        raw: input != null ? String(input) : '',
+        parsed: { fio: '', birthYear: '', address: '', city: '', phone: '', fop: '' },
+        confidence: 0,
+        errors: [error.message || 'PARSER_ERROR'],
+        status: 'ERROR'
+      }
+    }
+  }
+
+  async routeToTools (parsedData) {
+    const tools = []
+
+    if (parsedData.parsed.fio) {
+      tools.push({ name: 'ФІО Search', route: '/adapters/fio-search', status: '🟢' })
+    }
+    if (parsedData.parsed.address) {
+      tools.push({ name: 'Адресний пошук', route: '/adapters/address-lookup', status: '🟢' })
+    }
+    if (parsedData.parsed.birthYear) {
+      tools.push({ name: 'ДР/РІК', route: '/adapters/birthyear-check', status: '🟢' })
+    }
+    if (parsedData.parsed.phone) {
+      tools.push({ name: 'Телефон', route: '/adapters/phone-lookup', status: '🟢' })
+    }
+    if (parsedData.parsed.fop) {
+      tools.push({ name: 'ФОП/ЄДР', route: '/adapters/fop-search', status: '🟢' })
+    }
+
+    return tools
+  }
+}
+
+class DebugParser extends SafeParser {
+  constructor (debug = false) {
+    super()
+    this.debug = debug || process.env.DEBUG === '1'
+    this.debugLog = []
+  }
+
+  parseSearchInput (text, options = {}) {
+    const start = Date.now()
+    const debugId = options.debugId || `DBG-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
+    if (this.debug) {
+      this.debugLog.push({
+        id: debugId,
+        timestamp: new Date().toISOString(),
+        inputLength: text?.length || 0,
+        stage: 'START'
+      })
+    }
+
+    const result = super.parseSearchInput(text)
+
+    if (this.debug) {
+      this.debugLog.push({
+        id: debugId,
+        timestamp: new Date().toISOString(),
+        stage: result.status === 'ERROR' ? 'ERROR' : 'PARSED',
+        duration: Date.now() - start,
+        confidence: result.confidence,
+        parsedFields: Object.keys(result.parsed).filter((k) => result.parsed[k]),
+        errors: result.errors || []
+      })
+    }
+
+    return result
+  }
+
+  getDebugReport (casePrefix = 'DBG-') {
+    return this.debugLog.filter((log) => log.id.startsWith(casePrefix))
+  }
+
+  dumpDebug (filename = `debug-${Date.now()}.json`) {
+    fs.writeFileSync(filename, JSON.stringify(this.debugLog, null, 2) + '\n')
+    return filename
+  }
+}
+
+class SearchPanel extends SafeParser {
   constructor (screen, apiClient, onLog) {
+    super()
     this.screen = screen || null
     this.api = apiClient || null
     this.onLog = typeof onLog === 'function' ? onLog : () => {}
@@ -75,84 +265,6 @@ class SearchPanel {
       headers: ['Інструмент', 'Результат', 'Точність'],
       data: [['-', 'Готово до пошуку', '-']]
     })
-  }
-
-  extractPhone (text) {
-    const candidates = [
-      ...(text.match(/\+\d[\d\s().-]{8,20}\d/g) || []),
-      ...(text.match(/\b0\d(?:[\s().-]?\d){8}\b/g) || [])
-    ]
-
-    for (const rawCandidate of candidates) {
-      const compactDigits = rawCandidate.replace(/\D/g, '')
-      const normalized = rawCandidate.trim().startsWith('+')
-        ? `+${compactDigits}`
-        : compactDigits
-
-      if (/^\+\d{10,15}$/.test(normalized) || /^0\d{9}$/.test(normalized)) {
-        return normalized
-      }
-    }
-
-    return ''
-  }
-
-  parseSearchInput (text) {
-    const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
-    let fioCandidate = ''
-
-    for (const line of lines) {
-      const match = line.match(/^([A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+(?:\s+[A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+){1,3})/u)
-      if (match && !/\d/.test(match[1])) {
-        fioCandidate = match[1]
-        break
-      }
-    }
-
-    if (!fioCandidate) {
-      fioCandidate = text.match(/([A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+\s+){1,3}[A-Za-zА-Яа-яІіЇїЄєҐґ'’\-]+/u)?.[0] || ''
-    }
-
-    const birthYear = text.match(/\b(19|20)\d{2}\b/)?.[0] || ''
-    const address = text.match(/(вул\.?|ул\.?|вулиця|улица|просп\.?|проспект|street|st\.?)\s*[^,\n]+/iu)?.[0] || ''
-    const city = text.match(/Київ|Киев|Kharkiv|Kharkov|Харків|Харьков|Одеса|Одесса|Львів|Львов|Дніпро|Днепр|Dnipro|Lviv|Odesa/iu)?.[0] || ''
-    const phone = this.extractPhone(text)
-    const fopRaw = text.match(/ФОП|FOP|підприємець|предприниматель|entrepreneur/iu)?.[0] || ''
-    const fop = fopRaw ? 'ФОП' : ''
-
-    const hasStreetTokenInFio = /(вул\.?|ул\.?|вулиця|улица|street|st\.?|просп\.?|проспект)/iu.test(fioCandidate)
-    const fio = fioCandidate && (hasStreetTokenInFio || (address && address.includes(fioCandidate))) ? '' : fioCandidate
-
-    const parsed = { fio, birthYear, address, city, phone, fop }
-    const confidence = Object.values(parsed).filter(Boolean).length
-
-    return {
-      raw: text.trim(),
-      parsed,
-      confidence
-    }
-  }
-
-  async routeToTools (parsedData) {
-    const tools = []
-
-    if (parsedData.parsed.fio) {
-      tools.push({ name: 'ФІО Search', route: '/adapters/fio-search', status: '🟢' })
-    }
-    if (parsedData.parsed.address) {
-      tools.push({ name: 'Адресний пошук', route: '/adapters/address-lookup', status: '🟢' })
-    }
-    if (parsedData.parsed.birthYear) {
-      tools.push({ name: 'ДР/РІК', route: '/adapters/birthyear-check', status: '🟢' })
-    }
-    if (parsedData.parsed.phone) {
-      tools.push({ name: 'Телефон', route: '/adapters/phone-lookup', status: '🟢' })
-    }
-    if (parsedData.parsed.fop) {
-      tools.push({ name: 'ФОП/ЄДР', route: '/adapters/fop-search', status: '🟢' })
-    }
-
-    return tools
   }
 
   async executeSearch (input) {
@@ -330,6 +442,8 @@ function initSearch (screen, apiClient, onLog) {
 }
 
 module.exports = {
+  SafeParser,
+  DebugParser,
   SearchPanel,
   initSearch
 }

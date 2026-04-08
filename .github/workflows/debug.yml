@@ -1,0 +1,33 @@
+name: Debug Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      debug_mode:
+        description: Enable DEBUG=1 logs
+        required: false
+        default: 'true'
+
+env:
+  DEBUG: '1'
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run test:parser-debug
+        env:
+          DEBUG: '1'
+      - name: Upload debug logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-logs
+          path: |
+            debug-*.json
+            test/debug-*.json

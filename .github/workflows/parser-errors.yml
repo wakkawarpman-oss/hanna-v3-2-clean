@@ -1,0 +1,29 @@
+name: Parser Error Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  errors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: mkdir -p test/data/errors
+      - run: |
+          echo "Пелешен%ko" > test/data/errors/malformed-fio.txt
+          echo "" > test/data/errors/empty.txt
+          printf '\\xFF\\xFE\\x00' > test/data/errors/corrupted-files.bin
+      - run: npm run test:parser-errors
+      - run: npm run error-report
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: parser-error-report
+          path: |
+            test/parser-error-report.json
+            test/data/errors/

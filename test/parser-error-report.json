@@ -1,0 +1,17 @@
+{
+  "total": 5,
+  "passed": 3,
+  "failed": [],
+  "low_confidence": [
+    {
+      "file": "/Users/admin/Desktop/runs/exports/html/dossiers/new osint-ui rewrite/hanna-v3-2-clean/test/data/errors/corrupted-files.bin",
+      "confidence": 0,
+      "status": "EMPTY"
+    },
+    {
+      "file": "/Users/admin/Desktop/runs/exports/html/dossiers/new osint-ui rewrite/hanna-v3-2-clean/test/data/errors/empty.txt",
+      "confidence": 0,
+      "status": "EMPTY"
+    }
+  ]
+}

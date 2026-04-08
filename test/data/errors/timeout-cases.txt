@@ -1,0 +1,2 @@
+timeout adapter ua_phone for target +380501234567
+retry exceeded
