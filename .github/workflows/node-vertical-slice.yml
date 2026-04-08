@@ -1,0 +1,36 @@
+name: Node Vertical Slice
+
+on:
+  pull_request:
+    paths:
+      - "app.js"
+      - "package.json"
+      - "plugins/**"
+      - "routes/**"
+      - "test/**"
+      - ".github/workflows/node-vertical-slice.yml"
+  push:
+    branches:
+      - feat/fastify-vertical-slice-manual
+
+jobs:
+  test-vertical-slice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run vertical slice tests
+        env:
+          JWT_SECRET: ci-test-secret
+        run: npm test
