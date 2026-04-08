@@ -87,7 +87,15 @@ def run_preflight(modules: list[str] | None = None) -> list[PreflightCheck]:
     ]
     for name, env_name, fallback in tool_specs:
         resolved, source = _resolve_env_binary(env_name, fallback)
-        checks.append(PreflightCheck(name=name, status="ok" if resolved else "fail", detail=resolved or source))
+        if resolved:
+            status = "ok"
+        elif source.startswith("env:"):
+            # Env var is explicitly set but the path does not exist — misconfiguration.
+            status = "fail"
+        else:
+            # Binary simply not installed; adapters handle this gracefully at runtime.
+            status = "warn"
+        checks.append(PreflightCheck(name=name, status=status, detail=resolved or source))
 
     repo_tools = [
         ("blackbird", "BLACKBIRD_BIN", Path("tools/blackbird/blackbird.py"), Path("tools/blackbird/.venv/bin/python")),
@@ -109,7 +117,8 @@ def run_preflight(modules: list[str] | None = None) -> list[PreflightCheck]:
         elif path_hit:
             checks.append(PreflightCheck(name=name, status="warn", detail=f"path:{path_hit}"))
         else:
-            checks.append(PreflightCheck(name=name, status="fail", detail="missing repo checkout and PATH binary"))
+            # Tool not checked out and not on PATH; adapters handle this gracefully at runtime.
+            checks.append(PreflightCheck(name=name, status="warn", detail="missing repo checkout and PATH binary"))
 
     chrome_bin = os.environ.get("EYEWITNESS_CHROME_BIN", "").strip()
     if chrome_bin:
