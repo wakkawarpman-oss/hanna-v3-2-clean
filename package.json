@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
+    "start:prod": "node --max-old-space-size=512 app-opt.js",
     "test": "node --test test/*.spec.js",
     "test:core": "node --test test/core-routes.spec.js test/parser.spec.js",
     "test:parser": "node --test test/parser.spec.js test/parser-files.spec.js",
@@ -23,6 +24,15 @@
     "test:coverage": "node --test --experimental-test-coverage test/*.spec.js",
     "test:all": "npm test && python3 -m pytest -q tests/*.py",
     "tui": "node hanna-tui.js",
+    "tui:ultra": "TUI_ULTRA=1 node --optimize-for-size --max-old-space-size=256 hanna-tui.js",
+    "api:worker": "node app-worker.js",
+    "build:prod": "npm prune --omit=dev && npm dedupe",
+    "perf:monitor": "node scripts/perf-monitor.js",
+    "parse:large": "node scripts/large-file-parse.js",
+    "parse:batch": "node scripts/batch-parser.js",
+    "bench:files": "node benchmark/file-perf.js",
+    "parse:1gb": "node --max-old-space-size=1024 scripts/parse-1gb.js",
+    "gen:test-files": "node scripts/gen-test-files.js",
     "tui:debug": "DEBUG=1 TUI_DEBUG=1 npm run tui",
     "tui:test": "DEBUG=1 TUI_DEBUG=1 npm run tui",
     "dev:debug": "DEBUG=1 ./scripts/hanna.sh tui",
@@ -36,6 +46,9 @@
   },
   "bin": {
     "hanna": "./scripts/hanna"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   },
   "dependencies": {
     "@fastify/jwt": "^10.0.0",

@@ -4,6 +4,7 @@ const blessed = require('blessed')
 const contrib = require('blessed-contrib')
 const { initSearch, DebugParser } = require('./components/search-panel')
 const { DebugTui } = require('./components/debug-tui')
+const { UltraPerfTui } = require('./components/ultra-perf-tui')
 
 const COLORS = {
   primary: 'green',
@@ -160,6 +161,15 @@ function buildScreen () {
 function startTui () {
   const ui = buildScreen()
   const { screen, sessions, table, rps, logs, resources, clock } = ui
+  const ultraPerf = process.env.TUI_ULTRA === '1' ? new UltraPerfTui(screen) : null
+
+  function requestRender (widget) {
+    if (ultraPerf) {
+      ultraPerf.markDirty(widget)
+      return
+    }
+    screen.render()
+  }
   const debugParser = new DebugParser(process.env.DEBUG === '1' || process.env.TUI_DEBUG === '1')
   const debugTui = new DebugTui(screen, debugParser, (line) => {
     logs.log(`[${nowIsoMinute()}] ${line}`)
@@ -242,29 +252,29 @@ function startTui () {
   screen.key(['tab'], () => {
     focusIndex = (focusIndex + 1) % focusables.length
     focusables[focusIndex].focus()
-    screen.render()
+    requestRender(focusables[focusIndex])
   })
 
   screen.key(['C-a'], () => {
     addLog(`[${nowIsoMinute()}] Manual action: ANALYZE`)
-    screen.render()
+    requestRender(logs)
   })
 
   screen.key(['C-e'], () => {
     addLog(`[${nowIsoMinute()}] Manual action: EXPORT`)
-    screen.render()
+    requestRender(logs)
   })
 
   screen.key(['C-s'], () => {
     searchPanel.open()
     addLog(`[${nowIsoMinute()}] Search panel opened`)
-    screen.render()
+    requestRender(logs)
   })
 
   screen.key(['C-d'], () => {
     debugTui.open()
     addLog(`[${nowIsoMinute()}] Debug panel opened`)
-    screen.render()
+    requestRender(logs)
   })
 
   screen.key(['f12'], () => {
@@ -275,29 +285,29 @@ function startTui () {
       debugTui.close()
     }
     addLog(`[${nowIsoMinute()}] Debug mode ${debugMode ? 'ON' : 'OFF'}`)
-    screen.render()
+    requestRender(logs)
   })
 
   sessions.on('select item', (item) => {
     addLog(`[${nowIsoMinute()}] Session selected: ${item.getText()}`)
-    screen.render()
+    requestRender(logs)
   })
 
   setInterval(() => {
     tickClock()
-    screen.render()
+    requestRender(clock)
   }, 1000)
 
   setInterval(() => {
     tickMetrics()
     renderResources()
-    screen.render()
+    requestRender(rps)
   }, 2000)
 
   setInterval(() => {
     tickComponentStatus()
     tickLogs()
-    screen.render()
+    requestRender(table)
   }, 5000)
 
   screen.render()

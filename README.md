@@ -66,12 +66,41 @@ npm install
 npm run tui
 ```
 
+Ultra performance mode:
+
+```bash
+npm run tui:ultra
+```
+
 TUI search controls:
 
 - `Ctrl+S` — open OSINT search window and focus input
 - `Enter` — run multi-entity search routing
 - `Ctrl+Enter` — load a sample query
 - `Esc` — close search window
+
+TUI debug controls:
+
+- `Ctrl+D` — open parser debug panel
+- `F1` — load debug sample query
+- `F2` — clear debug widgets
+- `F12` — toggle debug panel visibility
+
+API optimized runtime options:
+
+```bash
+npm run start:prod
+npm run api:worker
+npm run perf:monitor
+```
+
+Large file parsing and benchmarking:
+
+```bash
+npm run gen:test-files
+npm run parse:large -- test/data/100mb.txt
+npm run bench:files
+```
 
 Hanna quick command toolkit:
 
