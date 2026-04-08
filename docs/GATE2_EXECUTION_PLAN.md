@@ -16,6 +16,7 @@ Step 1 completion snapshot:
 	- Node vertical-slice tests: 12/12 green
 	- Python AdapterResult schema tests: 26/26 green
 
+
 ## Task 1: Freeze and extend auth contract behavior
 
 - Endpoints in scope:
