@@ -14,6 +14,7 @@ import urllib.error
 import urllib.parse
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -280,6 +281,7 @@ _RU_PHONE_RE = re.compile(r"(?:\+?7|8)\d{10}")
 _GENERIC_PHONE_RE = re.compile(r"\+?\d[\d\-\s]{7,15}\d")
 
 
+@lru_cache(maxsize=4096)
 def normalize_phone(raw: str) -> str | None:
     """Normalize a phone string to E.164 format."""
     digits = re.sub(r"[\s\-\(\)\+]", "", raw)

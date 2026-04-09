@@ -68,6 +68,10 @@ PRIORITY_WORKER_TIMEOUT = {
 
 # Module-specific worker overrides for long-running CLI tools.
 MODULE_WORKER_TIMEOUT_DEFAULTS = {
+    "subfinder": 30,
+    "httpx_probe": 20,
+    "naabu": 25,
+    "nmap": 35,
     "nuclei": 60,
     "amass": 60,
     "social_analyzer": 45,

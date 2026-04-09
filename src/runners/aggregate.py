@@ -22,7 +22,7 @@ from pathlib import Path
 from adapters.base import ReconHit
 from config import RUNS_ROOT
 from models import AdapterOutcome, RunResult
-from registry import resolve_modules
+from registry import resolve_modules, split_core_and_non_core_modules
 from scheduler import LaneScheduler, dedup_and_confirm
 from worker import build_tasks
 
@@ -54,9 +54,13 @@ class AggregateRunner:
         known_phones = known_phones or []
         known_usernames = known_usernames or []
         module_names = resolve_modules(modules)
+        core_module_names, deferred_module_names = split_core_and_non_core_modules(module_names)
+
+        immediate_module_names = core_module_names or module_names
+        reported_deferred_modules = deferred_module_names if core_module_names else []
 
         tasks, errors = build_tasks(
-            module_names, target_name, known_phones, known_usernames,
+            immediate_module_names, target_name, known_phones, known_usernames,
             self.proxy, self.timeout, self.leak_dir,
         )
 
@@ -96,5 +100,9 @@ class AggregateRunner:
             errors=errors,
             started_at=started,
             finished_at=datetime.now().isoformat(),
-            extra={"queued_modules": module_names},
+            extra={
+                "queued_modules": immediate_module_names,
+                "deferred_modules": reported_deferred_modules,
+                "core_snapshot": bool(core_module_names and deferred_module_names),
+            },
         )

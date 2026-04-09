@@ -98,17 +98,28 @@ async function jwtRbacPlugin (fastify, opts) {
   // Decorate fastify with authenticate() – verifies the Bearer token and
   // populates request.user with the decoded payload.
   // Usage: onRequest: [fastify.authenticate]  OR  await request.jwtVerify()
-  fastify.decorate('authenticate', async function (request, reply) {
-    try {
-      await request.jwtVerify()
-    } catch (err) {
+  fastify.decorate('authenticate', function (request, reply, done) {
+    const authHeader = request.headers.authorization
+    if (typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
       reply.code(401).send({
         statusCode: 401,
         error: 'Unauthorized',
         code: 'AUTH_INVALID_OR_EXPIRED_TOKEN',
         message: 'Invalid or expired token'
       })
+      return
     }
+
+    request.jwtVerify()
+      .then(() => done())
+      .catch(() => {
+        reply.code(401).send({
+        statusCode: 401,
+        error: 'Unauthorized',
+        code: 'AUTH_INVALID_OR_EXPIRED_TOKEN',
+        message: 'Invalid or expired token'
+        })
+      })
   })
 
   // Expose permission checker on the fastify instance so routes can call it.

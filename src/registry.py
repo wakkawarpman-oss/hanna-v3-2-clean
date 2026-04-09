@@ -74,43 +74,107 @@ ADAPTER_REGISTRY: dict[str, type[ReconAdapter]] = {
 MODULES: dict[str, type[ReconAdapter]] = ADAPTER_REGISTRY
 MODULE_ALIASES: dict[str, str] = {"getcontact": "ua_phone"}
 
+DISABLED_MODULES: set[str] = {
+    "social_analyzer",
+}
+
+CORE_LOCAL_MODULES: list[str] = [
+    "subfinder",
+    "httpx_probe",
+    "naabu",
+    "nmap",
+]
+
+OPTIONAL_ENRICHMENT_MODULES: list[str] = [
+    "getcontact",
+    "holehe",
+    "opendatabot",
+    "shodan",
+    "censys",
+    "hibp",
+]
+
+FULL_SPECTRUM_LOCAL_MODULES: list[str] = [
+    "ua_leak",
+    "ru_leak",
+    "vk_graph",
+    "avito",
+    "maryam",
+    "ashok",
+    "satintel",
+    "httpx_probe",
+    "naabu",
+    "subfinder",
+    "amass",
+    "nmap",
+    "nuclei",
+    "katana",
+    "blackbird",
+    "metagoofil",
+    "reconng",
+    "eyewitness",
+]
+
+# Core completion must never depend on APIs, enrichment layers, or slow modules.
+CORE_COMPLETION_RULE = (
+    "CORE COMPLETION MUST NOT DEPEND ON API availability, external services, "
+    "slow modules, or enrichment layers"
+)
+
+
+def is_core_safe(module_name: str) -> bool:
+    return module_name in CORE_LOCAL_MODULES
+
+
+def is_disabled_module(module_name: str) -> bool:
+    return module_name in DISABLED_MODULES
+
+
+def split_core_and_non_core_modules(module_names: list[str]) -> tuple[list[str], list[str]]:
+    core = [name for name in module_names if is_core_safe(name)]
+    deferred = [name for name in module_names if not is_core_safe(name)]
+    return core, deferred
+
 
 def _default_module_names() -> list[str]:
-    return [name for name in MODULES.keys() if name not in MODULE_ALIASES]
+    default_modules = list(CORE_LOCAL_MODULES)
+    assert all(is_core_safe(name) for name in default_modules), "default modules must remain core-safe"
+    return default_modules
 
 # ── Presets ──────────────────────────────────────────────────────
 
 MODULE_PRESETS: dict[str, list[str]] = {
-    "deep-ua": ["ua_leak", "ua_phone", "opendatabot"],
+    "core-local": list(CORE_LOCAL_MODULES),
+    "deep-ua": ["ua_leak"],
     "deep-ru": ["ru_leak", "vk_graph", "avito"],
-    "deep-all": ["ua_leak", "ua_phone", "ru_leak", "vk_graph", "avito"],
+    "deep-all": ["ua_leak", "ru_leak", "vk_graph", "avito"],
     "leaks_all": ["ua_leak", "ru_leak"],
     "milint": [
-        "maryam", "ashok", "ghunt", "social_analyzer",
-        "satintel", "search4faces", "opendatabot",
+        "maryam", "ashok", "satintel",
     ],
     "infra": ["ashok", "maryam"],
-    "geoint": ["satintel", "firms"],
-    "social-deep": ["social_analyzer", "search4faces", "ghunt"],
+    "geoint": ["satintel"],
+    "social-deep": ["blackbird", "holehe"],
     "fast-lane": [
-        "ua_phone", "ua_leak", "ru_leak", "ghunt", "satintel",
-        "avito", "maryam", "search4faces", "opendatabot",
+        "ua_leak", "ru_leak", "satintel",
+        "avito", "maryam", "holehe",
     ],
-    "slow-lane": ["ashok", "vk_graph", "social_analyzer", "web_search", "firms"],
+    "slow-lane": ["ashok", "vk_graph", "reconng", "eyewitness"],
     "pd-infra-quick": ["httpx_probe", "katana", "nuclei", "naabu"],
     "pd-infra-deep": ["httpx_probe", "katana", "nuclei", "naabu"],
     "pd-infra": ["httpx_probe", "katana", "nuclei", "naabu"],
     "pd-full": ["httpx_probe", "katana", "nuclei", "naabu", "ashok"],
-    "person-deep": ["ua_phone", "ghunt", "holehe", "blackbird", "search4faces", "social_analyzer"],
-    "email-chain": ["holehe", "hibp", "ghunt", "metagoofil"],
+    "person-deep": ["holehe", "blackbird", "ua_leak", "ru_leak"],
+    "email-chain": ["holehe", "metagoofil"],
     "subdomain-full": ["subfinder", "amass", "ashok"],
     "port-scan": ["naabu", "nmap"],
-    "infra-deep": ["subfinder", "httpx_probe", "nuclei", "nmap", "shodan", "censys"],
+    "infra-deep": ["subfinder", "httpx_probe", "nuclei", "nmap"],
     "recon-auto-quick": ["subfinder", "httpx_probe", "nuclei", "katana", "naabu"],
     "recon-auto-deep": ["subfinder", "httpx_probe", "nuclei", "katana", "naabu"],
     "recon-auto": ["subfinder", "httpx_probe", "nuclei", "katana", "naabu"],
-    "full-spectrum-2026": _default_module_names(),
-    "full-spectrum": _default_module_names(),
+    "enrich-optional": list(OPTIONAL_ENRICHMENT_MODULES),
+    "full-spectrum-2026": list(FULL_SPECTRUM_LOCAL_MODULES),
+    "full-spectrum": list(FULL_SPECTRUM_LOCAL_MODULES),
 }
 
 # ── Priority matrix (ROI-based) ─────────────────────────────────

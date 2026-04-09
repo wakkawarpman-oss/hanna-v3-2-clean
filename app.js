@@ -1,5 +1,7 @@
 'use strict'
 
+require('./load-env').loadEnv()
+
 const fastify = require('fastify')
 const rateLimit = require('@fastify/rate-limit')
 const jwtRbac = require('./plugins/jwt-rbac')

@@ -46,6 +46,25 @@ These are built into `src/cli.py` and work both through `./scripts/hanna` and di
 ./scripts/hanna rs --confirm --json-only --output-file ./runs/exports/reset-result.json
 ```
 
+## No-Key Smoke Test
+
+Use this when you want to verify the orchestration path without relying on paid APIs or missing secrets.
+
+```bash
+./scripts/test_no_keys.sh
+./scripts/test_no_keys.sh example.com
+```
+
+The script uses the minimal autonomous preset `core-local` and runs `aggregate` instead of `chain` to avoid deep-recon blocking.
+Core completion must not depend on APIs, external services, slow modules, or enrichment layers.
+
+Artifacts are written to `./.cache/no-key-smoke/`:
+
+```bash
+open ./.cache/no-key-smoke/no-key-smoke.html
+cat ./.cache/no-key-smoke/no-key-smoke.metadata.json
+```
+
 ## NPM Shortcuts
 
 Quick aliases added directly to `package.json`:

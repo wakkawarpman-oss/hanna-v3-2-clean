@@ -43,6 +43,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
@@ -150,6 +151,7 @@ def strip_ansi(text: str) -> str:
     return _ANSI_RE.sub("", text)
 
 
+@lru_cache(maxsize=4096)
 def _normalize_phone(raw: str) -> str | None:
     digits = re.sub(r"[\s\-\(\)]", "", raw)
     if not re.fullmatch(r"\+?\d{7,15}", digits):
@@ -159,6 +161,7 @@ def _normalize_phone(raw: str) -> str | None:
     return digits
 
 
+@lru_cache(maxsize=4096)
 def _normalize_domain(raw: str) -> str | None:
     d = raw.lower().strip().rstrip(".")
     if len(d) < 4 or "." not in d:

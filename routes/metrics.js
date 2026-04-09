@@ -3,7 +3,7 @@
 const pkg = require('../package.json')
 
 async function metricsRoutes (fastify, _opts) {
-  fastify.get('/health', async (_request, reply) => {
+  async function respondHealth (_request, reply) {
     const memory = process.memoryUsage()
     const degraded = memory.heapUsed > 400 * 1024 * 1024
     const payload = {
@@ -16,7 +16,10 @@ async function metricsRoutes (fastify, _opts) {
     }
 
     return reply.code(degraded ? 503 : 200).send(payload)
-  })
+  }
+
+  fastify.get('/health', respondHealth)
+  fastify.get('/healthz', respondHealth)
 
   fastify.get('/metrics', {
     config: { rateLimit: { max: 60, timeWindow: '1 minute' } }

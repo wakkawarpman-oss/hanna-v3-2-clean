@@ -23,6 +23,21 @@ class LaneScheduler:
     """Dispatch recon tasks by lane with worker isolation and timeout controls."""
 
     @staticmethod
+    def _terminate_pool_workers(pool: ProcessPoolExecutor) -> None:
+        processes = getattr(pool, "_processes", None)
+        if not processes:
+            return
+        for proc in list(processes.values()):
+            if proc is None:
+                continue
+            try:
+                if proc.is_alive():
+                    proc.terminate()
+                    proc.join(timeout=0.2)
+            except Exception:
+                continue
+
+    @staticmethod
     def _timeout_cancellation_state(future: Future) -> tuple[str, bool]:
         was_running = future.running()
         cancelled = future.cancel()
@@ -228,6 +243,7 @@ class LaneScheduler:
 
             finally:
                 pool.shutdown(wait=False, cancel_futures=True)
+                LaneScheduler._terminate_pool_workers(pool)
 
             lane_ok = sum(1 for tr in result.task_results if tr.lane == lane_name and not tr.error)
             print(f"  {prefix}{lane_name.upper()} LANE complete  |  {lane_ok}/{len(lane_tasks)} task(s) finished cleanly")

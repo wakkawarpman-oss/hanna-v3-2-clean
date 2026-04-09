@@ -26,7 +26,7 @@ from config import (
     PRIORITY_WORKER_TIMEOUT,
     WORKER_TIMEOUT,
 )
-from registry import LANE_ORDER, MODULES, MODULE_LANE, MODULE_PRIORITY
+from registry import DISABLED_MODULES, LANE_ORDER, MODULES, MODULE_LANE, MODULE_PRIORITY
 
 
 @dataclass
@@ -97,6 +97,13 @@ def build_tasks(
     tasks: list[ReconTask] = []
     errors: list[dict] = []
     for mod_name in module_names:
+        if mod_name in DISABLED_MODULES:
+            errors.append({
+                "module": mod_name,
+                "error": f"disabled module: {mod_name}",
+                "error_kind": "disabled_module",
+            })
+            continue
         adapter_cls = MODULES.get(mod_name)
         if not adapter_cls:
             errors.append({"module": mod_name, "error": f"Unknown module: {mod_name}", "error_kind": "unknown_module"})
