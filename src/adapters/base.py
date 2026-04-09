@@ -64,6 +64,39 @@ class DependencyUnavailableError(AdapterExecutionError):
         super().__init__(f"dependency unavailable: {detail}")
 
 
+class UnsupportedProxyError(AdapterExecutionError):
+    """Raised when an adapter cannot safely honor proxy/Tor routing."""
+
+    error_kind = "unsupported_proxy"
+
+    def __init__(self, detail: str):
+        super().__init__(detail)
+
+
+def derive_runtime_issue(adapter: "ReconAdapter", hits: list["ReconHit"]) -> dict[str, str] | None:
+    """Promote hidden adapter degradation into explicit runtime errors."""
+    if hits:
+        return None
+
+    diagnostics = adapter.runtime_diagnostics()
+    if not diagnostics.get("healthy", True):
+        failures = int(diagnostics.get("consecutive_failures", 0))
+        return {
+            "error": f"auto-disabled after {failures} consecutive failures",
+            "error_kind": "auto_disabled",
+        }
+
+    noop_reason_raw = diagnostics.get("noop_reason")
+    noop_reason = noop_reason_raw.strip() if isinstance(noop_reason_raw, str) else ""
+    if noop_reason:
+        return {
+            "error": f"silent no-op: {noop_reason}",
+            "error_kind": "silent_noop",
+        }
+
+    return None
+
+
 # ── Data structures ──────────────────────────────────────────────
 
 @dataclass
@@ -111,17 +144,133 @@ class ReconHit:
 
 
 @dataclass
+class ReconModuleOutcome:
+    """Per-module execution outcome for deep recon sessions."""
+    module_name: str
+    lane: str
+    hits: list[ReconHit] = field(default_factory=list)
+    error: str | None = None
+    error_kind: str | None = None
+    elapsed_sec: float = 0.0
+    log_path: str = ""
+
+    @property
+    def ok(self) -> bool:
+        return self.error is None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "module_name": self.module_name,
+            "lane": self.lane,
+            "hits": [hit.to_dict() for hit in self.hits],
+            "error": self.error,
+            "error_kind": self.error_kind,
+            "elapsed_sec": self.elapsed_sec,
+            "log_path": self.log_path,
+        }
+
+    def to_error_dict(self) -> dict[str, Any] | None:
+        if not self.error:
+            return None
+        payload: dict[str, Any] = {
+            "module": self.module_name,
+            "error": self.error,
+        }
+        if self.error_kind:
+            payload["error_kind"] = self.error_kind
+        return payload
+
+
+@dataclass
 class ReconReport:
     """Aggregated result of a deep recon session."""
     target_name: str
     modules_run: list[str]
     hits: list[ReconHit]
-    errors: list[dict]
     started_at: str
     finished_at: str = ""
     new_phones: list[str] = field(default_factory=list)
     new_emails: list[str] = field(default_factory=list)
     cross_confirmed: list[ReconHit] = field(default_factory=list)  # found in 2+ sources
+    outcomes: list[ReconModuleOutcome] = field(default_factory=list)
+    errors: list[dict] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        standalone_errors: list[dict[str, Any]] = []
+        for raw_error in self.errors:
+            normalized = self._normalize_error_entry(raw_error)
+            if not normalized:
+                continue
+
+            module_name = str(normalized.get("module", "")).strip()
+            message = str(normalized.get("error", "")).strip()
+            error_kind = str(normalized.get("error_kind", "")).strip() or None
+            if module_name:
+                outcome = next((item for item in self.outcomes if item.module_name == module_name), None)
+                if outcome is None:
+                    self.outcomes.append(ReconModuleOutcome(
+                        module_name=module_name,
+                        lane="unknown",
+                        error=message,
+                        error_kind=error_kind,
+                    ))
+                    continue
+                if not outcome.error:
+                    outcome.error = message
+                    outcome.error_kind = error_kind
+                    continue
+                if outcome.error == message and outcome.error_kind == error_kind:
+                    continue
+
+            standalone_errors.append(normalized)
+
+        self.errors = self._collect_error_entries(standalone_errors)
+
+    @staticmethod
+    def _normalize_error_entry(raw_error: Any) -> dict[str, Any] | None:
+        if isinstance(raw_error, dict):
+            message = str(raw_error.get("error", "")).strip()
+            if not message:
+                return None
+            payload: dict[str, Any] = {"error": message}
+            module_name = str(raw_error.get("module", "")).strip()
+            if module_name:
+                payload["module"] = module_name
+            error_kind = str(raw_error.get("error_kind", "")).strip()
+            if error_kind:
+                payload["error_kind"] = error_kind
+            return payload
+        if isinstance(raw_error, str) and raw_error.strip():
+            return {"error": raw_error.strip()}
+        return None
+
+    def _collect_error_entries(self, standalone_errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        entries: list[dict[str, Any]] = []
+        seen: set[tuple[str, str, str | None]] = set()
+
+        def _append(entry: dict[str, Any]) -> None:
+            module_name = str(entry.get("module", "")).strip()
+            message = str(entry.get("error", "")).strip()
+            error_kind_raw = entry.get("error_kind")
+            error_kind = str(error_kind_raw).strip() if error_kind_raw else None
+            key = (module_name, message, error_kind)
+            if not message or key in seen:
+                return
+            seen.add(key)
+            payload: dict[str, Any] = {"error": message}
+            if module_name:
+                payload["module"] = module_name
+            if error_kind:
+                payload["error_kind"] = error_kind
+            entries.append(payload)
+
+        for outcome in self.outcomes:
+            entry = outcome.to_error_dict()
+            if entry:
+                _append(entry)
+        for entry in standalone_errors:
+            _append(entry)
+        return entries
 
 
 # ── Phone normalization ──────────────────────────────────────────
@@ -224,12 +373,30 @@ class ReconAdapter(ABC):
         self._opener: urllib.request.OpenerDirector | None = None
         self._consecutive_failures = 0
         self._is_healthy = True
+        self._fetch_attempts = 0
+        self._post_attempts = 0
+        self._noop_reason: str | None = None
         if proxy:
             proxy_handler = urllib.request.ProxyHandler({
                 "http": proxy,
                 "https": proxy,
             })
             self._opener = urllib.request.build_opener(proxy_handler)
+
+    def _record_noop(self, reason: str) -> None:
+        """Store a human-readable reason when the adapter legitimately did no work."""
+        if reason and not self._noop_reason:
+            self._noop_reason = reason
+
+    def runtime_diagnostics(self) -> dict[str, Any]:
+        """Expose post-run adapter health for runner-level accounting."""
+        return {
+            "healthy": self._is_healthy,
+            "consecutive_failures": self._consecutive_failures,
+            "fetch_attempts": self._fetch_attempts,
+            "post_attempts": self._post_attempts,
+            "noop_reason": self._noop_reason,
+        }
 
     def _record_success(self) -> None:
         """Reset failure counter on successful request."""
@@ -245,6 +412,7 @@ class ReconAdapter(ABC):
 
     def _fetch(self, url: str, headers: dict | None = None) -> tuple[int, str]:
         """HTTP GET through proxy with retry. Returns (status_code, body)."""
+        self._fetch_attempts += 1
         if not self._is_healthy:
             return 0, ""
         req = urllib.request.Request(url, headers=headers or {})
@@ -275,6 +443,7 @@ class ReconAdapter(ABC):
 
     def _post(self, url: str, data: dict, headers: dict | None = None) -> tuple[int, str]:
         """HTTP POST (JSON body) through proxy with retry. Returns (status_code, body)."""
+        self._post_attempts += 1
         if not self._is_healthy:
             return 0, ""
         payload = json.dumps(data).encode("utf-8")

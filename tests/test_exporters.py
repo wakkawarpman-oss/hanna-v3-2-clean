@@ -185,3 +185,31 @@ def test_zip_exporter_ignores_non_artifact_raw_record_paths(tmp_path):
     with zipfile.ZipFile(path) as zf:
         names = set(zf.namelist())
         assert "artifacts/unrelated-system-like-dir/ignore.txt" not in names
+
+
+def test_zip_exporter_rejects_artifact_paths_outside_allowed_roots(tmp_path):
+    result = _sample_result()
+    html_path = tmp_path / "dossier.html"
+    outside_root = tmp_path.parent / "outside-artifacts"
+    outside_file = outside_root / "capture.txt"
+
+    html_path.write_text("<html>safe</html>", encoding="utf-8")
+    outside_root.mkdir(exist_ok=True)
+    outside_file.write_text("outside", encoding="utf-8")
+
+    hit = ReconHit(
+        observable_type="url",
+        value="https://example.com",
+        source_module="eyewitness",
+        source_detail="fixture",
+        confidence=0.4,
+        raw_record={"artifact_root": str(outside_root)},
+    )
+    result.all_hits.append(hit)
+    result.outcomes[0].hits.append(hit)
+
+    path = export_run_result_zip(result, tmp_path, html_path=html_path, report_mode="shareable")
+
+    with zipfile.ZipFile(path) as zf:
+        names = set(zf.namelist())
+        assert "artifacts/outside-artifacts/capture.txt" not in names

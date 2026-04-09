@@ -6,10 +6,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from adapters.base import ReconHit, ReconReport
+from adapters.base import AdapterExecutionError, ReconHit, ReconReport, derive_runtime_issue
 from config import DEFAULT_DB_PATH, RUNS_ROOT
 from discovery_engine import DiscoveryEngine
-from exporters import export_run_result_json, export_run_result_stix, export_run_result_zip
 from models import AdapterOutcome, RunResult
 from preflight import format_preflight_report, has_hard_failures, run_preflight
 from registry import MODULE_LANE, MODULES, resolve_modules
@@ -56,11 +55,6 @@ def run_mode(config: TUIExecutionConfig, mode: str, event_sink: EventSink) -> Ru
         result = _run_chain(config, modules, event_sink)
     else:
         raise RuntimeError(f"Unsupported TUI mode: {mode}")
-
-    exported = _export_artifacts(result, config)
-    if exported:
-        result.extra["exports"] = exported
-        _emit(event_sink, "activity", level="ok", text=f"Exported artifacts: {', '.join(sorted(exported))}")
     _emit(event_sink, "run_finished", mode=mode, result=result)
     return result
 
@@ -91,9 +85,20 @@ def _run_manual(config: TUIExecutionConfig, modules: list[str], event_sink: Even
     try:
         adapter = adapter_cls(proxy=config.proxy, timeout=15.0, leak_dir=config.leak_dir)
         hits = adapter.search(config.target, config.known_phones, config.known_usernames)
-        outcome = AdapterOutcome(module_name=module_name, lane=MODULE_LANE.get(module_name, "fast"), hits=hits)
-        _emit(event_sink, "module", module=module_name, status="done", detail=f"{len(hits)} hit(s)")
-        _emit(event_sink, "activity", level="ok", text=f"Manual run completed for {module_name}: {len(hits)} hit(s)")
+        runtime_issue = derive_runtime_issue(adapter, hits)
+        outcome = AdapterOutcome(
+            module_name=module_name,
+            lane=MODULE_LANE.get(module_name, "fast"),
+            hits=hits,
+            error=runtime_issue["error"] if runtime_issue else None,
+            error_kind=runtime_issue["error_kind"] if runtime_issue else None,
+        )
+        if runtime_issue:
+            _emit(event_sink, "module", module=module_name, status="error", detail=runtime_issue["error"])
+            _emit(event_sink, "activity", level="error", text=f"Manual run completed with runtime issue for {module_name}: {runtime_issue['error']}")
+        else:
+            _emit(event_sink, "module", module=module_name, status="done", detail=f"{len(hits)} hit(s)")
+            _emit(event_sink, "activity", level="ok", text=f"Manual run completed for {module_name}: {len(hits)} hit(s)")
         known_set = set(config.known_phones)
         return RunResult(
             target_name=config.target,
@@ -106,6 +111,22 @@ def _run_manual(config: TUIExecutionConfig, modules: list[str], event_sink: Even
             started_at=started,
             finished_at=datetime.now().isoformat(),
         )
+    except AdapterExecutionError as exc:
+        _emit(event_sink, "module", module=module_name, status="error", detail=str(exc))
+        _emit(event_sink, "activity", level="error", text=f"Manual run failed for {module_name}: {exc}")
+        return RunResult(
+            target_name=config.target,
+            mode="manual",
+            modules_run=[module_name],
+            outcomes=[AdapterOutcome(
+                module_name=module_name,
+                lane=MODULE_LANE.get(module_name, "fast"),
+                error=str(exc),
+                error_kind=getattr(exc, "error_kind", "adapter_error"),
+            )],
+            started_at=started,
+            finished_at=datetime.now().isoformat(),
+        )
     except Exception as exc:
         _emit(event_sink, "module", module=module_name, status="error", detail=str(exc))
         _emit(event_sink, "activity", level="error", text=f"Manual run failed for {module_name}: {exc}")
@@ -113,8 +134,7 @@ def _run_manual(config: TUIExecutionConfig, modules: list[str], event_sink: Even
             target_name=config.target,
             mode="manual",
             modules_run=[module_name],
-            outcomes=[AdapterOutcome(module_name=module_name, lane=MODULE_LANE.get(module_name, "fast"), error=str(exc))],
-            errors=[{"module": module_name, "error": str(exc)}],
+            outcomes=[AdapterOutcome(module_name=module_name, lane=MODULE_LANE.get(module_name, "fast"), error=str(exc), error_kind="adapter_error")],
             started_at=started,
             finished_at=datetime.now().isoformat(),
         )
@@ -140,7 +160,6 @@ def _run_aggregate(config: TUIExecutionConfig, modules: list[str], event_sink: E
         label="tui-aggregate",
         event_callback=lambda payload: _emit_scheduler_event(event_sink, payload),
     )
-    errors.extend(scheduled.errors)
     deduped, cross_confirmed = dedup_and_confirm(scheduled.all_hits)
     outcomes = [
         AdapterOutcome(
@@ -148,6 +167,7 @@ def _run_aggregate(config: TUIExecutionConfig, modules: list[str], event_sink: E
             lane=item.lane,
             hits=item.hits,
             error=item.error,
+            error_kind=item.error_kind,
             elapsed_sec=item.elapsed_sec,
             log_path=item.raw_log_path,
         )
@@ -182,7 +202,9 @@ def _run_chain(config: TUIExecutionConfig, modules: list[str], event_sink: Event
 
     engine = DiscoveryEngine(db_path=config.db_path)
     _emit(event_sink, "phase", phase="ingest", detail="ingesting metadata")
-    metas = sorted(exports.glob("*.json"))
+    from metadata_inputs import discover_ingest_metadata_paths
+
+    metas = discover_ingest_metadata_paths(exports)
     ing = {"ingested": 0, "rejected": 0, "skipped": 0}
     _emit(event_sink, "phase_counters", phase="ingest", counters={"total_files": len(metas), "ingested": 0, "rejected": 0, "skipped": 0})
     for meta_path in metas:
@@ -203,7 +225,6 @@ def _run_chain(config: TUIExecutionConfig, modules: list[str], event_sink: Event
     _emit(event_sink, "activity", level="info", text=f"Entity resolution produced {len(clusters)} cluster(s)")
 
     outcomes: list[AdapterOutcome] = []
-    errors: list[dict] = []
     all_hits: list[ReconHit] = []
     recon_summary: dict | None = None
     if config.target or modules:
@@ -221,11 +242,16 @@ def _run_chain(config: TUIExecutionConfig, modules: list[str], event_sink: Event
             "errors": report.errors,
         }
         all_hits = list(report.hits)
-        errors = list(report.errors)
-        for module_name in report.modules_run:
-            module_hits = [hit for hit in report.hits if hit.source_module == module_name]
-            outcome_error = next((err["error"] for err in report.errors if err.get("module") == module_name), None)
-            outcomes.append(AdapterOutcome(module_name=module_name, lane=MODULE_LANE.get(module_name, "fast"), hits=module_hits, error=outcome_error))
+        for item in report.outcomes:
+            outcomes.append(AdapterOutcome(
+                module_name=item.module_name,
+                lane=item.lane,
+                hits=item.hits,
+                error=item.error,
+                error_kind=item.error_kind,
+                elapsed_sec=item.elapsed_sec,
+                log_path=item.log_path,
+            ))
         if report.hits:
             clusters = engine.resolve_entities()
             _emit(event_sink, "phase_counters", phase="resolve", counters={"clusters": len(clusters), "post_recon": 1})
@@ -255,7 +281,6 @@ def _run_chain(config: TUIExecutionConfig, modules: list[str], event_sink: Event
         modules_run=(recon_summary or {}).get("modules_run", []),
         outcomes=outcomes,
         all_hits=all_hits,
-        errors=errors,
         started_at=started,
         finished_at=datetime.now().isoformat(),
         new_phones=(recon_summary or {}).get("new_phones", []),
@@ -299,18 +324,30 @@ def _run_deep_recon_live(
         label="tui-chain",
         event_callback=lambda payload: _emit_scheduler_event(event_sink, payload),
     )
-    errors.extend(scheduled.errors)
     deduped, cross_confirmed = dedup_and_confirm(scheduled.all_hits)
+    outcomes = [
+        ReconModuleOutcome(
+            module_name=item.module_name,
+            lane=item.lane,
+            hits=item.hits,
+            error=item.error,
+            error_kind=item.error_kind,
+            elapsed_sec=item.elapsed_sec,
+            log_path=item.raw_log_path,
+        )
+        for item in scheduled.task_results
+    ]
     report = ReconReport(
         target_name=config.target or "unknown",
         modules_run=scheduled.modules_run,
         hits=deduped,
-        errors=errors,
         started_at=datetime.now().isoformat(),
         finished_at=datetime.now().isoformat(),
         new_phones=sorted({h.value for h in deduped if h.observable_type == "phone" and h.confidence > 0}),
         new_emails=sorted({h.value for h in deduped if h.observable_type == "email" and h.confidence > 0}),
         cross_confirmed=cross_confirmed,
+        outcomes=outcomes,
+        errors=errors,
     )
     _save_deep_recon_report(report, Path(RUNS_ROOT / "logs"))
 
@@ -366,28 +403,6 @@ def _emit_scheduler_event(event_sink: EventSink, payload: dict) -> None:
         _emit(event_sink, "phase", phase=f"lane:{payload.get('lane')}", detail=f"{payload.get('task_count', 0)} task(s) dispatched")
     elif event_type == "lane_complete":
         _emit(event_sink, "activity", level="info", text=f"{payload.get('lane', 'lane')} complete: {payload.get('ok_count', 0)}/{payload.get('task_count', 0)} clean")
-
-
-def _export_artifacts(result: RunResult, config: TUIExecutionConfig) -> dict[str, str]:
-    if not config.export_formats:
-        return {}
-    target_dir = Path(config.export_dir) if config.export_dir else (RUNS_ROOT / "exports" / "artifacts")
-    target_dir.mkdir(parents=True, exist_ok=True)
-    exported: dict[str, str] = {}
-    if "json" in config.export_formats:
-        exported["json"] = str(export_run_result_json(result, target_dir))
-    if "stix" in config.export_formats:
-        exported["stix"] = str(export_run_result_stix(result, target_dir))
-    if "zip" in config.export_formats:
-        exported["zip"] = str(
-            export_run_result_zip(
-                result,
-                target_dir,
-                html_path=result.extra.get("output_path") if isinstance(result.extra, dict) else None,
-                report_mode=result.extra.get("report_mode") if isinstance(result.extra, dict) else None,
-            )
-        )
-    return exported
 
 
 def _save_deep_recon_report(report: ReconReport, log_dir: Path) -> None:

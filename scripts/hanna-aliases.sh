@@ -27,6 +27,42 @@ hman() {
   "$HANNA_BIN" man "$@"
 }
 
+phone() {
+  local target="${1:-}"
+  shift || true
+  "$HANNA_BIN" man --module ua_phone --target "$target" "$@"
+}
+
+fop() {
+  local target="${1:-}"
+  shift || true
+  "$HANNA_BIN" man --module opendatabot --target "$target" "$@"
+}
+
+leak() {
+  local target="${1:-}"
+  shift || true
+  "$HANNA_BIN" man --module ua_leak --target "$target" "$@"
+}
+
+email() {
+  local target="${1:-}"
+  shift || true
+  "$HANNA_BIN" man --module holehe --target "$target" "$@"
+}
+
+ashok() {
+  local target="${1:-}"
+  shift || true
+  "$HANNA_BIN" man --module ashok --target "$target" "$@"
+}
+
+soc() {
+  local target="${1:-}"
+  shift || true
+  "$HANNA_BIN" man --module social_analyzer --target "$target" "$@"
+}
+
 hfs() {
   local target="${1:-}"
   shift || true
@@ -87,28 +123,25 @@ hdash() {
 }
 
 hlayout1() { tmux select-layout tiled; }
-hlayout2() { tmux select-layout even-horizontal; }
-hlayout3() { tmux select-layout main-vertical; }
+hlayout2() { tmux select-layout main-vertical; }
+hlayout3() { tmux select-layout even-horizontal; }
 
 hlayout-ref() {
-  # Reference layout: topbar 10% → tree+controls 20% → graph 50% → logs 20%
-  tmux select-pane -t 0
-  tmux resize-pane -y 3
-  tmux select-pane -t 3
-  tmux resize-pane -y 50%
-  tmux select-pane -t 4
-  tmux resize-pane -y 20%
+  tmux resize-pane -t 0 -y 3 2>/dev/null || true
+  tmux resize-pane -t 4 -x 26 2>/dev/null || true
+  tmux resize-pane -t 1 -x 32 2>/dev/null || true
+  tmux select-pane -t 3 2>/dev/null || true
 }
 
 hfocus-top()      { tmux select-pane -t 0; }
 hfocus-metrics()  { tmux select-pane -t 1; }
-hfocus-controls() { tmux select-pane -t 2; }
+hfocus-controls() { tmux select-pane -t 4; }
 hfocus-graph()    { tmux select-pane -t 3; }
-hfocus-logs()     { tmux select-pane -t 4; }
+hfocus-logs()     { tmux select-pane -t 2; }
 
 htop() { tmux switch-client -t hanna-dashboard 2>/dev/null || hdash; }
 hkill() { tmux kill-session -t hanna-dashboard 2>/dev/null && echo "Dashboard killed" || echo "No dashboard session"; }
 
 echo "HANNA shortcuts loaded from $HANNA_BIN"
-echo "Available: hls, hpf, hui, hagg, hch, hman, hfs, hchainfs, hsum, hreset, hstart, hstop, hhealth, hlogs, hanna"
+echo "Available: hls, hpf, hui, hagg, hch, hman, phone, fop, leak, email, ashok, soc, hfs, hchainfs, hsum, hreset, hstart, hstop, hhealth, hlogs, hanna"
 echo "Dashboard: hdash, htop, hkill, hlayout1/2/3, hlayout-ref, hfocus-{top,metrics,controls,graph,logs}"

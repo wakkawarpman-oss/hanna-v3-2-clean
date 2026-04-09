@@ -105,6 +105,8 @@ ADAPTER_FAILURE_THRESHOLD = 3      # consecutive failures before auto-skip
 
 # ── OPSEC ────────────────────────────────────────────────────────
 
+DEFAULT_TOR_PROXY = os.environ.get("HANNA_TOR_PROXY", "socks5h://127.0.0.1:9050").strip() or "socks5h://127.0.0.1:9050"
+TOR_PROXY_CHECK_TIMEOUT = _env_float("HANNA_TOR_PROXY_CHECK_TIMEOUT", 1.5)
 REQUIRE_PROXY = os.environ.get("HANNA_REQUIRE_PROXY", "0") == "1"
 LOG_ENCRYPT = os.environ.get("HANNA_LOG_ENCRYPT", "0") == "1"
 LOG_ENCRYPT_KEY = os.environ.get("HANNA_LOG_KEY", "")

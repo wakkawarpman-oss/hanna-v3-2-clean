@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+import os
 import re
 
 from config import DEFAULT_DB_PATH, HTML_DIR, RUNS_ROOT
@@ -93,6 +94,15 @@ class ExportState:
 
 
 @dataclass
+class CredentialEntry:
+    env_name: str
+    label: str
+    module: str
+    value: str = ""
+    enabled: bool = False
+
+
+@dataclass
 class OpsState:
     runs_root: str
     db_path: str
@@ -126,6 +136,20 @@ class SessionState:
     show_rejected: bool = False
     prompt_status: str = "ready"
     latest_result: RunResult | None = None
+    next_actions: list[str] = field(default_factory=list)
+    locale: str = "uk"
+    credentials: list[CredentialEntry] = field(default_factory=list)
+
+
+CREDENTIAL_SPECS: tuple[tuple[str, str, str], ...] = (
+    ("HIBP_API_KEY", "HIBP", "hibp"),
+    ("SHODAN_API_KEY", "Shodan", "shodan"),
+    ("CENSYS_API_ID", "Censys ID", "censys"),
+    ("CENSYS_API_SECRET", "Censys Secret", "censys"),
+    ("TELEGRAM_BOT_TOKEN", "Telegram Bot", "ua_phone"),
+    ("GETCONTACT_TOKEN", "GetContact Token", "getcontact"),
+    ("GETCONTACT_AES_KEY", "GetContact AES", "getcontact"),
+)
 
 
 def build_default_session_state(
@@ -133,6 +157,7 @@ def build_default_session_state(
     modules: list[str] | None = None,
     report_mode: str = "shareable",
     default_mode: str = "idle",
+    locale: str = "uk",
     manual_module: str | None = None,
     known_phones: list[str] | None = None,
     known_usernames: list[str] | None = None,
@@ -166,6 +191,7 @@ def build_default_session_state(
         ActivityEvent(level="info", text=f"Resolved {len(resolved_modules)} module(s) for operator view", timestamp=started_at),
         ActivityEvent(level="warn" if readiness.warnings else "ok", text=f"Preflight warnings: {readiness.warnings} | failures: {readiness.hard_failures}", timestamp=started_at),
     ]
+    credentials = _build_credential_entries()
     return SessionState(
         title="HANNA // OSINT & Cyber Intelligence",
         started_at=started_at,
@@ -218,15 +244,51 @@ def build_default_session_state(
         readiness=readiness,
         activity=activity,
         observables=_build_seed_observables(target_state),
+        locale=locale,
+        credentials=credentials,
     )
 
 
 def refresh_readiness(state: SessionState) -> None:
+    _sync_credential_env(state)
     modules = active_modules_for_mode(state.execution.default_mode, state.execution)
     readiness = _build_readiness_state(run_preflight(modules=modules or None))
     state.readiness = readiness
     state.ops.preflight_failures = readiness.hard_failures
     state.ops.preflight_warnings = readiness.warnings
+
+
+def set_credential_value(state: SessionState, env_name: str, value: str) -> CredentialEntry | None:
+    entry = _find_credential_entry(state, env_name)
+    if entry is None:
+        return None
+    entry.value = value.strip()
+    if entry.enabled and not entry.value:
+        entry.enabled = False
+    _sync_credential_env(state)
+    refresh_readiness(state)
+    return entry
+
+
+def toggle_credential_entry(state: SessionState, env_name: str, enabled: bool) -> CredentialEntry | None:
+    entry = _find_credential_entry(state, env_name)
+    if entry is None:
+        return None
+    entry.enabled = bool(enabled and entry.value)
+    _sync_credential_env(state)
+    refresh_readiness(state)
+    return entry
+
+
+def credential_slug(env_name: str) -> str:
+    return env_name.lower().replace("_", "-")
+
+
+def credential_env_from_slug(slug: str) -> str | None:
+    for env_name, _, _ in CREDENTIAL_SPECS:
+        if credential_slug(env_name) == slug:
+            return env_name
+    return None
 
 
 def apply_editor_updates(state: SessionState, payload: dict[str, str]) -> None:
@@ -286,6 +348,7 @@ def apply_editor_updates(state: SessionState, payload: dict[str, str]) -> None:
     state.running = False
     state.last_result_summary = []
     state.latest_result = None
+    state.next_actions = []
     state.prompt_status = "ready"
     state.show_rejected = False
     preview_modules = active_modules_for_mode(mode, state.execution)
@@ -303,6 +366,7 @@ def clear_pipeline_history(state: SessionState) -> None:
     state.pipeline.phase_counters = {}
     state.pipeline.phase_timeline = []
     state.last_result_summary = []
+    state.next_actions = []
     state.prompt_status = "ready"
     _recompute_progress(state)
 
@@ -318,6 +382,7 @@ def reset_modules_for_run(state: SessionState, mode: str, modules: list[str]) ->
     ]
     _recompute_progress(state)
     state.last_result_summary = []
+    state.next_actions = []
     state.running = True
     state.prompt_status = f"running:{mode}"
 
@@ -356,7 +421,8 @@ def apply_run_result(state: SessionState, result: RunResult) -> None:
     state.running = False
     state.last_result_summary = result.summary_lines()
     state.latest_result = result
-    state.prompt_status = "ready"
+    state.next_actions = _derive_next_actions(result)
+    state.prompt_status = "review-ready"
     state.target.label = result.target_name or state.target.label
     state.target.phones = list(result.new_phones)
     state.target.emails = list(result.new_emails)
@@ -380,6 +446,8 @@ def apply_run_result(state: SessionState, result: RunResult) -> None:
             state.export.html_dir = str(html_path)
         if exported:
             append_activity(state, "ok", f"Artifacts exported: {', '.join(sorted(exported.keys()))}")
+    if state.next_actions:
+        append_activity(state, "info", f"Next actions: {', '.join(_format_action_name(action) for action in state.next_actions)}")
     state.observables = _build_observables_from_result(state.target, result)
 
 
@@ -401,7 +469,7 @@ def _build_readiness_state(checks: list[PreflightCheck]) -> ReadinessState:
     secrets_ready: list[str] = []
     secrets_missing: list[str] = []
     for check in checks:
-        if "token" in check.name or "key" in check.name or "secret" in check.name:
+        if any(marker in check.name for marker in ("token", "key", "secret", "api_id", "client_id")):
             if check.status == "ok":
                 secrets_ready.append(check.name)
             else:
@@ -413,6 +481,57 @@ def _build_readiness_state(checks: list[PreflightCheck]) -> ReadinessState:
         secrets_ready=sorted(secrets_ready),
         secrets_missing=sorted(secrets_missing),
     )
+
+
+def _derive_next_actions(result: RunResult) -> list[str]:
+    actions = ["review", "print", "diagnostics", "new-search"]
+    actions.extend(["export-stix", "export-zip"])
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for action in actions:
+        if action in seen:
+            continue
+        seen.add(action)
+        ordered.append(action)
+    return ordered
+
+
+def _format_action_name(action: str) -> str:
+    return action.replace("-", " ")
+
+
+def _build_credential_entries() -> list[CredentialEntry]:
+    entries: list[CredentialEntry] = []
+    for env_name, label, module in CREDENTIAL_SPECS:
+        value = os.environ.get(env_name, "").strip()
+        entries.append(
+            CredentialEntry(
+                env_name=env_name,
+                label=label,
+                module=module,
+                value=value,
+                enabled=bool(value),
+            )
+        )
+    return entries
+
+
+def _find_credential_entry(state: SessionState, env_name: str) -> CredentialEntry | None:
+    for entry in state.credentials:
+        if entry.env_name == env_name:
+            return entry
+    return None
+
+
+def _sync_credential_env(state: SessionState) -> None:
+    if not state.credentials:
+        return
+    managed = {env_name for env_name, _, _ in CREDENTIAL_SPECS}
+    for env_name in managed:
+        os.environ.pop(env_name, None)
+    for entry in state.credentials:
+        if entry.enabled and entry.value:
+            os.environ[entry.env_name] = entry.value
 
 
 def _initial_module_names(resolved_modules: list[str], manual_module: str | None) -> list[str]:

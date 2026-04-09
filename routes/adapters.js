@@ -12,15 +12,35 @@
  *                            and a matching tenantId)
  */
 
-// ---------------------------------------------------------------------------
-// Stub adapter registry – in production, load from the Python adapter layer
-// or a shared config store.
-// ---------------------------------------------------------------------------
-const ADAPTERS = [
-  { id: 'shodan', name: 'Shodan', description: 'Infrastructure and host enrichment' },
-  { id: 'ghunt', name: 'GHunt', description: 'Google-account enrichment' },
-  { id: 'social_analyzer', name: 'Social Analyzer', description: 'Cross-platform username footprint' }
-]
+const { adapters: ADAPTER_CATALOG } = require('../config/adapter-catalog.json')
+
+const DISPLAY_NAME_OVERRIDES = {
+  ua_phone: 'UA Phone',
+  ua_leak: 'UA Leak',
+  ru_leak: 'RU Leak',
+  vk_graph: 'VK Graph',
+  ghunt: 'GHunt',
+  hibp: 'HIBP',
+  httpx_probe: 'httpx Probe',
+  opendatabot: 'OpenDataBot',
+  social_analyzer: 'Social Analyzer'
+}
+
+function adapterDisplayName (id) {
+  if (DISPLAY_NAME_OVERRIDES[id]) {
+    return DISPLAY_NAME_OVERRIDES[id]
+  }
+  return id
+    .split('_')
+    .map((segment) => segment ? segment[0].toUpperCase() + segment.slice(1) : segment)
+    .join(' ')
+}
+
+const ADAPTERS = ADAPTER_CATALOG.map((adapter) => ({
+  ...adapter,
+  name: adapterDisplayName(adapter.id),
+  description: `${adapterDisplayName(adapter.id)} adapter (${adapter.lane} lane, P${adapter.priority})`
+}))
 
 // ---------------------------------------------------------------------------
 // Route plugin

@@ -58,6 +58,36 @@ Quick aliases added directly to `package.json`:
 | `npm run reset` | `hanna reset --confirm --json-only` | ~1s |
 | `npm run bench` | `benchmark:multi` | ~15s |
 
+## Reference Dashboard
+
+Reference layout is now exposed as native repo commands and shell aliases.
+
+```bash
+source scripts/hanna-aliases.sh
+hdash
+hlayout-ref
+hfocus-graph
+```
+
+Layout intent:
+
+| Area | Command | Purpose |
+|---|---|---|
+| Top bar | `npm run topbar` | One-line health, throughput, memory, cache, queue |
+| Metrics tree | `npm run tui:tree` | Fast/slow lane snapshot + risk line |
+| Graph | `npm run tui:graph` | Throughput and latency sparkline |
+| Controls | `npm run tui:controls` | Parse / Export / Reset / Config cheat sheet |
+| Logs | `npm run logs:live` | Live runtime logs |
+
+Available layouts:
+
+| Alias | Layout |
+|---|---|
+| `hlayout-ref` | Reference proportions: top + metrics + graph + controls + logs |
+| `hlayout1` | Compact tiled |
+| `hlayout2` | Wide main-vertical |
+| `hlayout3` | Mobile even-horizontal |
+
 ## Shell Aliases
 
 Load once per shell session:
@@ -76,6 +106,12 @@ source scripts/hanna-aliases.sh
 | `hagg` | Parallel adapter run |
 | `hch` | Full pipeline (chain) |
 | `hman` | Single adapter run |
+| `phone <target>` | Manual `ua_phone` pivot |
+| `fop <target>` | Manual `opendatabot` pivot |
+| `leak <target>` | Manual `ua_leak` pivot |
+| `email <target>` | Manual `holehe` pivot |
+| `ashok <target>` | Manual `ashok` deep infra pivot |
+| `soc <target>` | Manual `social_analyzer` pivot |
 | `hfs <target>` | Full-spectrum aggregate |
 | `hchainfs <target>` | Full-spectrum chain |
 | `hsum <target> <text>` | Smart summary + risk flags |
@@ -100,6 +136,12 @@ hui --target "Ivan" --modules full-spectrum
 hfs example.com
 hchainfs "Ivan" --verify --export-formats json,metadata,stix,zip
 hman --module nuclei --target https://example.com
+phone +380501234567
+fop +380501234567
+leak user@example.com
+email target@example.org
+ashok example.com
+soc @handle
 hsum "Case Target" "password dump for user@example.com near військова частина"
 ```
 
@@ -117,11 +159,10 @@ hstop          # Stop all processes
 ## tmux Dashboard (Production)
 
 ```bash
-tmux new -s hanna -d
-tmux split-window -h "watch -n 5 npm run h"
-tmux split-window -v "source scripts/hanna-aliases.sh && hlogs"
-tmux split-window -v "watch -n 30 curl -s localhost:3000/health"
-tmux attach -t hanna
+source scripts/hanna-aliases.sh
+hdash
+hlayout-ref
+hfocus-graph
 ```
 
 ## Environment Readiness
@@ -132,4 +173,16 @@ The repository already contains a local `.env`. Validate the current setup with:
 ./scripts/hanna pf
 ./scripts/hanna pf --modules ua_phone
 ./scripts/hanna pf --modules ua_phone --json-only
+```
+
+## OPSEC Routing
+
+Canonical safe routing rules are documented in `docs/OPSEC_RUNBOOK.md`.
+
+Quick reference:
+
+```bash
+./scripts/hanna agg --target example.com --modules pd-infra --tor
+./scripts/hanna ch --target example.com --modules full-spectrum --proxy socks5h://127.0.0.1:9055
+HANNA_REQUIRE_PROXY=1 ./scripts/hanna ui --tor --plain
 ```

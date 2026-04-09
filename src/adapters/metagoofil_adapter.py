@@ -19,7 +19,11 @@ class MetagoofilAdapter(ReconAdapter):
 
     def search(self, target_name: str, known_phones: list[str], known_usernames: list[str]) -> list[ReconHit]:
         hits: list[ReconHit] = []
-        for domain in self._collect_domains(target_name, known_usernames)[:3]:
+        domains = self._collect_domains(target_name, known_usernames)
+        if not domains:
+            self._record_noop("no domain-like seeds available for Metagoofil")
+            return hits
+        for domain in domains[:3]:
             hits.extend(self._run_metagoofil(domain))
         return hits
 

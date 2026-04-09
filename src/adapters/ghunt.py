@@ -50,6 +50,10 @@ class GHuntAdapter(ReconAdapter):
                 f"{name_parts[0]}{name_parts[1]}@gmail.com",
             ])
 
+        if not emails:
+            self._record_noop("no Gmail pivots available for GHunt")
+            return hits
+
         for email in emails[:3]:
             ghunt_data = self._run_ghunt_email(email)
             if ghunt_data:

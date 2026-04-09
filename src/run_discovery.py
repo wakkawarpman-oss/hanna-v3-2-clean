@@ -121,7 +121,9 @@ def main():
         return
 
     exports = Path(args.exports_dir)
-    metas = sorted(exports.glob("*.json"))
+    from metadata_inputs import discover_ingest_metadata_paths
+
+    metas = discover_ingest_metadata_paths(exports)
     log.info("Found %d metadata files in %s", len(metas), exports)
 
     # Default output

@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import shlex
+
+import pytest
+
 from models import AdapterOutcome, RunResult
-from tui.app import HannaTUIApp
+from registry import resolve_modules
+from tui.app import EMAIL_INTENT_PREFIXES, INTENT_EXACT_COMMANDS, PHONE_INTENT_PREFIXES, USERNAME_INTENT_PREFIXES, HannaTUIApp
 from tui.screens import OverviewScreen
 from tui.state import build_default_session_state
 
@@ -31,10 +36,30 @@ def test_apply_event_updates_ui_state_transitions(monkeypatch):
 
     assert app.session_state.running is False
     assert app.session_state.pipeline.phase == "completed"
+    assert app.session_state.prompt_status == "review-ready"
+    assert app.session_state.current_view == "overview"
+    assert app.session_state.next_actions == ["review", "print", "diagnostics", "new-search", "export-stix", "export-zip"]
     assert "ingest" in app.session_state.pipeline.phase_counters
     assert app.session_state.pipeline.phase_timeline
     assert any(item.level == "info" and item.text == "Scheduler active" for item in app.session_state.activity)
     assert "Chain:" in app._render_topbar()
+
+
+def test_startup_banner_shows_next_actions_after_run():
+    state = build_default_session_state(target="Case Entity")
+    app = HannaTUIApp(session_state=state)
+    app.session_state.next_actions = ["review", "print", "diagnostics"]
+    app.session_state.latest_result = RunResult(
+        target_name="Case Entity",
+        mode="aggregate",
+        started_at="2026-04-08T01:00:00",
+        finished_at="2026-04-08T01:00:05",
+    )
+
+    banner = app._render_startup_banner()
+
+    assert "Run complete. Next:" in banner
+    assert "review | print | diagnostics" in banner
 
 
 def test_render_compact_chain_status_includes_recent_counters():
@@ -122,3 +147,210 @@ def test_command_prompt_run_updates_profile_and_starts_mode(monkeypatch):
     assert started == ["aggregate"]
     assert app.session_state.execution.target == "Ivan Signal"
     assert "ivan_ops" in app.session_state.execution.known_usernames
+
+
+def test_language_command_switches_locale(monkeypatch):
+    state = build_default_session_state(target="Case Entity")
+    app = HannaTUIApp(session_state=state)
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: None)
+
+    app._execute_command("lang en")
+
+    assert app.session_state.locale == "en"
+    assert app.session_state.prompt_status == "lang:en"
+
+
+def test_credential_helpers_update_session_state(monkeypatch):
+    monkeypatch.delenv("SHODAN_API_KEY", raising=False)
+    state = build_default_session_state(target="Case Entity")
+    app = HannaTUIApp(session_state=state)
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: None)
+    monkeypatch.setattr(app, "notify", lambda *args, **kwargs: None)
+
+    app._commit_credential_value("SHODAN_API_KEY", "temporary-shodan-key")
+    entry = next(item for item in app.session_state.credentials if item.env_name == "SHODAN_API_KEY")
+    assert entry.value == "temporary-shodan-key"
+    assert entry.enabled is False
+
+    app._set_credential_enabled("SHODAN_API_KEY", "temporary-shodan-key", True)
+    assert entry.enabled is True
+
+    app._set_credential_enabled("SHODAN_API_KEY", "temporary-shodan-key", False)
+    assert entry.enabled is False
+
+
+def test_render_command_board_uses_selected_locale():
+    state = build_default_session_state(target="Case Entity", locale="pl")
+    app = HannaTUIApp(session_state=state)
+
+    rendered = app._render_command_board()
+
+    assert "CENTRUM KOMEND" in rendered
+    assert "Pisz naturalnie" in rendered
+    assert "Quick prompts:" in rendered
+
+
+def test_intent_router_maps_ukrainian_phone_phrase(monkeypatch):
+    state = build_default_session_state(target="Case Entity", modules=["pd-infra"], default_mode="idle")
+    app = HannaTUIApp(session_state=state)
+    started: list[str] = []
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: None)
+    monkeypatch.setattr(app, "_start_run", lambda mode: started.append(mode))
+
+    app._execute_command("знайди по номеру +380991234598")
+
+    assert started == ["aggregate"]
+    assert app.session_state.execution.target == "+380991234598"
+    assert app.session_state.execution.resolved_modules == ["ua_phone"]
+
+
+def test_intent_router_maps_english_email_phrase(monkeypatch):
+    state = build_default_session_state(target="Case Entity", modules=["pd-infra"], default_mode="idle")
+    app = HannaTUIApp(session_state=state)
+    started: list[str] = []
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: None)
+    monkeypatch.setattr(app, "_start_run", lambda mode: started.append(mode))
+
+    app._execute_command("check email case@example.com")
+
+    assert started == ["aggregate"]
+    assert app.session_state.execution.target == "case@example.com"
+    assert app.session_state.execution.resolved_modules == resolve_modules(["email-chain"])
+
+
+def test_intent_router_maps_navigation_phrase(monkeypatch):
+    state = build_default_session_state(target="Case Entity")
+    app = HannaTUIApp(session_state=state)
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: None)
+    monkeypatch.setattr(app, "_switch_view", lambda name: setattr(app.session_state, "current_view", name))
+
+    app._execute_command("show diagnostics")
+
+    assert app.session_state.current_view == "readiness"
+
+
+def test_intent_router_maps_focus_phrase(monkeypatch):
+    state = build_default_session_state(target="Case Entity")
+    app = HannaTUIApp(session_state=state)
+    focused: list[str] = []
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: None)
+    monkeypatch.setattr(app, "_switch_view", lambda name: setattr(app.session_state, "current_view", name))
+    monkeypatch.setattr(app, "action_focus_command", lambda: focused.append("focus"))
+
+    app._execute_command("new search")
+
+    assert app.session_state.current_view == "overview"
+    assert app.session_state.prompt_status == "focus-search"
+    assert focused == ["focus"]
+
+
+def test_intent_router_maps_keys_phrase(monkeypatch):
+    state = build_default_session_state(target="Case Entity")
+    app = HannaTUIApp(session_state=state)
+    focused: list[str] = []
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: None)
+    monkeypatch.setattr(app, "action_focus_credentials", lambda env_name=None: focused.append(env_name or "credentials"))
+
+    app._execute_command("keys")
+
+    assert app.session_state.prompt_status == "focus-credentials"
+    assert focused == ["credentials"]
+
+
+def test_intent_router_maps_keys_service_phrase(monkeypatch):
+    state = build_default_session_state(target="Case Entity")
+    app = HannaTUIApp(session_state=state)
+    focused: list[str] = []
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: None)
+    monkeypatch.setattr(app, "action_focus_credentials", lambda env_name=None: focused.append(env_name))
+
+    app._execute_command("keys censys")
+
+    assert app.session_state.prompt_status == "focus-credentials"
+    assert focused == ["CENSYS_API_ID"]
+
+
+def test_intent_router_maps_print_to_export(monkeypatch):
+    state = build_default_session_state(target="Case Entity")
+    app = HannaTUIApp(session_state=state)
+    exported: list[str] = []
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: None)
+    monkeypatch.setattr(app, "_export_last_result", lambda artifact: exported.append(artifact))
+
+    app._execute_command("print")
+
+    assert exported == ["zip"]
+
+
+def test_startup_banner_mentions_keys_navigation_after_run():
+    state = build_default_session_state(target="Case Entity")
+    app = HannaTUIApp(session_state=state)
+    app.session_state.next_actions = ["review", "print", "diagnostics"]
+
+    banner = app._render_startup_banner()
+
+    assert "Use keys or keys censys" in banner
+
+
+@pytest.mark.parametrize(("phrase", "expected"), sorted(INTENT_EXACT_COMMANDS.items()))
+def test_route_intent_covers_all_exact_phrase_aliases(phrase, expected):
+    app = HannaTUIApp(session_state=build_default_session_state(target="Case Entity"))
+
+    assert app._route_intent(phrase) == expected
+
+
+@pytest.mark.parametrize("prefix", PHONE_INTENT_PREFIXES)
+def test_route_intent_covers_all_phone_prefixes(prefix):
+    app = HannaTUIApp(session_state=build_default_session_state(target="Case Entity"))
+    target = "+380991234598"
+
+    expected = f"run --mode aggregate --target {shlex.quote(target)} --modules ua_phone"
+
+    assert app._route_intent(f"{prefix} {target}") == expected
+
+
+@pytest.mark.parametrize("prefix", EMAIL_INTENT_PREFIXES)
+def test_route_intent_covers_all_email_prefixes(prefix):
+    app = HannaTUIApp(session_state=build_default_session_state(target="Case Entity"))
+    target = "case@example.com"
+
+    expected = f"run --mode aggregate --target {shlex.quote(target)} --modules email-chain"
+
+    assert app._route_intent(f"{prefix} {target}") == expected
+
+
+@pytest.mark.parametrize("prefix", USERNAME_INTENT_PREFIXES)
+def test_route_intent_covers_all_username_prefixes(prefix):
+    app = HannaTUIApp(session_state=build_default_session_state(target="Case Entity"))
+    target = "caseuser"
+
+    expected = f"run --mode aggregate --target {shlex.quote(target)} --usernames {shlex.quote(target)}"
+
+    assert app._route_intent(f"{prefix} {target}") == expected
+
+
+def test_route_intent_falls_back_for_raw_email():
+    app = HannaTUIApp(session_state=build_default_session_state(target="Case Entity"))
+    target = "raw@example.com"
+
+    expected = f"run --mode aggregate --target {shlex.quote(target)} --modules email-chain"
+
+    assert app._route_intent(target) == expected
+
+
+def test_route_intent_falls_back_for_raw_phone():
+    app = HannaTUIApp(session_state=build_default_session_state(target="Case Entity"))
+    target = "+380501112233"
+
+    expected = f"run --mode aggregate --target {shlex.quote(target)} --modules ua_phone"
+
+    assert app._route_intent(target) == expected

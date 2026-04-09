@@ -35,7 +35,7 @@ class AmassAdapter(ReconAdapter):
 
     def _run_amass(self, domain: str) -> list[ReconHit]:
         amass_bin = os.environ.get("AMASS_BIN", "amass")
-        proc = run_cli([amass_bin, "enum", "-passive", "-d", domain], timeout=self.timeout * 12)
+        proc = run_cli([amass_bin, "enum", "-passive", "-d", domain], timeout=self.timeout * 12, proxy=self.proxy)
         if not proc or not proc.stdout.strip():
             return []
         hits: list[ReconHit] = []

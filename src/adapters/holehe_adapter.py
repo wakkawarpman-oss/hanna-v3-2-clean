@@ -18,6 +18,9 @@ class HoleheAdapter(ReconAdapter):
     def search(self, target_name: str, known_phones: list[str], known_usernames: list[str]) -> list[ReconHit]:
         hits: list[ReconHit] = []
         emails = [u.strip().lower() for u in known_usernames if "@" in u]
+        if not emails:
+            self._record_noop("no email observables available for Holehe")
+            return hits
         for email in list(dict.fromkeys(emails))[:5]:
             hits.extend(self._run_holehe(email))
         return hits

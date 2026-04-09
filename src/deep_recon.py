@@ -25,7 +25,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from adapters.base import ReconAdapter, ReconHit, ReconReport  # re-exported
+from adapters.base import ReconAdapter, ReconHit, ReconModuleOutcome, ReconReport  # re-exported
 from config import CROSS_CONFIRM_BOOST, RUNS_ROOT
 from registry import (
     MODULE_LANE,
@@ -90,12 +90,22 @@ class DeepReconRunner:
         started = datetime.now().isoformat()
         all_hits: list[ReconHit] = []
         modules_run: list[str] = []
+        outcomes: list[ReconModuleOutcome] = []
 
         Path(self.log_dir).mkdir(parents=True, exist_ok=True)
         scheduled = LaneScheduler.dispatch(tasks=tasks, max_workers=self.max_workers, log_dir=self.log_dir, label="deep_recon")
-        errors.extend(scheduled.errors)
         modules_run = scheduled.modules_run
         all_hits = scheduled.all_hits
+        for task_result in scheduled.task_results:
+            outcomes.append(ReconModuleOutcome(
+                module_name=task_result.module_name,
+                lane=task_result.lane,
+                hits=task_result.hits,
+                error=task_result.error,
+                error_kind=task_result.error_kind,
+                elapsed_sec=task_result.elapsed_sec,
+                log_path=task_result.raw_log_path,
+            ))
 
         # ── Dedup + cross-confirm ──
         deduped, cross_confirmed = dedup_and_confirm(all_hits)
@@ -108,12 +118,13 @@ class DeepReconRunner:
             target_name=target_name,
             modules_run=modules_run,
             hits=deduped,
-            errors=errors,
             started_at=started,
             finished_at=datetime.now().isoformat(),
             new_phones=new_phones,
             new_emails=new_emails,
             cross_confirmed=cross_confirmed,
+            outcomes=outcomes,
+            errors=errors,
         )
         self._save_report(report)
         return report
@@ -131,6 +142,7 @@ class DeepReconRunner:
                 "target": report.target_name,
                 "modules": report.modules_run,
                 "hits": [h.to_dict() for h in report.hits],
+                "outcomes": [outcome.to_dict() for outcome in report.outcomes],
                 "errors": report.errors,
                 "started": report.started_at,
                 "finished": report.finished_at,
@@ -279,6 +291,7 @@ def _cli():
         "new_phones": report.new_phones,
         "new_emails": report.new_emails,
         "cross_confirmed": len(report.cross_confirmed),
+        "outcomes": [outcome.to_dict() for outcome in report.outcomes],
         "hits": [
             {"type": h.observable_type, "value": h.value, "source": h.source_module,
              "detail": h.source_detail, "confidence": h.confidence, "cross_refs": h.cross_refs}

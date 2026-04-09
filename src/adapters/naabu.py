@@ -17,7 +17,11 @@ class NaabuAdapter(ReconAdapter):
 
     def search(self, target_name: str, known_phones: list[str], known_usernames: list[str]) -> list[ReconHit]:
         hits: list[ReconHit] = []
-        for target in self._collect_targets(target_name, known_usernames)[:10]:
+        targets = self._collect_targets(target_name, known_usernames)
+        if not targets:
+            self._record_noop("no domain or IP seeds available for Naabu")
+            return hits
+        for target in targets[:10]:
             hits.extend(self._scan(target))
         return hits
 

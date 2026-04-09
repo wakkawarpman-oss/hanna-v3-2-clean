@@ -55,6 +55,7 @@ class NucleiAdapter(ReconAdapter):
         # Nuclei needs a URL or domain — extract from target_name or usernames
         targets = self._collect_targets(target_name, known_usernames)
         if not targets:
+            self._record_noop("no URL or domain seeds available for Nuclei")
             return hits
 
         profile = self._profile_name()

@@ -95,6 +95,15 @@ def test_cli_parser_accepts_tui_subcommand():
     assert args.plain is True
 
 
+def test_cli_parser_accepts_tor_flag_across_execution_modes():
+    parser = cli_mod._build_parser()
+
+    assert parser.parse_args(["chain", "--target", "Case", "--tor"]).tor is True
+    assert parser.parse_args(["aggregate", "--target", "Case", "--tor"]).tor is True
+    assert parser.parse_args(["manual", "--module", "ua_phone", "--target", "Case", "--tor"]).tor is True
+    assert parser.parse_args(["tui", "--tor"]).tor is True
+
+
 def test_cli_parser_accepts_summarize_subcommand():
     parser = cli_mod._build_parser()
     args = parser.parse_args([
@@ -379,6 +388,81 @@ def test_cmd_manual_json_summary_emits_block(monkeypatch, capsys):
 
     out = capsys.readouterr().out.strip().splitlines()
     assert "Runtime summary JSON:" in out
+
+
+def test_resolve_proxy_setting_prefers_tor_default(monkeypatch):
+    calls = []
+
+    class _SocketStub:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    monkeypatch.setattr(cli_mod.socket, "create_connection", lambda address, timeout=0: calls.append((address, timeout)) or _SocketStub())
+
+    proxy = cli_mod._resolve_proxy_setting(argparse.Namespace(proxy=None, tor=True))
+
+    assert proxy == cli_mod.DEFAULT_TOR_PROXY
+    assert calls == [(("127.0.0.1", 9050), cli_mod.TOR_PROXY_CHECK_TIMEOUT)]
+
+
+def test_resolve_proxy_setting_rejects_tor_and_proxy_together():
+    with pytest.raises(RuntimeError, match="Use either --tor or --proxy"):
+        cli_mod._resolve_proxy_setting(argparse.Namespace(proxy="socks5h://10.0.0.1:9999", tor=True))
+
+
+def test_resolve_proxy_setting_fails_when_tor_endpoint_unreachable(monkeypatch):
+    monkeypatch.setattr(cli_mod.socket, "create_connection", lambda *args, **kwargs: (_ for _ in ()).throw(OSError("down")))
+
+    with pytest.raises(RuntimeError, match="Tor proxy endpoint is unreachable"):
+        cli_mod._resolve_proxy_setting(argparse.Namespace(proxy=None, tor=True))
+
+
+def test_cmd_tui_uses_tor_proxy_for_session_state(monkeypatch):
+    captured = {}
+
+    class FakeApp:
+        def __init__(self, session_state=None, plain=False):
+            captured["session_state"] = session_state
+            captured["plain"] = plain
+
+        def run(self):
+            captured["ran"] = True
+
+    monkeypatch.setattr(cli_mod, "_assert_proxy_endpoint_reachable", lambda *args, **kwargs: None)
+    monkeypatch.setattr("tui.HannaTUIApp", FakeApp)
+
+    args = argparse.Namespace(
+        target="Case",
+        modules=None,
+        run_mode="idle",
+        module=None,
+        phones=None,
+        usernames=None,
+        workers=4,
+        db="/tmp/discovery.db",
+        exports_dir="/tmp/exports",
+        output=None,
+        verify=False,
+        verify_all=False,
+        verify_content=False,
+        tor=True,
+        proxy=None,
+        leak_dir=None,
+        no_preflight=False,
+        export_formats="json,metadata,stix,zip",
+        export_dir=None,
+        report_mode="shareable",
+        plain=True,
+    )
+
+    cli_mod._cmd_tui(args)
+
+    assert captured["session_state"].execution.proxy == cli_mod.DEFAULT_TOR_PROXY
+    assert captured["plain"] is True
+    assert captured["ran"] is True
 
 
 def test_cmd_preflight_json_summary_only_emits_structured_json(monkeypatch, capsys):

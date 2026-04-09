@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import os
+
 from models import AdapterOutcome, RunResult
 from tui.app import HannaTUIApp
-from tui.screens import HeatmapPanel, ThreatMeterPanel, validate_editor_payload
-from tui.state import apply_editor_updates, apply_run_result, build_default_session_state, clear_pipeline_history, refresh_readiness, reset_modules_for_run, update_module_status, update_phase_counters
+from preflight import PreflightCheck
+from tui.screens import HeatmapPanel, ThreatMeterPanel, _build_activity_body, _build_pipeline_body, _build_readiness_body, validate_editor_payload
+from tui.state import ActivityEvent, apply_editor_updates, apply_run_result, build_default_session_state, clear_pipeline_history, refresh_readiness, reset_modules_for_run, set_credential_value, toggle_credential_entry, update_module_status, update_phase_counters
 
 
 def test_build_default_session_state_uses_target_and_report_mode():
@@ -16,6 +19,7 @@ def test_build_default_session_state_uses_target_and_report_mode():
     assert state.pipeline.modules
     assert all(module.name != "getcontact" for module in state.pipeline.modules)
     assert state.readiness.checks
+    assert state.locale == "uk"
 
 
 def test_build_default_session_state_records_preflight_summary():
@@ -24,6 +28,30 @@ def test_build_default_session_state_records_preflight_summary():
     assert state.ops.preflight_failures >= 0
     assert state.ops.preflight_warnings >= 0
     assert state.activity
+    assert state.credentials
+
+
+def test_session_credentials_sync_environment(monkeypatch):
+    monkeypatch.delenv("SHODAN_API_KEY", raising=False)
+    state = build_default_session_state()
+
+    entry = set_credential_value(state, "SHODAN_API_KEY", "temporary-shodan-key")
+    assert entry is not None
+    assert entry.value == "temporary-shodan-key"
+    assert entry.enabled is False
+
+    toggled = toggle_credential_entry(state, "SHODAN_API_KEY", True)
+
+    assert toggled is not None
+    assert toggled.enabled is True
+    assert state.readiness.checks
+    assert "SHODAN_API_KEY" in os.environ
+
+    toggled = toggle_credential_entry(state, "SHODAN_API_KEY", False)
+
+    assert toggled is not None
+    assert toggled.enabled is False
+    assert "SHODAN_API_KEY" not in os.environ
 
 
 def test_reset_modules_for_run_and_status_updates_progress():
@@ -56,9 +84,11 @@ def test_apply_run_result_updates_summary_and_target_data():
     apply_run_result(state, result)
 
     assert state.running is False
+    assert state.prompt_status == "review-ready"
     assert state.target.phones == ["+380500000000"]
     assert state.target.emails == ["case@example.com"]
     assert state.last_result_summary
+    assert state.next_actions == ["review", "print", "diagnostics", "new-search", "export-stix", "export-zip"]
     assert state.export.html_dir == "/tmp/dossier.html"
     assert any(item.value == "+380500000000" for item in state.observables)
 
@@ -138,6 +168,7 @@ def test_clear_pipeline_history_resets_timeline_and_counters():
     state = build_default_session_state(target="Case Entity", modules=["pd-infra"])
     update_phase_counters(state, "ingest", {"total_files": 3})
     state.last_result_summary = ["summary"]
+    state.next_actions = ["review"]
 
     clear_pipeline_history(state)
 
@@ -145,6 +176,7 @@ def test_clear_pipeline_history_resets_timeline_and_counters():
     assert state.pipeline.phase_counters == {}
     assert state.pipeline.phase_timeline == []
     assert state.last_result_summary == []
+    assert state.next_actions == []
 
 
 def test_validate_editor_payload_reports_invalid_values():
@@ -185,9 +217,85 @@ def test_tui_startup_banner_explains_internal_prompt():
 
     banner = app._render_startup_banner()
 
-    assert "HANNA cockpit active" in banner
-    assert "hanna >" in banner
+    assert "Search-first command center active" in banner
+    assert "phone, email, username, review" in banner
     assert "Press / to refocus input" in banner
+
+
+def test_build_pipeline_body_renders_dense_snapshot():
+    state = build_default_session_state(target="Case Entity", modules=["pd-infra"])
+    state.pipeline.phase = "resolve"
+    state.pipeline.progress_label = "completed 1/2 | running 1 | queued 0"
+    state.pipeline.phase_counters["ingest"] = "total_files=2, ingested=1"
+    state.pipeline.phase_timeline.append("[2026-04-08T01:00:00] resolve: clusters=3")
+    state.pipeline.modules[0].status = "running"
+    state.pipeline.modules[0].detail = "worker started"
+    state.next_actions = ["review", "diagnostics"]
+    state.last_result_summary = ["=== AGGREGATE Run: Case Entity ===", "Hits: 2"]
+
+    rendered = _build_pipeline_body(state)
+
+    assert "[Pipeline // Live Ops]" in rendered
+    assert "phase=resolve" in rendered
+    assert "ЛІЧИЛЬНИКИ ФАЗ" in rendered
+    assert "СІТКА МОДУЛІВ" in rendered
+    assert "next=review, diagnostics" in rendered
+    assert "ПІДСУМОК РЕЗУЛЬТАТУ" in rendered
+
+
+def test_build_readiness_body_renders_gate_snapshot():
+    state = build_default_session_state(target="Case Entity", modules=["ua_phone"])
+    state.execution.proxy = "socks5h://127.0.0.1:9050"
+    state.readiness.checks = [
+        PreflightCheck(name="hibp_api_key", status="warn", detail="missing env var"),
+        PreflightCheck(name="tor_proxy", status="ok", detail="reachable"),
+    ]
+    state.readiness.secrets_ready = ["tor_proxy"]
+    state.readiness.secrets_missing = ["hibp_api_key"]
+    state.readiness.warnings = 1
+
+    rendered = _build_readiness_body(state)
+
+    assert "[Readiness // Gate]" in rendered
+    assert "proxy=socks5h://127.0.0.1:9050" in rendered
+    assert "СЕКРЕТИ" in rendered
+    assert "МАТРИЦЯ ПЕРЕВІРОК" in rendered
+    assert "hibp_api_key" in rendered
+    assert "tor_proxy" in rendered
+
+
+def test_refresh_readiness_counts_api_id_credentials(monkeypatch):
+    monkeypatch.setenv("CENSYS_API_ID", "test-id")
+    monkeypatch.setenv("CENSYS_API_SECRET", "test-secret")
+
+    state = build_default_session_state(target="Case Entity", modules=["censys"])
+    refresh_readiness(state)
+
+    assert "censys_api_id" in state.readiness.secrets_ready
+    assert "censys_api_secret" in state.readiness.secrets_ready
+
+
+def test_build_activity_body_renders_dense_console_snapshot():
+    state = build_default_session_state(target="Case Entity", modules=["ua_phone"])
+    state.pipeline.phase = "aggregate"
+    state.running = False
+    state.prompt_status = "review-ready"
+    state.next_actions = ["review", "print", "diagnostics"]
+    state.activity = [
+        ActivityEvent(level="info", text="Scheduler active", timestamp="2026-04-08T01:00:00"),
+        ActivityEvent(level="ok", text="Aggregate run completed", timestamp="2026-04-08T01:00:03"),
+        ActivityEvent(level="warn", text="HIBP key missing", timestamp="2026-04-08T01:00:04"),
+    ]
+
+    rendered = _build_activity_body(state)
+
+    assert "[Activity // Live Console]" in rendered
+    assert "ПІДСУМОК ПОТОКУ" in rendered
+    assert "ОСТАННІ ПОДІЇ" in rendered
+    assert "events=3 | info=1 | ok=1 | warn=1 | error=0" in rendered
+    assert "next=review, print, diagnostics" in rendered
+    assert "Scheduler active" in rendered
+    assert "Aggregate run completed" in rendered
 
 
 def test_heatmap_panel_renders_signal_matrix():

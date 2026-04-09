@@ -22,13 +22,15 @@ import io
 import json
 import logging
 import os
+import socket
 import sys
 import textwrap
 from pathlib import Path
+from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from config import DEFAULT_DB_PATH, RUNS_ROOT
+from config import DEFAULT_DB_PATH, DEFAULT_TOR_PROXY, RUNS_ROOT, TOR_PROXY_CHECK_TIMEOUT
 from exporters import export_run_metadata_json, export_run_result_json, export_run_result_stix, export_run_result_zip
 from preflight import format_preflight_report, has_hard_failures, preflight_summary, run_preflight
 from registry import MODULE_PRESETS, MODULES, resolve_modules
@@ -263,6 +265,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ch.add_argument("--verify", action="store_true")
     ch.add_argument("--verify-all", action="store_true")
     ch.add_argument("--verify-content", action="store_true")
+    ch.add_argument("--tor", action="store_true", help=f"Route traffic through Tor via {DEFAULT_TOR_PROXY}")
     ch.add_argument("--proxy", default=None)
     ch.add_argument("--leak-dir", default=None)
     ch.add_argument("--no-preflight", action="store_true", help="Skip dependency preflight before running")
@@ -279,6 +282,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ag.add_argument("--modules", default=None, help="Comma-separated modules or preset name")
     ag.add_argument("--phones", default=None)
     ag.add_argument("--usernames", default=None)
+    ag.add_argument("--tor", action="store_true", help=f"Route traffic through Tor via {DEFAULT_TOR_PROXY}")
     ag.add_argument("--proxy", default=None)
     ag.add_argument("--leak-dir", default=None)
     ag.add_argument("--workers", type=int, default=4)
@@ -295,6 +299,7 @@ def _build_parser() -> argparse.ArgumentParser:
     mn.add_argument("--target", required=True)
     mn.add_argument("--phones", default=None)
     mn.add_argument("--usernames", default=None)
+    mn.add_argument("--tor", action="store_true", help=f"Route traffic through Tor via {DEFAULT_TOR_PROXY}")
     mn.add_argument("--proxy", default=None)
     mn.add_argument("--leak-dir", default=None)
     mn.add_argument("--nuclei-profile", choices=["quick", "deep"], default=None)
@@ -317,6 +322,7 @@ def _build_parser() -> argparse.ArgumentParser:
     tui.add_argument("--verify", action="store_true")
     tui.add_argument("--verify-all", action="store_true")
     tui.add_argument("--verify-content", action="store_true")
+    tui.add_argument("--tor", action="store_true", help=f"Route traffic through Tor via {DEFAULT_TOR_PROXY}")
     tui.add_argument("--proxy", default=None)
     tui.add_argument("--leak-dir", default=None)
     tui.add_argument("--no-preflight", action="store_true")
@@ -379,6 +385,30 @@ def _configure_nuclei_profile(explicit_profile: str | None, module_tokens: list[
         os.environ["HANNA_NUCLEI_PROFILE"] = profile
 
 
+def _assert_proxy_endpoint_reachable(proxy_url: str, *, label: str, timeout: float) -> None:
+    parsed = urlparse(proxy_url)
+    host = parsed.hostname
+    port = parsed.port
+    if not host or not port:
+        raise RuntimeError(f"{label} proxy URL is invalid: {proxy_url}")
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return
+    except OSError as exc:
+        raise RuntimeError(f"{label} proxy endpoint is unreachable at {host}:{port}") from exc
+
+
+def _resolve_proxy_setting(args: argparse.Namespace) -> str | None:
+    explicit_proxy = getattr(args, "proxy", None)
+    tor_enabled = bool(getattr(args, "tor", False))
+    if tor_enabled and explicit_proxy:
+        raise RuntimeError("Use either --tor or --proxy, not both")
+    if tor_enabled:
+        _assert_proxy_endpoint_reachable(DEFAULT_TOR_PROXY, label="Tor", timeout=TOR_PROXY_CHECK_TIMEOUT)
+        return DEFAULT_TOR_PROXY
+    return explicit_proxy
+
+
 def _run_fail_fast_preflight(module_tokens: list[str]) -> None:
     checks = run_preflight(modules=module_tokens or None)
     if has_hard_failures(checks):
@@ -390,6 +420,7 @@ def _cmd_chain(args: argparse.Namespace) -> None:
     from runners.chain import ChainRunner
 
     module_tokens = _split(args.modules)
+    proxy = _resolve_proxy_setting(args)
     metadata_file = getattr(args, "metadata_file", None)
     export_formats = _resolve_export_formats(args.export_formats, metadata_file)
     _configure_nuclei_profile(args.nuclei_profile, module_tokens)
@@ -398,7 +429,7 @@ def _cmd_chain(args: argparse.Namespace) -> None:
 
     runner = ChainRunner(
         db_path=args.db,
-        proxy=args.proxy,
+        proxy=proxy,
         leak_dir=args.leak_dir,
     )
     result = _run_with_optional_stdout_capture(
@@ -432,6 +463,7 @@ def _cmd_aggregate(args: argparse.Namespace) -> None:
     from runners.aggregate import AggregateRunner
 
     module_tokens = _split(args.modules)
+    proxy = _resolve_proxy_setting(args)
     metadata_file = getattr(args, "metadata_file", None)
     export_formats = _resolve_export_formats(args.export_formats, metadata_file)
     _configure_nuclei_profile(args.nuclei_profile, module_tokens)
@@ -439,7 +471,7 @@ def _cmd_aggregate(args: argparse.Namespace) -> None:
         _run_fail_fast_preflight(module_tokens or resolve_modules(None))
 
     runner = AggregateRunner(
-        proxy=args.proxy,
+        proxy=proxy,
         leak_dir=args.leak_dir,
         max_workers=args.workers,
     )
@@ -461,12 +493,13 @@ def _cmd_aggregate(args: argparse.Namespace) -> None:
 def _cmd_manual(args: argparse.Namespace) -> None:
     from runners.manual import ManualRunner
 
+    proxy = _resolve_proxy_setting(args)
     metadata_file = getattr(args, "metadata_file", None)
     export_formats = _resolve_export_formats(args.export_formats, metadata_file)
     _configure_nuclei_profile(args.nuclei_profile, [args.module])
 
     runner = ManualRunner(
-        proxy=args.proxy,
+        proxy=proxy,
         leak_dir=args.leak_dir,
     )
     result = _run_with_optional_stdout_capture(
@@ -552,6 +585,8 @@ def _cmd_tui(args: argparse.Namespace) -> None:
     except ImportError as exc:
         raise RuntimeError("TUI dependencies are missing. Install requirements.txt to use 'hanna tui'.") from exc
 
+    proxy = _resolve_proxy_setting(args)
+
     session_state = build_default_session_state(
         target=args.target,
         modules=_split(args.modules) or None,
@@ -569,7 +604,7 @@ def _cmd_tui(args: argparse.Namespace) -> None:
         verify=args.verify,
         verify_all=args.verify_all,
         verify_content=args.verify_content,
-        proxy=args.proxy,
+        proxy=proxy,
         leak_dir=args.leak_dir,
         no_preflight=args.no_preflight,
     )

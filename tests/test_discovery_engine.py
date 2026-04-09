@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 
+from adapters.base import ReconModuleOutcome, ReconReport
+
 from discovery_engine import (
     DiscoveryEngine,
     Observable,
@@ -246,3 +248,50 @@ class TestRenderGraphReport:
     def test_invalid_redaction_mode_raises(self):
         with pytest.raises(ValueError):
             self.eng.render_graph_report(redaction_mode="unknown")
+
+
+def test_run_deep_recon_summary_uses_report_outcomes(monkeypatch, tmp_db):
+    import deep_recon as deep_recon_mod
+
+    engine = DiscoveryEngine(db_path=tmp_db)
+
+    report = ReconReport(
+        target_name="Case",
+        modules_run=["ua_leak", "ghunt"],
+        hits=[],
+        started_at="2026-04-09T00:00:00",
+        finished_at="2026-04-09T00:00:01",
+        outcomes=[
+            ReconModuleOutcome(module_name="ua_leak", lane="fast"),
+            ReconModuleOutcome(
+                module_name="ghunt",
+                lane="fast",
+                error="missing credentials: GHUNT_CREDS_DIR",
+                error_kind="missing_credentials",
+            ),
+        ],
+        errors=[],
+    )
+
+    monkeypatch.setattr(
+        deep_recon_mod.DeepReconRunner,
+        "run",
+        lambda self, **kwargs: report,
+    )
+    monkeypatch.setattr(
+        deep_recon_mod.DeepReconRunner,
+        "report_summary",
+        staticmethod(lambda report: "summary"),
+    )
+
+    summary, returned_report = engine.run_deep_recon(target_name="Case", modules=["ua_leak", "ghunt"])
+
+    assert returned_report is report
+    assert summary["modules_run"] == ["ua_leak", "ghunt"]
+    assert summary["outcomes"][1]["module_name"] == "ghunt"
+    assert summary["outcomes"][1]["error_kind"] == "missing_credentials"
+    assert summary["errors"] == [{
+        "module": "ghunt",
+        "error": "missing credentials: GHUNT_CREDS_DIR",
+        "error_kind": "missing_credentials",
+    }]

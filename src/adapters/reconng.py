@@ -84,6 +84,7 @@ class ReconNGAdapter(ReconAdapter):
             proc = run_cli(
                 cmd + ["--no-analytics", "--no-marketplace", "-r", str(rc_path)],
                 timeout=resolve_cli_timeout(self.name, self.timeout, 20),
+                proxy=self.proxy,
             )
             if not proc:
                 return []

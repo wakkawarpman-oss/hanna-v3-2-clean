@@ -5,10 +5,10 @@ from datetime import datetime
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen, Screen
-from textual.widgets import Button, Input, Label, Static
+from textual.widgets import Button, Input, Label, Static, Switch
 
 from smart_summary import summarize_text
-from tui.state import ExecutionConfig, SessionState, TargetState
+from tui.state import CREDENTIAL_SPECS, ExecutionConfig, SessionState, TargetState, credential_slug
 
 
 ALLOWED_MODES = {"idle", "manual", "aggregate", "chain"}
@@ -24,17 +24,283 @@ ASCII_HANNA = r"""
 ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═══╝╚═╝  ╚═╝
 """.strip("\n")
 
+OVERVIEW_TEXT = {
+    "uk": {
+        "finding": "ГОЛОВНИЙ РЕЗУЛЬТАТ",
+        "finding_empty": "Ще немає результату. Почніть з phone, email або username у головному рядку пошуку.",
+        "signals": "КЛЮЧОВІ СИГНАЛИ",
+        "actions": "НАСТУПНІ ДІЇ",
+        "actions_empty": "Після запуску тут з'являться review, print, diagnostics, new search та явний export.",
+        "digest": "ЩО ПЕРЕВІРЕНО",
+        "manual_exports": "Експорт тепер лише явною дією.",
+    },
+    "en": {
+        "finding": "MAIN FINDING",
+        "finding_empty": "No result yet. Start with phone, email, or username in the main search bar.",
+        "signals": "KEY SIGNALS",
+        "actions": "NEXT ACTIONS",
+        "actions_empty": "After a run you will see review, print, diagnostics, new search, and explicit export choices here.",
+        "digest": "RUN DIGEST",
+        "manual_exports": "Exports are manual actions now.",
+    },
+    "pl": {
+        "finding": "GLOWNY WYNIK",
+        "finding_empty": "Jeszcze nie ma wyniku. Zacznij od phone, email lub username w glownym pasku wyszukiwania.",
+        "signals": "KLUCZOWE SYGNALY",
+        "actions": "NASTEPNY KROK",
+        "actions_empty": "Po uruchomieniu zobaczysz tutaj review, print, diagnostics, new search oraz jawny export.",
+        "digest": "PODSUMOWANIE RUN",
+        "manual_exports": "Eksport jest teraz tylko jawna akcja.",
+    },
+    "lt": {
+        "finding": "PAGRINDINIS REZULTATAS",
+        "finding_empty": "Rezultato dar nera. Pradekite nuo phone, email arba username pagrindineje paieskoje.",
+        "signals": "PAGRINDINIAI SIGNALAI",
+        "actions": "KITI VEIKSMAI",
+        "actions_empty": "Po paleidimo cia matysite review, print, diagnostics, new search ir aisku export pasirinkima.",
+        "digest": "RUN SANTRAUKA",
+        "manual_exports": "Eksportas dabar tik aiskus veiksmas.",
+    },
+}
+
+DIAGNOSTICS_TEXT = {
+    "uk": {
+        "pipeline_title": "[Pipeline // Live Ops]",
+        "pipeline_phase_counters": "ЛІЧИЛЬНИКИ ФАЗ",
+        "pipeline_module_grid": "СІТКА МОДУЛІВ",
+        "pipeline_recent_timeline": "ОСТАННЯ ХРОНОЛОГІЯ",
+        "pipeline_result_digest": "ПІДСУМОК РЕЗУЛЬТАТУ",
+        "pipeline_none": "none",
+        "readiness_title": "[Readiness // Gate]",
+        "readiness_secrets": "СЕКРЕТИ",
+        "readiness_check_matrix": "МАТРИЦЯ ПЕРЕВІРОК",
+        "activity_title": "[Activity // Live Console]",
+        "activity_summary": "ПІДСУМОК ПОТОКУ",
+        "activity_recent": "ОСТАННІ ПОДІЇ",
+        "activity_none": "ще немає подій",
+    },
+    "en": {
+        "pipeline_title": "[Pipeline // Live Ops]",
+        "pipeline_phase_counters": "PHASE COUNTERS",
+        "pipeline_module_grid": "MODULE GRID",
+        "pipeline_recent_timeline": "RECENT TIMELINE",
+        "pipeline_result_digest": "RESULT DIGEST",
+        "pipeline_none": "none",
+        "readiness_title": "[Readiness // Gate]",
+        "readiness_secrets": "SECRETS",
+        "readiness_check_matrix": "CHECK MATRIX",
+        "activity_title": "[Activity // Live Console]",
+        "activity_summary": "STREAM SUMMARY",
+        "activity_recent": "RECENT EVENTS",
+        "activity_none": "no events yet",
+    },
+    "pl": {
+        "pipeline_title": "[Pipeline // Live Ops]",
+        "pipeline_phase_counters": "LICZNIKI FAZ",
+        "pipeline_module_grid": "SIATKA MODULOW",
+        "pipeline_recent_timeline": "OSTATNIA CHRONOLOGIA",
+        "pipeline_result_digest": "SKROT WYNIKU",
+        "pipeline_none": "none",
+        "readiness_title": "[Readiness // Gate]",
+        "readiness_secrets": "SEKRETY",
+        "readiness_check_matrix": "MACIERZ KONTROLI",
+        "activity_title": "[Activity // Live Console]",
+        "activity_summary": "PODSUMOWANIE STRUMIENIA",
+        "activity_recent": "OSTATNIE ZDARZENIA",
+        "activity_none": "brak zdarzen",
+    },
+    "lt": {
+        "pipeline_title": "[Pipeline // Live Ops]",
+        "pipeline_phase_counters": "FAZIU SKAITIKLIAI",
+        "pipeline_module_grid": "MODULIU TINKLAS",
+        "pipeline_recent_timeline": "NAUJAUSIA CHRONOLOGIJA",
+        "pipeline_result_digest": "REZULTATO SANTRAUKA",
+        "pipeline_none": "none",
+        "readiness_title": "[Readiness // Gate]",
+        "readiness_secrets": "SLAPTOS REIKSMES",
+        "readiness_check_matrix": "PATIKRU MATRICA",
+        "activity_title": "[Activity // Live Console]",
+        "activity_summary": "SRAUTO SANTRAUKA",
+        "activity_recent": "NAUJAUSI IVYKIAI",
+        "activity_none": "ivykiu dar nera",
+    },
+}
+
+CREDENTIALS_TEXT = {
+    "uk": {
+        "title": "КЛЮЧІ ТА ДОСТУП",
+        "hint": "Session-only. Значення не пишуться у файли; Enter застосовує, switch вмикає або відсікає env.",
+        "columns": "СЕРВІС        МОДУЛЬ       СТАН",
+        "active": "active",
+        "stored": "stored",
+        "missing": "missing",
+        "off": "off",
+    },
+    "en": {
+        "title": "KEY CONTROL",
+        "hint": "Session-only. Values are not written to disk; press Enter to apply, use the switch to expose or cut env.",
+        "columns": "SERVICE       MODULE       STATE",
+        "active": "active",
+        "stored": "stored",
+        "missing": "missing",
+        "off": "off",
+    },
+    "pl": {
+        "title": "KLUCZE I DOSTEP",
+        "hint": "Tylko sesja. Wartosci nie sa zapisywane na dysk; Enter zapisuje, przelacznik wlacza lub odcina env.",
+        "columns": "SERWIS        MODUL        STAN",
+        "active": "active",
+        "stored": "stored",
+        "missing": "missing",
+        "off": "off",
+    },
+    "lt": {
+        "title": "RAKTAI IR PRIEIGA",
+        "hint": "Tik sesijai. Reiksmes neirasomos i diska; Enter pritaiko, jungiklis ijungia arba atjungia env.",
+        "columns": "SERVISAS      MODULIS      BUSENA",
+        "active": "active",
+        "stored": "stored",
+        "missing": "missing",
+        "off": "off",
+    },
+}
+
 
 class AsciiHeader(Static):
     def render_header(self, session_state: SessionState) -> None:
         ready = len(session_state.readiness.secrets_ready)
         total = ready + len(session_state.readiness.secrets_missing)
         time_label = session_state.started_at.replace("T", " ")[:16]
+        tor_status = "TOR ROUTED" if session_state.execution.proxy and "socks" in (session_state.execution.proxy or "") else "DIRECT PATH"
         self.update(
-            f"[bold #00ffcc]{ASCII_HANNA}[/]   [bold #ff44aa]OSINT & КІБЕРРОЗВІДКА[/]\n"
-            f"[#7fdbff]{time_label}[/] | [#ffcc00]view={session_state.current_view}[/] | [#ff6bdf]mode={session_state.execution.default_mode}[/] | [#00ff88]phase={session_state.pipeline.phase}[/]\n"
-            f"[#19f9ff]keys={ready}/{total}[/] | [#ff9f6b]warnings={session_state.readiness.warnings}[/] | [#ff4466]failures={session_state.readiness.hard_failures}[/] | [#c89bff]prompt={session_state.prompt_status}[/]"
+            f"[bold #00ffcc]{ASCII_HANNA}[/]   [bold #19f9ff]HANNA v3.2.0[/] [bold #ff44aa]INTELLIGENCE CONTROL PLANE[/]\n"
+            f"[#7fdbff]{time_label}[/] | [#ffcc00]{tor_status}[/] | [#ff6bdf]mode={session_state.execution.default_mode}[/] | [#00ff88]phase={session_state.pipeline.phase}[/]\n"
+            f"[#19f9ff]api keys={ready}/{total}[/] | [#ff9f6b]warnings={session_state.readiness.warnings}[/] | [#ff4466]failures={session_state.readiness.hard_failures}[/] | [#c89bff]prompt={session_state.prompt_status}[/]"
         )
+
+
+class MainFindingPanel(Static):
+    def render_main(self, session_state: SessionState, summary_text: str, risk_tags: list[str]) -> None:
+        text = _overview_text(session_state, "finding")
+        result = session_state.latest_result
+        lines = [text]
+        if result is None:
+            lines.extend([
+                _overview_text(session_state, "finding_empty"),
+                "",
+                "Try: phone +380...",
+                "Try: email name@example.com",
+                "Try: username handle",
+            ])
+            self.update("\n".join(lines))
+            return
+        best_signal = _best_result_signal(result)
+        lines.append(_build_result_headline(result))
+        lines.extend(_take_lines(summary_text, 4))
+        lines.append("")
+        if best_signal:
+            lines.append(f"Top signal: {best_signal.observable_type} {_shorten(best_signal.value, 42)} ({best_signal.confidence:.0%})")
+        lines.append(
+            f"Cross-confirmed={len(result.cross_confirmed)} | errors={result.error_count} | mode={result.mode}"
+        )
+        if risk_tags:
+            lines.append(f"Flags: {' '.join(risk_tags)}")
+        self.update("\n".join(lines))
+
+
+class EvidenceStripPanel(Static):
+    def render_evidence(self, session_state: SessionState) -> None:
+        confirmed = sum(1 for item in session_state.observables if item.status == "confirmed")
+        candidates = sum(1 for item in session_state.observables if item.status == "candidate")
+        hidden = sum(1 for item in session_state.observables if item.status == "rejected")
+        phones = ", ".join(_top_observable_values(session_state, "phone")) or "none"
+        emails = ", ".join(_top_observable_values(session_state, "email")) or "none"
+        usernames = ", ".join(_top_observable_values(session_state, "username")) or "none"
+        lines = [
+            _overview_text(session_state, "signals"),
+            f"confirmed={confirmed} | candidate={candidates} | hidden_noise={hidden}",
+            "",
+            f"Phones    : {_shorten(phones, 60)}",
+            f"Emails    : {_shorten(emails, 60)}",
+            f"Usernames : {_shorten(usernames, 60)}",
+        ]
+        self.update("\n".join(lines))
+
+
+class NextActionsPanel(Static):
+    def render_actions(self, session_state: SessionState) -> None:
+        lines = [_overview_text(session_state, "actions")]
+        if not session_state.next_actions:
+            lines.extend([
+                _overview_text(session_state, "actions_empty"),
+                "",
+                "review | print | diagnostics | new search",
+            ])
+            self.update("\n".join(lines))
+            return
+        for action in session_state.next_actions:
+            lines.append(f"- {_format_action_command(action)}")
+        self.update("\n".join(lines))
+
+
+class CredentialControlPanel(Static):
+    def compose(self) -> ComposeResult:
+        yield Static(id="credentials-title")
+        yield Static(id="credentials-hint")
+        yield Static(id="credentials-columns")
+        for env_name, label, module in CREDENTIAL_SPECS:
+            slug = credential_slug(env_name)
+            with Horizontal(classes="credential-row", id=f"credential-row-{slug}"):
+                yield Static(label, classes="credential-label")
+                yield Static(module, classes="credential-module")
+                yield Input(placeholder=env_name, password=True, id=f"credential-input-{slug}", classes="credential-input")
+                yield Switch(value=False, id=f"credential-toggle-{slug}", classes="credential-toggle")
+                yield Static("off", id=f"credential-state-{slug}", classes="credential-state")
+
+    def render_credentials(self, session_state: SessionState) -> None:
+        self.query_one("#credentials-title", Static).update(_credential_text(session_state, "title"))
+        self.query_one("#credentials-hint", Static).update(_credential_text(session_state, "hint"))
+        self.query_one("#credentials-columns", Static).update(_credential_text(session_state, "columns"))
+        for entry in session_state.credentials:
+            slug = credential_slug(entry.env_name)
+            input_widget = self.query_one(f"#credential-input-{slug}", Input)
+            toggle_widget = self.query_one(f"#credential-toggle-{slug}", Switch)
+            state_widget = self.query_one(f"#credential-state-{slug}", Static)
+            if input_widget.value != entry.value:
+                input_widget.value = entry.value
+            if toggle_widget.value != entry.enabled:
+                toggle_widget.value = entry.enabled
+            state_widget.update(_credential_state_label(session_state, entry.enabled, bool(entry.value)))
+
+
+class RunDigestPanel(Static):
+    def render_digest(self, session_state: SessionState) -> None:
+        lines = [_overview_text(session_state, "digest")]
+        result = session_state.latest_result
+        if result is None:
+            lines.extend([
+                "No run completed in this session.",
+                "",
+                _overview_text(session_state, "manual_exports"),
+            ])
+            self.update("\n".join(lines))
+            return
+        runtime = result.runtime_summary()
+        modules = ", ".join(result.modules_run[:4]) or "none"
+        if len(result.modules_run) > 4:
+            modules = f"{modules}, +{len(result.modules_run) - 4} more"
+        lines.extend([
+            f"Modules checked: {modules}",
+            f"Queued={runtime['queued']} | completed={runtime['completed']} | failed={runtime['failed']} | timed_out={runtime['timed_out']}",
+            f"New phones={len(result.new_phones)} | new emails={len(result.new_emails)} | total hits={result.total_hits}",
+            _overview_text(session_state, "manual_exports"),
+        ])
+        if isinstance(result.extra, dict) and result.extra.get("output_path"):
+            lines.append(f"Report: {_shorten(str(result.extra['output_path']), 58)}")
+        if result.errors:
+            first_error = result.errors[0]
+            lines.append(f"First issue: {_shorten(first_error.get('error', ''), 58)}")
+        self.update("\n".join(lines))
 
 
 class TargetDossierPanel(Static):
@@ -46,7 +312,7 @@ class TargetDossierPanel(Static):
         primary_email = (target.emails or [_infer_email_hint(target.label)])[0]
         domain = _infer_primary_domain(target, execution)
         lines = [
-            "TARGET ENTITY",
+            "ACTIVE TARGETS & INPUT",
             "     .-''''-.",
             "   .'  .--.  '.",
             "  /   /    \\   \\",
@@ -56,7 +322,7 @@ class TargetDossierPanel(Static):
             "   '.      .'",
             "     '-..-'",
             "",
-            "Priority target:",
+            "Active seed:",
             f"Username : {primary_username}",
             f"Phone    : {_mask_phone(primary_phone)}",
             f"Email    : {_shorten(primary_email, 22)}",
@@ -89,27 +355,23 @@ class HeatmapPanel(Static):
 
 
 class ThreatMeterPanel(Static):
-    def render_meter(self, score: float, level: str, risk_count: int) -> None:
+    def render_meter(self, score: float, level: str, risk_count: int, tags: list[str] | None = None) -> None:
         clamped = max(0, min(100, int(score)))
-        steps = 6
-        filled = max(0, min(steps, round((clamped / 100) * steps)))
-        rows = ["THREAT LEVEL"]
-        for index in range(steps, 0, -1):
-            marker = "██" if index <= filled else "  "
-            rows.append(f"{index:>2} |{marker}|")
+        rows = ["THREAT LEVEL // SECURITY SCORE"]
+        rows.extend(_semi_gauge(clamped))
         rows.extend(
             [
-                "   +--+",
                 f"score {clamped:03d}",
                 f"lvl   {level.upper()[:4]}",
                 f"flags {risk_count:02d}",
+                " ".join(tags or _default_risk_tags(level, risk_count)),
             ]
         )
         self.update("\n".join(rows))
 
 
 class LaneContainer(Static):
-    def render_lane(self, title: str, modules: list[tuple[str, str, str]], confirmed: int, pending: int, rejected: int) -> None:
+    def render_lane(self, title: str, modules: list[tuple[str, str, str]], confirmed: int, pending: int, rejected: int, *, slow: bool = False) -> None:
         lines = [
             f"[bold #ffcc00][ {title} ][/]",
             f"SNR [bold #00ff88]{confirmed} confirmed[/] | [bold #ffcc00]{pending} pending[/] | [bold #ff4466]{rejected} noise[/]",
@@ -117,7 +379,8 @@ class LaneContainer(Static):
         if not modules:
             lines.append("  no modules assigned")
         for name, status, detail in modules[:8]:
-            lines.append(f"  {_spinner(status)} {name:<16} {_status_label(status):<10} {_shorten(detail, 36)}")
+            meter = _slow_lane_meter(status) if slow else _module_meter(status)
+            lines.append(f"  {_spinner(status)} {name:<16} {_status_label(status):<10} {meter} {_shorten(detail, 24)}")
         self.update("\n".join(lines))
 
 
@@ -149,7 +412,7 @@ class PipelineMonitorPanel(Static):
 class SummaryPanel(Static):
     def render_summary(self, summary_text: str, risk_tags: list[str]) -> None:
         tags = " ".join(risk_tags) or "[INFO]"
-        self.update(f"ANALYST BRIEF\n{summary_text}\n\nThreat tags: {tags}")
+        self.update(f"SMART AI SUMMARY\n{summary_text}\n\nThreat tags: {tags}")
 
 
 class ObservablesPanel(Static):
@@ -157,7 +420,7 @@ class ObservablesPanel(Static):
         visible = [item for item in session_state.observables if session_state.show_rejected or item.status != "rejected"]
         hidden_count = sum(1 for item in session_state.observables if item.status == "rejected") if not session_state.show_rejected else 0
         lines = [
-            "RECENT KEY FINDINGS",
+            "ENTITY GRAPH / OBSERVABLES",
             "TYPE       VALUE                      CONF  STATE       SOURCE",
             "---------------------------------------------------------------",
         ]
@@ -169,7 +432,7 @@ class ObservablesPanel(Static):
             )
         lines.extend([
             "",
-            f"Rejected / low confidence hidden: {hidden_count} | press v to toggle noise rows",
+            f"{'▸' if not session_state.show_rejected else '▾'} Rejected / low confidence hidden: {hidden_count} | press v to toggle noise rows",
             f"Last refresh: {datetime.now().isoformat(timespec='seconds')}",
         ])
         self.update("\n".join(lines))
@@ -184,7 +447,7 @@ class SystemPulsePanel(Static):
         failed = sum(1 for module in modules if module.status in {"error", "timeout"})
         pulses = _spark_bars([queued, running, done, failed, len(session_state.activity[-8:]), session_state.readiness.warnings])
         lines = [
-            "SYSTEM STATE",
+            "GLOBAL STATUS",
             f"Started  {session_state.started_at.replace('T', ' ')[:19]}",
             f"Runs root {_shorten(session_state.ops.runs_root, 28)}",
             f"DB       {_shorten(session_state.ops.db_path, 28)}",
@@ -209,12 +472,12 @@ class ActivityFeedPanel(Static):
 class CommandLegendPanel(Static):
     def render_legend(self) -> None:
         self.update(
-            "QUICK COMMANDS\n"
-            "/ focus command line\n"
-            "? help\n"
-            "e edit operator profile\n"
-            "m manual | a aggregate | c chain\n"
-            "q quit"
+            "COMMAND DECK\n"
+            "phone +380... | email name@example.com\n"
+            "username handle | review | diagnostics\n"
+            "activity | pipeline | print\n"
+            "export stix | export zip | keys\n"
+            "lang uk|en|pl|lt | / focus | q quit"
         )
 
 
@@ -246,16 +509,14 @@ class OverviewScreen(SessionScreen):
     }
 
     #ascii-header,
-    #summary-panel,
-    #target-panel,
+    #main-finding,
+    #evidence-strip,
+    #next-actions,
+    #credentials-panel,
+    #run-digest,
     #pipeline-monitor,
-    #fast-lane,
-    #system-panel,
     #observables-panel,
-    #heatmap-panel,
-    #threat-meter,
-    #activity-feed,
-    #command-legend {
+    #activity-feed {
         border: round #19f9ff;
         background: #100915;
         color: #d9f8ff;
@@ -275,65 +536,91 @@ class OverviewScreen(SessionScreen):
         height: 1fr;
     }
 
-    #left-column {
-        width: 36;
+    #center-column {
+        width: 1fr;
         padding-right: 1;
     }
 
-    #center-column {
-        width: 1fr;
-        padding: 0 1;
-    }
-
     #right-column {
-        width: 40;
+        width: 58;
     }
 
-    #summary-panel,
-    #target-panel,
+    #main-finding,
+    #evidence-strip,
+    #next-actions,
+    #credentials-panel,
+    #run-digest,
     #pipeline-monitor,
-    #fast-lane,
-    #system-panel,
     #observables-panel,
-    #heatmap-panel,
-    #threat-meter,
-    #activity-feed,
-    #command-legend {
+    #activity-feed {
         margin-bottom: 1;
     }
 
-    #target-panel {
-        height: 20;
+    #pipeline-monitor {
+        height: 10;
+        border: round #ff44aa;
+        background: #120812;
+    }
+
+    #main-finding {
+        height: 12;
+        border: round #c89bff;
+        background: #0e0819;
+    }
+
+    #evidence-strip {
+        height: 8;
         border: round #7fdbff;
         background: #0c0a18;
     }
 
-    #command-legend {
-        height: 8;
+    #next-actions {
+        height: 10;
         border: round #ffcc00;
         background: #0e0b14;
         color: #ffcc00;
     }
 
-    #pipeline-monitor {
-        height: 12;
-        border: round #ff44aa;
-        background: #120812;
+    #credentials-panel {
+        height: 18;
+        border: round #20d5ff;
+        background: #081018;
     }
 
-    #summary-panel {
-        height: 11;
-        border: round #c89bff;
-        background: #0e0819;
+    .credential-row {
+        height: 3;
+        align: left middle;
     }
 
-    #fast-lane {
-        height: 11;
-        border: round #ff9f6b;
-        background: #120d12;
+    .credential-label {
+        width: 14;
+        color: #7fdbff;
     }
 
-    #system-panel {
+    .credential-module {
+        width: 11;
+        color: #c89bff;
+    }
+
+    .credential-input {
+        width: 1fr;
+        margin-right: 1;
+        background: #040912;
+        color: #f2f1f5;
+        border: round #19f9ff;
+    }
+
+    .credential-toggle {
+        width: 8;
+        margin-right: 1;
+    }
+
+    .credential-state {
+        width: 8;
+        color: #00ff88;
+    }
+
+    #run-digest {
         height: 10;
         border: round #00ff88;
         background: #081210;
@@ -351,24 +638,6 @@ class OverviewScreen(SessionScreen):
         background: #0b1018;
     }
 
-    #risk-row {
-        height: 12;
-    }
-
-    #heatmap-panel {
-        width: 1fr;
-        height: 10;
-        border: round #ff4466;
-        background: #130c12;
-        margin-right: 1;
-    }
-
-    #threat-meter {
-        width: 14;
-        border: round #ffcc00;
-        background: #14100c;
-        height: 10;
-    }
     """
 
     def __init__(self) -> None:
@@ -378,20 +647,16 @@ class OverviewScreen(SessionScreen):
         with Vertical(id="overview-root"):
             yield AsciiHeader(id="ascii-header")
             with Horizontal(id="overview-grid"):
-                with Vertical(id="left-column"):
-                    yield TargetDossierPanel(id="target-panel")
-                    yield ObservablesPanel(id="observables-panel")
-                    yield CommandLegendPanel(id="command-legend")
                 with Vertical(id="center-column"):
-                    yield PipelineMonitorPanel(id="pipeline-monitor")
-                    yield SummaryPanel(id="summary-panel")
-                    yield LaneContainer(id="fast-lane")
+                    yield MainFindingPanel(id="main-finding")
+                    yield EvidenceStripPanel(id="evidence-strip")
+                    yield ObservablesPanel(id="observables-panel")
                 with Vertical(id="right-column"):
-                    yield SystemPulsePanel(id="system-panel")
-                    with Horizontal(id="risk-row"):
-                        yield HeatmapPanel(id="heatmap-panel")
-                        yield ThreatMeterPanel(id="threat-meter")
+                    yield NextActionsPanel(id="next-actions")
+                    yield CredentialControlPanel(id="credentials-panel")
+                    yield RunDigestPanel(id="run-digest")
                     yield ActivityFeedPanel(id="activity-feed")
+            yield PipelineMonitorPanel(id="pipeline-monitor")
 
     def refresh_screen(self) -> None:
         if not self.session_state:
@@ -401,24 +666,15 @@ class OverviewScreen(SessionScreen):
         smart = summarize_text(target.label or "No target selected", ai_input or "No active intelligence yet.")
         risk_tags = [f"[{flag.code.upper()}]" for flag in smart.risk_flags[:3]]
 
-        fast_modules = [
-            (module.name, module.status, module.detail)
-            for module in self.session_state.pipeline.modules
-            if module.lane == "fast"
-        ]
-        fast_confirmed, fast_pending, fast_rejected = _lane_status_counts(fast_modules)
-
         self.query_one("#ascii-header", AsciiHeader).render_header(self.session_state)
-        self.query_one("#target-panel", TargetDossierPanel).render_target(self.session_state)
+        self.query_one("#main-finding", MainFindingPanel).render_main(self.session_state, smart.summary, risk_tags)
+        self.query_one("#evidence-strip", EvidenceStripPanel).render_evidence(self.session_state)
+        self.query_one("#next-actions", NextActionsPanel).render_actions(self.session_state)
+        self.query_one("#credentials-panel", CredentialControlPanel).render_credentials(self.session_state)
+        self.query_one("#run-digest", RunDigestPanel).render_digest(self.session_state)
         self.query_one("#pipeline-monitor", PipelineMonitorPanel).render_pipeline(self.session_state)
-        self.query_one("#summary-panel", SummaryPanel).render_summary(smart.summary, risk_tags)
-        self.query_one("#fast-lane", LaneContainer).render_lane("Fast Lane (P1/P3)", fast_modules, fast_confirmed, fast_pending, fast_rejected)
-        self.query_one("#system-panel", SystemPulsePanel).render_system(self.session_state)
         self.query_one("#observables-panel", ObservablesPanel).render_observables(self.session_state)
-        self.query_one("#heatmap-panel", HeatmapPanel).render_heatmap(self.session_state)
-        self.query_one("#threat-meter", ThreatMeterPanel).render_meter(self.session_state.confidence.score * 100, self.session_state.confidence.level, len(smart.risk_flags))
         self.query_one("#activity-feed", ActivityFeedPanel).render_activity(self.session_state)
-        self.query_one("#command-legend", CommandLegendPanel).render_legend()
 
 
 class PipelineScreen(SessionScreen):
@@ -442,36 +698,7 @@ class PipelineScreen(SessionScreen):
     def refresh_screen(self) -> None:
         if not self.session_state:
             return
-        lines = [
-            "[Pipeline]",
-            f"Phase: {self.session_state.pipeline.phase}",
-            f"Progress: {self.session_state.pipeline.progress_label}",
-            "",
-            "Phase Counters:",
-        ]
-        if self.session_state.pipeline.phase_counters:
-            for phase_name, detail in self.session_state.pipeline.phase_counters.items():
-                lines.append(f"  {phase_name:<16} {detail}")
-        else:
-            lines.append("  none")
-        lines.extend([
-            "",
-            "Phase Timeline:",
-        ])
-        if self.session_state.pipeline.phase_timeline:
-            lines.extend(f"  {item}" for item in self.session_state.pipeline.phase_timeline[-8:])
-        else:
-            lines.append("  none")
-        lines.extend([
-            "",
-            "Modules:",
-        ])
-        for module in self.session_state.pipeline.modules:
-            lines.append(f"  {module.name:<16} {module.lane:<4} {module.status:<8} {module.detail}")
-        if self.session_state.last_result_summary:
-            lines.extend(["", "Last Result:"])
-            lines.extend(f"  {line}" for line in self.session_state.last_result_summary[:12])
-        self.query_one("#pipeline-body", Static).update("\n".join(lines))
+        self.query_one("#pipeline-body", Static).update(_build_pipeline_body(self.session_state))
 
 
 class ReadinessScreen(SessionScreen):
@@ -495,20 +722,7 @@ class ReadinessScreen(SessionScreen):
     def refresh_screen(self) -> None:
         if not self.session_state:
             return
-        checks = self.session_state.readiness.checks
-        lines = [
-            "[Readiness]",
-            f"Hard failures: {self.session_state.readiness.hard_failures}",
-            f"Warnings: {self.session_state.readiness.warnings}",
-            "",
-            f"Secrets ready: {', '.join(self.session_state.readiness.secrets_ready) or 'none'}",
-            f"Secrets missing: {', '.join(self.session_state.readiness.secrets_missing) or 'none'}",
-            "",
-            "Checks:",
-        ]
-        for check in checks:
-            lines.append(f"  {check.name:<22} {check.status:<5} {check.detail}")
-        self.query_one("#readiness-body", Static).update("\n".join(lines))
+        self.query_one("#readiness-body", Static).update(_build_readiness_body(self.session_state))
 
 
 class ActivityScreen(SessionScreen):
@@ -532,10 +746,7 @@ class ActivityScreen(SessionScreen):
     def refresh_screen(self) -> None:
         if not self.session_state:
             return
-        lines = ["[Activity]"]
-        for item in self.session_state.activity[-20:]:
-            lines.append(f"[{item.timestamp}] {item.level.upper()}: {item.text}")
-        self.query_one("#activity-body", Static).update("\n".join(lines))
+        self.query_one("#activity-body", Static).update(_build_activity_body(self.session_state))
 
 
 class ConfigEditorScreen(ModalScreen[dict[str, str] | None]):
@@ -670,6 +881,74 @@ def _lane_status_counts(modules: list[tuple[str, str, str]]) -> tuple[int, int, 
     return confirmed, pending, rejected
 
 
+def _overview_text(session_state: SessionState, key: str) -> str:
+    locale = session_state.locale if session_state.locale in OVERVIEW_TEXT else "en"
+    return OVERVIEW_TEXT[locale][key]
+
+
+def _diagnostics_text(session_state: SessionState, key: str) -> str:
+    locale = session_state.locale if session_state.locale in DIAGNOSTICS_TEXT else "en"
+    return DIAGNOSTICS_TEXT[locale][key]
+
+
+def _credential_text(session_state: SessionState, key: str) -> str:
+    locale = session_state.locale if session_state.locale in CREDENTIALS_TEXT else "en"
+    return CREDENTIALS_TEXT[locale][key]
+
+
+def _credential_state_label(session_state: SessionState, enabled: bool, has_value: bool) -> str:
+    if enabled and has_value:
+        return _credential_text(session_state, "active")
+    if has_value:
+        return _credential_text(session_state, "stored")
+    if enabled:
+        return _credential_text(session_state, "missing")
+    return _credential_text(session_state, "off")
+
+
+def _build_result_headline(result: RunResult) -> str:
+    if result.total_hits:
+        return f"{result.total_hits} finding(s) across {len(result.modules_run)} module(s) for {result.target_name}"
+    if result.error_count:
+        return f"Run completed with {result.error_count} issue(s) and no confirmed findings yet"
+    return f"Run completed for {result.target_name} with no new findings yet"
+
+
+def _best_result_signal(result: RunResult):
+    if not result.all_hits:
+        return None
+    return max(result.all_hits, key=lambda hit: (hit.confidence, hit.observable_type, hit.value))
+
+
+def _take_lines(value: str, limit: int) -> list[str]:
+    lines = [line.strip() for line in value.splitlines() if line.strip()]
+    return lines[:limit]
+
+
+def _top_observable_values(session_state: SessionState, kind: str) -> list[str]:
+    values = [item.value for item in session_state.observables if item.kind == kind and item.status != "rejected"]
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        ordered.append(value)
+    return ordered[:3]
+
+
+def _format_action_command(action: str) -> str:
+    mapping = {
+        "review": "review",
+        "print": "print",
+        "diagnostics": "diagnostics",
+        "new-search": "new search",
+        "export-stix": "export stix",
+        "export-zip": "export zip",
+    }
+    return mapping.get(action, action.replace("-", " "))
+
+
 def _seed_domain(label: str) -> str:
     lowered = label.strip().lower()
     if "." in lowered and " " not in lowered:
@@ -698,6 +977,98 @@ def _status_plain(status: str) -> str:
     return labels.get(status, status)
 
 
+def _build_pipeline_body(session_state: SessionState) -> str:
+    modules = session_state.pipeline.modules
+    total = len(modules)
+    done = sum(1 for module in modules if module.status == "done")
+    running = sum(1 for module in modules if module.status == "running")
+    queued = sum(1 for module in modules if module.status in {"queued", "idle"})
+    errors = sum(1 for module in modules if module.status in {"error", "timeout"})
+    next_actions = ", ".join(_format_action_command(action) for action in session_state.next_actions[:4]) or "none"
+    lines = [
+        _diagnostics_text(session_state, "pipeline_title"),
+        f"phase={session_state.pipeline.phase} | done={done}/{total} | run={running} | queue={queued} | err={errors}",
+        f"progress={session_state.pipeline.progress_label}",
+        f"next={next_actions}",
+        "",
+        _diagnostics_text(session_state, "pipeline_phase_counters"),
+    ]
+    if session_state.pipeline.phase_counters:
+        for phase_name, detail in session_state.pipeline.phase_counters.items():
+            lines.append(f"  {phase_name:<16} {detail}")
+    else:
+        lines.append(f"  {_diagnostics_text(session_state, 'pipeline_none')}")
+    lines.extend(["", _diagnostics_text(session_state, "pipeline_module_grid")])
+    if modules:
+        for module in modules[:12]:
+            lines.append(
+                f"  {_module_state_glyph(module.status)} {module.name:<16} {module.lane:<4} {_status_label(module.status):<8} {_shorten(module.detail, 48)}"
+            )
+    else:
+        lines.append(f"  {_diagnostics_text(session_state, 'pipeline_none')}")
+    lines.extend(["", _diagnostics_text(session_state, "pipeline_recent_timeline")])
+    if session_state.pipeline.phase_timeline:
+        lines.extend(f"  {item}" for item in session_state.pipeline.phase_timeline[-6:])
+    else:
+        lines.append(f"  {_diagnostics_text(session_state, 'pipeline_none')}")
+    if session_state.last_result_summary:
+        lines.extend(["", _diagnostics_text(session_state, "pipeline_result_digest")])
+        lines.extend(f"  {line}" for line in session_state.last_result_summary[:6])
+    return "\n".join(lines)
+
+
+def _build_readiness_body(session_state: SessionState) -> str:
+    readiness = session_state.readiness
+    checks = readiness.checks
+    total_secrets = len(readiness.secrets_ready) + len(readiness.secrets_missing)
+    proxy_label = session_state.execution.proxy or "direct"
+    lines = [
+        _diagnostics_text(session_state, "readiness_title"),
+        f"fail={readiness.hard_failures} | warn={readiness.warnings} | keys_ready={len(readiness.secrets_ready)}/{total_secrets}",
+        f"mode={session_state.execution.default_mode} | proxy={proxy_label} | no_preflight={_bool_text(session_state.execution.no_preflight)}",
+        "",
+        _diagnostics_text(session_state, "readiness_secrets"),
+        f"  ready   : {', '.join(readiness.secrets_ready) or 'none'}",
+        f"  missing : {', '.join(readiness.secrets_missing) or 'none'}",
+        "",
+        _diagnostics_text(session_state, "readiness_check_matrix"),
+    ]
+    if checks:
+        for check in checks:
+            lines.append(f"  {_preflight_glyph(check.status)} {check.name:<22} {check.status.upper():<5} {_shorten(check.detail, 54)}")
+    else:
+        lines.append(f"  {_diagnostics_text(session_state, 'pipeline_none')}")
+    return "\n".join(lines)
+
+
+def _build_activity_body(session_state: SessionState) -> str:
+    events = session_state.activity[-24:]
+    info_count = sum(1 for item in events if item.level == "info")
+    ok_count = sum(1 for item in events if item.level == "ok")
+    warn_count = sum(1 for item in events if item.level == "warn")
+    error_count = sum(1 for item in events if item.level == "error")
+    phase = session_state.pipeline.phase
+    running = "yes" if session_state.running else "no"
+    lines = [
+        _diagnostics_text(session_state, "activity_title"),
+        f"phase={phase} | running={running} | prompt={session_state.prompt_status}",
+        f"events={len(events)} | info={info_count} | ok={ok_count} | warn={warn_count} | error={error_count}",
+        "",
+        _diagnostics_text(session_state, "activity_summary"),
+        f"target={_shorten(session_state.execution.target or session_state.target.label, 42)} | next={', '.join(_format_action_command(action) for action in session_state.next_actions[:3]) or 'none'}",
+        "",
+        _diagnostics_text(session_state, "activity_recent"),
+    ]
+    if events:
+        for item in events:
+            lines.append(
+                f"  {_level_console_glyph(item.level)} {item.timestamp[11:19]} {_level_badge(item.level):<6} {_shorten(item.text, 76)}"
+            )
+    else:
+        lines.append(f"  {_diagnostics_text(session_state, 'activity_none')}")
+    return "\n".join(lines)
+
+
 def _status_label(status: str) -> str:
     labels = {
         "done": "COMPLETE",
@@ -710,6 +1081,37 @@ def _status_label(status: str) -> str:
     return labels.get(status, status.upper())
 
 
+def _level_console_glyph(level: str) -> str:
+    glyphs = {
+        "info": ">",
+        "ok": "+",
+        "warn": "!",
+        "error": "x",
+    }
+    return glyphs.get(level, ">")
+
+
+def _module_state_glyph(status: str) -> str:
+    glyphs = {
+        "done": "+",
+        "running": ">",
+        "queued": "~",
+        "idle": ".",
+        "error": "!",
+        "timeout": "x",
+    }
+    return glyphs.get(status, ".")
+
+
+def _preflight_glyph(status: str) -> str:
+    glyphs = {
+        "ok": "+",
+        "warn": "!",
+        "fail": "x",
+    }
+    return glyphs.get(status, ".")
+
+
 def _module_meter(status: str) -> str:
     meters = {
         "done": "[====>]",
@@ -720,6 +1122,18 @@ def _module_meter(status: str) -> str:
         "timeout": "[ xx ]",
     }
     return meters.get(status, "[ ....]")
+
+
+def _slow_lane_meter(status: str) -> str:
+    meters = {
+        "done": "██████",
+        "running": "███░░░",
+        "queued": "█░░░░░",
+        "idle": "░░░░░░",
+        "error": "!!░░░░",
+        "timeout": "xx░░░░",
+    }
+    return meters.get(status, "░░░░░░")
 
 
 def _spark_bars(values: list[int]) -> str:
@@ -736,6 +1150,26 @@ def _level_badge(level: str) -> str:
         "error": "[ERR]",
     }
     return badges.get(level, f"[{level[:3].upper()}]")
+
+
+def _default_risk_tags(level: str, risk_count: int) -> list[str]:
+    if level == "high":
+        return ["[ALERT]", f"[RISK {risk_count:02d}]", "[INFO]"]
+    if level == "medium":
+        return ["[WATCH]", f"[RISK {risk_count:02d}]", "[INFO]"]
+    return ["[INFO]", f"[FLAGS {risk_count:02d}]"]
+
+
+def _semi_gauge(score: int) -> list[str]:
+    width = 12
+    fill = max(0, min(width, round((score / 100) * width)))
+    arc = "█" * fill + "·" * (width - fill)
+    return [
+        "   ╭────────────╮",
+        f"  ╱ {arc[:6]} {arc[6:]} ╲",
+        f" ╱      {score:03d}      ╲",
+        "╰────────────────╯",
+    ]
 
 
 def _mask_phone(value: str) -> str:

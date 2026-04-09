@@ -34,6 +34,7 @@ from adapters.httpx_probe import HttpxAdapter
 from adapters.naabu import NaabuAdapter
 from adapters.blackbird import BlackbirdAdapter
 from adapters.holehe_adapter import HoleheAdapter
+from adapters.hibp_adapter import HIBPAdapter
 from adapters.censys_adapter import CensysAdapter
 from adapters.metagoofil_adapter import MetagoofilAdapter
 from adapters.subfinder_adapter import SubfinderAdapter
@@ -65,6 +66,7 @@ ADAPTER_REGISTRY: dict[str, type[ReconAdapter]] = {
     "naabu": NaabuAdapter,
     "blackbird": BlackbirdAdapter,
     "holehe": HoleheAdapter,
+    "hibp": HIBPAdapter,
     "censys": CensysAdapter,
     "metagoofil": MetagoofilAdapter,
     "subfinder": SubfinderAdapter,
@@ -102,6 +104,7 @@ __all__ = [
     "NaabuAdapter",
     "BlackbirdAdapter",
     "HoleheAdapter",
+    "HIBPAdapter",
     "CensysAdapter",
     "MetagoofilAdapter",
     "SubfinderAdapter",

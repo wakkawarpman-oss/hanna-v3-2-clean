@@ -7,6 +7,7 @@ import re
 import zipfile
 from pathlib import Path
 
+from config import RUNS_ROOT
 from exporters.json_exporter import export_run_result_json
 from exporters.stix_exporter import export_run_result_stix
 from models import RunResult
@@ -70,11 +71,31 @@ def _collect_tree(path: Path, prefix: str) -> list[tuple[Path, str]]:
     return collected
 
 
-def _collect_supporting_paths(result: RunResult) -> list[tuple[Path, str]]:
+def _is_allowed_artifact_path(path: Path, allowed_roots: tuple[Path, ...]) -> bool:
+    try:
+        resolved = path.resolve()
+    except OSError:
+        return False
+    return any(resolved.is_relative_to(root) for root in allowed_roots)
+
+
+def _approved_artifact_roots(
+    output_dir: Path,
+    html_file: Path | None,
+) -> tuple[Path, ...]:
+    roots = {output_dir.resolve(), RUNS_ROOT.resolve()}
+    if html_file:
+        roots.add(html_file.resolve().parent)
+    return tuple(sorted(roots))
+
+
+def _collect_supporting_paths(result: RunResult, allowed_roots: tuple[Path, ...]) -> list[tuple[Path, str]]:
     collected: list[tuple[Path, str]] = []
     seen: set[Path] = set()
 
     def _remember(path: Path, prefix: str) -> None:
+        if not _is_allowed_artifact_path(path, allowed_roots):
+            return
         for file_path, arcname in _collect_tree(path, prefix):
             resolved = file_path.resolve()
             if resolved in seen:
@@ -133,6 +154,7 @@ def export_run_result_zip(
     html_file = Path(html_path) if html_path else None
     if report_mode and (html_file is None or not html_file.exists()):
         raise FileNotFoundError("ZIP export with report_mode requires a rendered HTML dossier")
+    allowed_roots = _approved_artifact_roots(output_dir, html_file)
 
     zip_path = output_dir / f"{_slugify(result.target_name)}-{result.mode}-{_timestamp_fragment(result.finished_at or result.started_at)}.zip"
     manifest: dict[str, object] = {
@@ -149,7 +171,7 @@ def export_run_result_zip(
         if html_file and html_file.exists():
             _append_file(zf, manifest, html_file, html_file.name)
 
-        for path, arcname in _collect_supporting_paths(result):
+        for path, arcname in _collect_supporting_paths(result, allowed_roots):
             _append_file(zf, manifest, path, arcname)
 
         manifest_bytes = json.dumps(manifest, indent=2, ensure_ascii=False).encode("utf-8")

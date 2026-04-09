@@ -35,6 +35,9 @@ class SocialAnalyzerAdapter(ReconAdapter):
         known_usernames: list[str],
     ) -> list[ReconHit]:
         hits: list[ReconHit] = []
+        if not known_usernames:
+            self._record_noop("no usernames available for social-analyzer")
+            return hits
 
         for username in known_usernames:
             results = self._run_social_analyzer(username)

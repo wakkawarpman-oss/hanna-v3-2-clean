@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from adapters.base import ReconHit, ReconReport
+from adapters.base import ReconHit, ReconModuleOutcome, ReconReport
 
 
 @dataclass
@@ -40,6 +40,17 @@ class AdapterOutcome:
             "log_path": self.log_path,
         }
 
+    def to_error_dict(self) -> dict[str, Any] | None:
+        if not self.error:
+            return None
+        payload: dict[str, Any] = {
+            "module": self.module_name,
+            "error": self.error,
+        }
+        if self.error_kind:
+            payload["error_kind"] = self.error_kind
+        return payload
+
 
 @dataclass
 class RunResult:
@@ -62,7 +73,84 @@ class RunResult:
     finished_at: str = ""
     extra: dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        standalone_errors: list[dict[str, Any]] = []
+        for raw_error in self.errors:
+            normalized = self._normalize_error_entry(raw_error)
+            if not normalized:
+                continue
+
+            module_name = str(normalized.get("module", "")).strip()
+            message = str(normalized.get("error", "")).strip()
+            error_kind = str(normalized.get("error_kind", "")).strip() or None
+            if module_name:
+                outcome = next((item for item in self.outcomes if item.module_name == module_name), None)
+                if outcome is None:
+                    self.outcomes.append(AdapterOutcome(
+                        module_name=module_name,
+                        lane="unknown",
+                        error=message,
+                        error_kind=error_kind,
+                    ))
+                    continue
+                if not outcome.error:
+                    outcome.error = message
+                    outcome.error_kind = error_kind
+                    continue
+                if outcome.error == message and outcome.error_kind == error_kind:
+                    continue
+
+            standalone_errors.append(normalized)
+
+        self.errors = self._collect_error_entries(standalone_errors)
+
     # -- convenience helpers --------------------------------------------------
+
+    @staticmethod
+    def _normalize_error_entry(raw_error: Any) -> dict[str, Any] | None:
+        if isinstance(raw_error, dict):
+            message = str(raw_error.get("error", "")).strip()
+            if not message:
+                return None
+            payload: dict[str, Any] = {"error": message}
+            module_name = str(raw_error.get("module", "")).strip()
+            if module_name:
+                payload["module"] = module_name
+            error_kind = str(raw_error.get("error_kind", "")).strip()
+            if error_kind:
+                payload["error_kind"] = error_kind
+            return payload
+        if isinstance(raw_error, str) and raw_error.strip():
+            return {"error": raw_error.strip()}
+        return None
+
+    def _collect_error_entries(self, standalone_errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        entries: list[dict[str, Any]] = []
+        seen: set[tuple[str, str, str | None]] = set()
+
+        def _append(entry: dict[str, Any]) -> None:
+            module_name = str(entry.get("module", "")).strip()
+            message = str(entry.get("error", "")).strip()
+            error_kind_raw = entry.get("error_kind")
+            error_kind = str(error_kind_raw).strip() if error_kind_raw else None
+            key = (module_name, message, error_kind)
+            if not message or key in seen:
+                return
+            seen.add(key)
+            payload: dict[str, Any] = {"error": message}
+            if module_name:
+                payload["module"] = module_name
+            if error_kind:
+                payload["error_kind"] = error_kind
+            entries.append(payload)
+
+        for outcome in self.outcomes:
+            entry = outcome.to_error_dict()
+            if entry:
+                _append(entry)
+        for entry in standalone_errors:
+            _append(entry)
+        return entries
 
     @property
     def total_hits(self) -> int:
@@ -146,12 +234,24 @@ class RunResult:
             target_name=self.target_name,
             modules_run=self.modules_run,
             hits=self.all_hits,
-            errors=self.errors,
             started_at=self.started_at,
             finished_at=self.finished_at,
             new_phones=self.new_phones,
             new_emails=self.new_emails,
             cross_confirmed=self.cross_confirmed,
+            outcomes=[
+                ReconModuleOutcome(
+                    module_name=outcome.module_name,
+                    lane=outcome.lane,
+                    hits=outcome.hits,
+                    error=outcome.error,
+                    error_kind=outcome.error_kind,
+                    elapsed_sec=outcome.elapsed_sec,
+                    log_path=outcome.log_path,
+                )
+                for outcome in self.outcomes
+            ],
+            errors=self.errors,
         )
 
     def summary_lines(self) -> list[str]:

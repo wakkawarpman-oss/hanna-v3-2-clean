@@ -18,6 +18,9 @@ class BlackbirdAdapter(ReconAdapter):
 
     def search(self, target_name: str, known_phones: list[str], known_usernames: list[str]) -> list[ReconHit]:
         hits: list[ReconHit] = []
+        if not known_usernames:
+            self._record_noop("no usernames available for Blackbird enumeration")
+            return hits
         for username in known_usernames[:10]:
             hits.extend(self._run_blackbird(username.strip()))
         return hits
@@ -39,6 +42,7 @@ class BlackbirdAdapter(ReconAdapter):
         proc = run_cli(
             cmd + ["-u", username, "--json", "--no-update"],
             timeout=self.timeout * 8,
+            proxy=self.proxy,
         )
         if not proc:
             return []

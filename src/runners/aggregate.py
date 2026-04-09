@@ -67,7 +67,6 @@ class AggregateRunner:
 
         Path(self.log_dir).mkdir(parents=True, exist_ok=True)
         scheduled = LaneScheduler.dispatch(tasks=tasks, max_workers=self.max_workers, log_dir=self.log_dir, label="aggregate")
-        errors.extend(scheduled.errors)
         modules_run = scheduled.modules_run
         all_hits = scheduled.all_hits
         for tr in scheduled.task_results:

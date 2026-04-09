@@ -37,7 +37,9 @@ class SatIntelAdapter(ReconAdapter):
 
         # 1. Scan local images for EXIF GPS data
         image_dir = os.environ.get("SATINTEL_IMAGE_DIR", "")
+        scanned_source = False
         if image_dir:
+            scanned_source = True
             hits.extend(self._scan_exif_gps(Path(image_dir), target_name))
         else:
             # Default scan locations
@@ -46,10 +48,18 @@ class SatIntelAdapter(ReconAdapter):
                 PROFILES_DIR,
             ]:
                 if default_dir.exists():
+                    scanned_source = True
                     hits.extend(self._scan_exif_gps(default_dir, target_name))
+
+        if not scanned_source:
+            self._record_noop("no image corpus available for SatIntel EXIF scan")
+            return hits
 
         # 2. For any found coordinates, do reverse geocoding
         coord_hits = [h for h in hits if h.observable_type == "coordinates"]
+        if not coord_hits and not hits:
+            self._record_noop("no EXIF GPS coordinates found for SatIntel")
+            return hits
         for ch in coord_hits:
             lat, lon = ch.raw_record.get("lat"), ch.raw_record.get("lon")
             if lat and lon:

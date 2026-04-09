@@ -8,7 +8,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime
 
-from adapters.base import ReconAdapter, ReconHit
+from adapters.base import MissingCredentialsError, ReconAdapter, ReconHit
 
 
 class CensysAdapter(ReconAdapter):
@@ -23,10 +23,19 @@ class CensysAdapter(ReconAdapter):
         api_id = os.environ.get("CENSYS_API_ID", "").strip()
         api_secret = os.environ.get("CENSYS_API_SECRET", "").strip()
         if not api_id or not api_secret:
-            return []
+            missing = []
+            if not api_id:
+                missing.append("CENSYS_API_ID")
+            if not api_secret:
+                missing.append("CENSYS_API_SECRET")
+            raise MissingCredentialsError(*missing)
 
         hits: list[ReconHit] = []
-        for query in self._collect_queries(target_name, known_usernames)[:5]:
+        queries = self._collect_queries(target_name, known_usernames)
+        if not queries:
+            self._record_noop("no host, domain, or certificate queries available for Censys")
+            return hits
+        for query in queries[:5]:
             hits.extend(self._query_hosts(query, api_id, api_secret))
             hits.extend(self._query_certs(query, api_id, api_secret))
         return hits

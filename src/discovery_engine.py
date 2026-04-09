@@ -1270,15 +1270,24 @@ class DiscoveryEngine:
         summary = DeepReconRunner.report_summary(report)
         print(summary)
 
+        outcome_payload = [outcome.to_dict() for outcome in report.outcomes]
+        summary_errors = [
+            entry
+            for entry in (outcome.to_error_dict() for outcome in report.outcomes)
+            if entry
+        ]
+        summary_modules = [outcome.module_name for outcome in report.outcomes] or list(report.modules_run)
+
         return ({
             "target": target_name,
-            "modules_run": report.modules_run,
+            "modules_run": summary_modules,
             "total_hits": len(report.hits),
             "new_observables": new_obs_count,
             "new_phones": report.new_phones,
             "new_emails": report.new_emails,
             "cross_confirmed": len(report.cross_confirmed),
-            "errors": report.errors,
+            "outcomes": outcome_payload,
+            "errors": summary_errors,
         }, report)
 
     # ── 5.  Reporting ─────────────────────────────────────────────

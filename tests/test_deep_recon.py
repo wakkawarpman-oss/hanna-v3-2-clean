@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from deep_recon import ReconHit
+from adapters.base import ReconModuleOutcome, ReconReport
 
 
 class TestReconHitSerialization:
@@ -49,3 +50,40 @@ class TestReconHitSerialization:
         """Confidence values should remain within 0.0–1.0 boundary."""
         hit = self._sample_hit()
         assert 0.0 <= hit.confidence <= 1.0
+
+
+def test_recon_report_derives_compat_errors_from_outcomes():
+    report = ReconReport(
+        target_name="Case",
+        modules_run=["hibp"],
+        hits=[],
+        started_at="2026-04-09T00:00:00",
+        outcomes=[
+            ReconModuleOutcome(
+                module_name="hibp",
+                lane="fast",
+                error="missing credentials: HIBP_API_KEY",
+                error_kind="missing_credentials",
+            )
+        ],
+    )
+
+    assert report.errors == [{
+        "module": "hibp",
+        "error": "missing credentials: HIBP_API_KEY",
+        "error_kind": "missing_credentials",
+    }]
+
+
+def test_recon_report_promotes_legacy_module_error_into_outcome():
+    report = ReconReport(
+        target_name="Case",
+        modules_run=["social_analyzer"],
+        hits=[],
+        started_at="2026-04-09T00:00:00",
+        outcomes=[ReconModuleOutcome(module_name="social_analyzer", lane="slow")],
+        errors=[{"module": "social_analyzer", "error": "TIMEOUT (45s)", "error_kind": "timeout"}],
+    )
+
+    assert report.outcomes[0].error == "TIMEOUT (45s)"
+    assert report.outcomes[0].error_kind == "timeout"

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import shlex
 from threading import Thread
 from time import sleep
@@ -8,7 +9,7 @@ from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal
-from textual.widgets import Button, Input, Static
+from textual.widgets import Button, Input, Static, Switch
 
 from exporters import export_run_result_stix, export_run_result_zip
 from tui.execution import TUIExecutionConfig, run_mode
@@ -21,18 +22,207 @@ from tui.state import (
     apply_run_result,
     build_default_session_state,
     clear_pipeline_history,
+    credential_slug,
+    credential_env_from_slug,
     refresh_readiness,
     reset_modules_for_run,
+    set_credential_value,
     set_phase,
+    toggle_credential_entry,
     toggle_rejected_rows,
     update_phase_counters,
     update_module_status,
 )
 
 
-STARTUP_BANNER_TEXT = "HANNA cockpit active. Enter commands in hanna > below. Press / to refocus input. Press q to quit."
-STARTUP_NOTIFY_TEXT = "You are inside HANNA. Type commands in hanna > below. Press / if focus leaves the input."
-HELP_NOTIFICATION_TEXT = "Keys: / focus command line, 1-4 switch views, e edit profile, m manual, a aggregate, c chain, r refresh readiness, x clear timeline, v toggle noise, q quit"
+STARTUP_BANNER_TEXT = "Search-first command center active. Use the prompt above for phone, email, username, review, diagnostics, print, and export actions. Press / to refocus input."
+STARTUP_NOTIFY_TEXT = "HANNA command center ready. Use plain-language prompts in the search bar above. Press / if focus leaves the input."
+HELP_NOTIFICATION_TEXT = "Keys: / focus search, 1-4 switch views, e edit profile, m manual, a aggregate, c chain, r refresh readiness, x clear timeline, v toggle noise, q quit | prompt shortcuts: phone, email, username, review, diagnostics, print, keys"
+
+NEXT_ACTION_LABELS = {
+    "review": "review",
+    "print": "print",
+    "diagnostics": "diagnostics",
+    "new-search": "new search",
+    "export-stix": "export stix",
+    "export-zip": "export zip",
+}
+
+SUPPORTED_LOCALES = {"uk", "en", "pl", "lt"}
+LOCALE_ALIASES = {"ua": "uk", "uk": "uk", "en": "en", "pl": "pl", "lt": "lt"}
+
+CREDENTIAL_FOCUS_TARGETS = {
+    "censys": "CENSYS_API_ID",
+    "shodan": "SHODAN_API_KEY",
+    "hibp": "HIBP_API_KEY",
+    "telegram": "TELEGRAM_BOT_TOKEN",
+    "getcontact": "GETCONTACT_TOKEN",
+}
+
+COMMAND_BOARD_TRANSLATIONS = {
+    "uk": {
+        "title": "ЦЕНТР КОМАНД",
+        "hint": "Мова: українська | змінити: lang uk|en|pl|lt",
+        "subtitle": "Пишіть людською мовою. HANNA перетворює фразу на пошук, огляд результатів, діагностику або експорт.",
+        "chips": ["phone +380...", "email name@example.com", "username target", "review", "diagnostics", "print"],
+        "columns": [
+            ("Пошук", ["phone +380...", "email name@example.com", "username target"]),
+            ("Огляд", ["review", "diagnostics", "activity"]),
+            ("Дії", ["print", "export stix", "export zip"]),
+            ("Система", ["new search", "keys", "lang en|pl|lt"]),
+        ],
+    },
+    "en": {
+        "title": "COMMAND CENTER",
+        "hint": "Language: English | switch with: lang uk|en|pl|lt",
+        "subtitle": "Type natural prompts. HANNA turns them into search, review, diagnostics, and export actions.",
+        "chips": ["phone +380...", "email name@example.com", "username target", "review", "diagnostics", "print"],
+        "columns": [
+            ("Search", ["phone +380...", "email name@example.com", "username target"]),
+            ("Review", ["review", "diagnostics", "activity"]),
+            ("Actions", ["print", "export stix", "export zip"]),
+            ("System", ["new search", "keys", "lang uk|pl|lt"]),
+        ],
+    },
+    "pl": {
+        "title": "CENTRUM KOMEND",
+        "hint": "Jezyk: polski | zmiana: lang uk|en|pl|lt",
+        "subtitle": "Pisz naturalnie. HANNA zamienia fraze na wyszukiwanie, przeglad wynikow, diagnostyke albo eksport.",
+        "chips": ["phone +380...", "email name@example.com", "username target", "review", "diagnostics", "print"],
+        "columns": [
+            ("Szukaj", ["phone +380...", "email name@example.com", "username target"]),
+            ("Przeglad", ["review", "diagnostics", "activity"]),
+            ("Akcje", ["print", "export stix", "export zip"]),
+            ("System", ["new search", "keys", "lang uk|en|lt"]),
+        ],
+    },
+    "lt": {
+        "title": "KOMANDU CENTRAS",
+        "hint": "Kalba: lietuviu | keisti: lang uk|en|pl|lt",
+        "subtitle": "Rasykite naturaliai. HANNA pavercia fraze i paieska, rezultatu perziura, diagnostika arba eksporta.",
+        "chips": ["phone +380...", "email name@example.com", "username target", "review", "diagnostics", "print"],
+        "columns": [
+            ("Paieska", ["phone +380...", "email name@example.com", "username target"]),
+            ("Perziura", ["review", "diagnostics", "activity"]),
+            ("Veiksmai", ["print", "export stix", "export zip"]),
+            ("Sistema", ["new search", "keys", "lang uk|en|pl"]),
+        ],
+    },
+}
+
+PHONE_INTENT_PREFIXES = (
+    "phone",
+    "find by phone",
+    "check phone",
+    "search phone",
+    "номер",
+    "знайди по номеру",
+    "перевір номер",
+    "шукати номер",
+    "numer",
+    "szukaj po numerze",
+    "sprawdz numer",
+    "numeris",
+    "ieskok pagal numeri",
+    "tikrink numeri",
+)
+
+EMAIL_INTENT_PREFIXES = (
+    "email",
+    "check email",
+    "find email",
+    "search email",
+    "перевір email",
+    "знайди email",
+    "перевір пошту",
+    "sprawdz email",
+    "szukaj email",
+    "tikrink email",
+    "ieskok email",
+)
+
+USERNAME_INTENT_PREFIXES = (
+    "username",
+    "user",
+    "check username",
+    "find username",
+    "search username",
+    "перевір username",
+    "знайди username",
+    "перевір юзернейм",
+    "sprawdz username",
+    "szukaj username",
+    "tikrink username",
+    "ieskok username",
+)
+
+INTENT_EXACT_COMMANDS = {
+    "review": "view overview",
+    "results": "view overview",
+    "show results": "view overview",
+    "show findings": "view overview",
+    "show overview": "view overview",
+    "покажи результати": "view overview",
+    "покажи знахідки": "view overview",
+    "покажи головне": "view overview",
+    "pokaz wyniki": "view overview",
+    "pokaz glowny ekran": "view overview",
+    "rodyk rezultatus": "view overview",
+    "rodyk pagrindini": "view overview",
+    "diagnostics": "view readiness",
+    "readiness": "view readiness",
+    "show diagnostics": "view readiness",
+    "show readiness": "view readiness",
+    "чому нічого не знайдено": "view readiness",
+    "покажи діагностику": "view readiness",
+    "покажи готовність": "view readiness",
+    "pokaz diagnostyke": "view readiness",
+    "pokaz gotowosc": "view readiness",
+    "rodyk diagnostika": "view readiness",
+    "rodyk parengti": "view readiness",
+    "activity": "view activity",
+    "logs": "view activity",
+    "show activity": "view activity",
+    "show log": "view activity",
+    "покажи активність": "view activity",
+    "покажи лог": "view activity",
+    "pokaz aktywnosc": "view activity",
+    "pokaz log": "view activity",
+    "rodyk aktyvuma": "view activity",
+    "rodyk zurnala": "view activity",
+    "pipeline": "view pipeline",
+    "show pipeline": "view pipeline",
+    "show progress": "view pipeline",
+    "покажи прогрес": "view pipeline",
+    "покажи пайплайн": "view pipeline",
+    "pokaz postep": "view pipeline",
+    "pokaz pipeline": "view pipeline",
+    "rodyk eiga": "view pipeline",
+    "new search": "focus",
+    "keys": "credentials",
+    "credentials": "credentials",
+    "api keys": "credentials",
+    "show keys": "credentials",
+    "show credentials": "credentials",
+    "покажи ключі": "credentials",
+    "ключі": "credentials",
+    "klucze": "credentials",
+    "pokaz klucze": "credentials",
+    "raktai": "credentials",
+    "rodyk raktus": "credentials",
+    "focus": "focus",
+    "search": "focus",
+    "stix": "export stix",
+    "zip": "export zip",
+    "print": "export zip",
+    "print report": "export zip",
+    "друк": "export zip",
+    "друк звіту": "export zip",
+    "druk": "export zip",
+    "druk raportu": "export zip",
+    "spausdinti": "export zip",
+    "spausdinti ataskaita": "export zip",
+}
 
 
 class HannaTUIApp(App[None]):
@@ -49,18 +239,27 @@ class HannaTUIApp(App[None]):
 
     #topbar {
         dock: top;
-        height: 3;
+        height: 4;
         border: tall #00ffcc;
         color: #00ffcc;
         padding: 0 1;
-        background: #0a0816;
+        background: #04070d;
+    }
+
+    #command-board {
+        dock: top;
+        height: 10;
+        border: tall #19f9ff;
+        color: #dffcff;
+        padding: 0 1;
+        background: #071019;
     }
 
     #command-bar {
-        dock: bottom;
-        height: 3;
+        dock: top;
+        height: 4;
         border: tall #7fdbff;
-        background: #0b1018;
+        background: #050b12;
         padding: 0 1;
         align: left middle;
     }
@@ -69,14 +268,14 @@ class HannaTUIApp(App[None]):
         dock: bottom;
         height: 2;
         border: tall #ffcc00;
-        background: #100c14;
+        background: #130f08;
         color: #ffcc00;
         padding: 0 1;
         content-align: left middle;
     }
 
     #command-prompt {
-        width: 9;
+        width: 14;
         color: #00ffcc;
         content-align: center middle;
     }
@@ -84,17 +283,17 @@ class HannaTUIApp(App[None]):
     #command-input {
         width: 1fr;
         margin-right: 1;
-        background: #09060d;
+        background: #030508;
         color: #e8f7ff;
         border: round #7fdbff;
     }
 
     .export-button {
         margin-right: 1;
-        min-width: 16;
-        background: #15101b;
+        min-width: 13;
+        background: #0c1118;
         color: #f2f1f5;
-        border: round #ff6bdf;
+        border: round #19f9ff;
     }
 
     #command-status {
@@ -127,6 +326,7 @@ class HannaTUIApp(App[None]):
         self.plain = plain
         self._worker: Thread | None = None
         self._mock_worker: Thread | None = None
+        self._suspend_credential_events = False
         self._screens = {
             "overview": OverviewScreen(),
             "pipeline": PipelineScreen(),
@@ -136,14 +336,15 @@ class HannaTUIApp(App[None]):
 
     def compose(self) -> ComposeResult:
         yield Static(self._render_topbar(), id="topbar")
-        yield Static(self._render_startup_banner(), id="startup-banner")
+        yield Static(self._render_command_board(), id="command-board")
         with Horizontal(id="command-bar"):
-            yield Static("hanna >", id="command-prompt")
-            yield Input(placeholder='run --mode full-spectrum --target "Ivan"', id="command-input")
+            yield Static("search >", id="command-prompt")
+            yield Input(placeholder="phone +380... | email analyst@example.com | username target | review", id="command-input")
             yield Button("Export STIX 2.1", id="export-stix", classes="export-button")
-            yield Button("Download Evidence Pack", id="export-zip", classes="export-button")
+            yield Button("Download Evidence Pack (ZIP)", id="export-zip", classes="export-button")
             yield Button("Generate PDF", id="export-pdf", classes="export-button")
             yield Static(self._render_command_status(), id="command-status")
+        yield Static(self._render_startup_banner(), id="startup-banner")
 
     def on_mount(self) -> None:
         for name, screen in self._screens.items():
@@ -202,10 +403,24 @@ class HannaTUIApp(App[None]):
     def action_focus_command(self) -> None:
         self._focus_command_input()
 
+    def action_focus_credentials(self, env_name: str | None = None) -> None:
+        self._focus_credentials_input(env_name)
+
     def _focus_command_input(self) -> None:
         if not self.is_mounted:
             return
         self.query_one("#command-input", Input).focus()
+
+    def _focus_credentials_input(self, env_name: str | None = None) -> None:
+        self._switch_view("overview")
+        if not self.is_mounted:
+            return
+        try:
+            target_env = env_name or "HIBP_API_KEY"
+            target_id = f"#credential-input-{credential_slug(target_env)}"
+            self.query_one(target_id, Input).focus()
+        except Exception:
+            return
 
     def _render_topbar(self) -> str:
         tor_status = "TOR" if self.session_state.execution.proxy and "socks" in self.session_state.execution.proxy else "DIRECT"
@@ -213,16 +428,49 @@ class HannaTUIApp(App[None]):
         total = ready + len(self.session_state.readiness.secrets_missing)
         db_size = _human_size(self.session_state.ops.db_path)
         return (
-            f"HANNA // OSINT & КІБЕРРОЗВІДКА | TOR={tor_status} | keys={ready}/{total} | DB={db_size}\n"
-            f"View={self.session_state.current_view} | Mode={self.session_state.execution.default_mode} | Runs={self.session_state.ops.runs_root}\n"
+            f"[HANNA v3.2.0] Intelligence Control Plane | TOR={tor_status} | API keys={ready}/{total} | DB={db_size}\n"
+            f"View={self.session_state.current_view} | Mode={self.session_state.execution.default_mode} | Report={self.session_state.execution.report_mode} | Runs={self.session_state.ops.runs_root}\n"
+            f"Target={self.session_state.execution.target or self.session_state.target.label} | Workers={self.session_state.execution.workers} | Prompt={self.session_state.prompt_status}\n"
             f"{self._render_compact_chain_status()}"
         )
 
+    def _render_command_board(self) -> str:
+        locale = self._normalize_locale(self.session_state.locale)
+        payload = COMMAND_BOARD_TRANSLATIONS[locale]
+        rows = [
+            f"{payload['title']} | {payload['hint']}",
+            payload["subtitle"],
+            f"Quick prompts: {' | '.join(payload['chips'])}",
+            "",
+        ]
+        columns: list[str] = []
+        for title, commands in payload["columns"]:
+            column_lines = [title]
+            column_lines.extend(commands)
+            width = max(len(line) for line in column_lines)
+            columns.append("\n".join(line.ljust(width) for line in column_lines))
+        split_columns = [column.split("\n") for column in columns]
+        max_lines = max(len(column) for column in split_columns)
+        for index in range(max_lines):
+            parts = []
+            for column in split_columns:
+                parts.append(column[index] if index < len(column) else " " * len(column[0]))
+            rows.append(" | ".join(parts))
+        return "\n".join(rows)
+
     def _render_command_status(self) -> str:
-        return f"[{self.session_state.prompt_status.upper()}]"
+        status = self.session_state.prompt_status.upper().replace(":", " ")
+        return f"[{status}]"
 
     def _render_startup_banner(self) -> str:
-        return STARTUP_BANNER_TEXT
+        target = self.session_state.execution.target or self.session_state.target.label
+        if self.session_state.next_actions and not self.session_state.running:
+            next_actions = " | ".join(self._format_next_action(action) for action in self.session_state.next_actions)
+            return f"Run complete. Next: {next_actions}. Use keys or keys censys to jump to credentials. Active target: {target}"
+        return f"{STARTUP_BANNER_TEXT} Active target: {target}"
+
+    def _format_next_action(self, action: str) -> str:
+        return NEXT_ACTION_LABELS.get(action, action.replace("-", " "))
 
     def _render_compact_chain_status(self) -> str:
         total = len(self.session_state.pipeline.modules)
@@ -244,15 +492,24 @@ class HannaTUIApp(App[None]):
 
     def _switch_view(self, name: str) -> None:
         self.session_state.current_view = name
-        self.switch_screen(name)
+        try:
+            self.switch_screen(name)
+        except KeyError:
+            pass
         self._refresh_views()
 
     def _refresh_views(self) -> None:
         if self.is_mounted:
+            self.query_one("#command-board", Static).update(self._render_command_board())
             self.query_one("#topbar", Static).update(self._render_topbar())
             self.query_one("#command-status", Static).update(self._render_command_status())
-        for screen in self._screens.values():
-            screen.update_state(self.session_state)
+            self.query_one("#startup-banner", Static).update(self._render_startup_banner())
+        self._suspend_credential_events = True
+        try:
+            for screen in self._screens.values():
+                screen.update_state(self.session_state)
+        finally:
+            self._suspend_credential_events = False
 
     def _start_run(self, mode: str) -> None:
         if self._worker and self._worker.is_alive():
@@ -317,15 +574,34 @@ class HannaTUIApp(App[None]):
         self.notify("Operator profile updated", title="HANNA")
 
     def on_input_submitted(self, event: Input.Submitted) -> None:
-        if event.input.id != "command-input":
+        input_id = event.input.id or ""
+        if input_id == "command-input":
+            command = event.value.strip()
+            event.input.value = ""
+            event.input.focus()
+            if not command:
+                return
+            append_activity(self.session_state, "info", f"$ {command}")
+            self._execute_command(command)
             return
-        command = event.value.strip()
-        event.input.value = ""
-        event.input.focus()
-        if not command:
+        if input_id.startswith("credential-input-"):
+            slug = input_id.removeprefix("credential-input-")
+            env_name = credential_env_from_slug(slug)
+            if env_name:
+                self._commit_credential_value(env_name, event.value)
+
+    def on_switch_changed(self, event: Switch.Changed) -> None:
+        if self._suspend_credential_events:
             return
-        append_activity(self.session_state, "info", f"$ {command}")
-        self._execute_command(command)
+        switch_id = event.switch.id or ""
+        if not switch_id.startswith("credential-toggle-"):
+            return
+        slug = switch_id.removeprefix("credential-toggle-")
+        env_name = credential_env_from_slug(slug)
+        if not env_name:
+            return
+        input_widget = self.query_one(f"#credential-input-{slug}", Input)
+        self._set_credential_enabled(env_name, input_widget.value, event.value)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id or ""
@@ -340,6 +616,10 @@ class HannaTUIApp(App[None]):
             self.notify("PDF export is not wired yet", title="HANNA", severity="warning")
 
     def _execute_command(self, command: str) -> None:
+        normalized_command = self._route_intent(command)
+        if normalized_command != command:
+            append_activity(self.session_state, "info", f"intent -> {normalized_command}")
+            command = normalized_command
         try:
             tokens = shlex.split(command)
         except ValueError as exc:
@@ -352,10 +632,21 @@ class HannaTUIApp(App[None]):
         head = tokens[0].lower()
         if head == "run":
             self._handle_run_command(tokens[1:])
+        elif head in {"lang", "language", "mova", "jezyk", "kalba"} and len(tokens) > 1:
+            self._set_locale(tokens[1])
         elif head == "view" and len(tokens) > 1:
             view = tokens[1].lower()
             if view in self._screens:
                 self._switch_view(view)
+        elif head == "focus":
+            self.session_state.prompt_status = "focus-search"
+            self._switch_view("overview")
+            self.action_focus_command()
+        elif head in {"credentials", "keys"}:
+            target_env = self._resolve_credential_focus_target(tokens[1] if len(tokens) > 1 else None)
+            self.session_state.prompt_status = "focus-credentials"
+            self.action_focus_credentials(target_env)
+            self._refresh_views()
         elif head in {"toggle", "details"}:
             self.action_toggle_rejected()
         elif head == "export" and len(tokens) > 1:
@@ -366,6 +657,88 @@ class HannaTUIApp(App[None]):
             append_activity(self.session_state, "warn", f"Unknown command: {command}")
             self.session_state.prompt_status = "unknown-command"
             self._refresh_views()
+
+    def _route_intent(self, command: str) -> str:
+        raw = command.strip()
+        if not raw:
+            return command
+        lowered = raw.lower()
+        if lowered in INTENT_EXACT_COMMANDS:
+            return INTENT_EXACT_COMMANDS[lowered]
+        phone_target = self._extract_prefixed_value(lowered, raw, PHONE_INTENT_PREFIXES)
+        if phone_target:
+            return f"run --mode aggregate --target {shlex.quote(phone_target)} --modules ua_phone"
+        email_target = self._extract_prefixed_value(lowered, raw, EMAIL_INTENT_PREFIXES)
+        if email_target:
+            return f"run --mode aggregate --target {shlex.quote(email_target)} --modules email-chain"
+        username_target = self._extract_prefixed_value(lowered, raw, USERNAME_INTENT_PREFIXES)
+        if username_target:
+            return f"run --mode aggregate --target {shlex.quote(username_target)} --usernames {shlex.quote(username_target)}"
+        if lowered.startswith("export ") or lowered.startswith("run ") or lowered.startswith("view "):
+            return command
+        if re.search(r"@", raw):
+            return f"run --mode aggregate --target {shlex.quote(raw)} --modules email-chain"
+        if re.search(r"\+?\d{7,}", raw):
+            return f"run --mode aggregate --target {shlex.quote(raw)} --modules ua_phone"
+        return command
+
+    def _extract_prefixed_value(self, lowered: str, raw: str, prefixes: tuple[str, ...]) -> str | None:
+        for prefix in sorted(prefixes, key=len, reverse=True):
+            if lowered.startswith(prefix):
+                return raw[len(prefix):].strip(" :") or None
+        return None
+
+    def _set_locale(self, value: str) -> None:
+        locale = self._normalize_locale(value)
+        if locale not in SUPPORTED_LOCALES:
+            append_activity(self.session_state, "warn", f"Unsupported language: {value}")
+            self.session_state.prompt_status = "bad-language"
+            self._refresh_views()
+            return
+        self.session_state.locale = locale
+        append_activity(self.session_state, "ok", f"Interface language set to {locale}")
+        self.session_state.prompt_status = f"lang:{locale}"
+        self._refresh_views()
+
+    def _commit_credential_value(self, env_name: str, value: str) -> None:
+        entry = set_credential_value(self.session_state, env_name, value)
+        if entry is None:
+            return
+        status = "stored" if entry.value and not entry.enabled else "active" if entry.enabled else "cleared"
+        append_activity(self.session_state, "info", f"Credential {env_name} {status}")
+        self.session_state.prompt_status = f"cred:{env_name.lower()}"
+        self._refresh_views()
+
+    def _set_credential_enabled(self, env_name: str, value: str, enabled: bool) -> None:
+        set_credential_value(self.session_state, env_name, value)
+        entry = toggle_credential_entry(self.session_state, env_name, enabled)
+        if entry is None:
+            return
+        if enabled and not entry.enabled:
+            append_activity(self.session_state, "warn", f"Credential {env_name} cannot be enabled without a value")
+            self.session_state.prompt_status = "cred-missing"
+            self._refresh_views()
+            self.notify(f"Enter a value for {env_name} before enabling it", title="HANNA", severity="warning")
+            return
+        state_label = "enabled" if entry.enabled else "disabled"
+        append_activity(self.session_state, "ok" if entry.enabled else "info", f"Credential {env_name} {state_label}")
+        self.session_state.prompt_status = f"cred:{'on' if entry.enabled else 'off'}"
+        self._refresh_views()
+
+    def _normalize_locale(self, value: str | None) -> str:
+        if not value:
+            return "uk"
+        return LOCALE_ALIASES.get(value.lower(), value.lower())
+
+    def _resolve_credential_focus_target(self, token: str | None) -> str | None:
+        if not token:
+            return None
+        lowered = token.strip().lower()
+        if not lowered:
+            return None
+        if lowered in CREDENTIAL_FOCUS_TARGETS:
+            return CREDENTIAL_FOCUS_TARGETS[lowered]
+        return credential_env_from_slug(lowered.replace("_", "-"))
 
     def _handle_run_command(self, args: list[str]) -> None:
         options = _parse_command_options(args)
@@ -434,7 +807,12 @@ class HannaTUIApp(App[None]):
         self._mock_worker.start()
 
     def _run_mock_lane_stream(self) -> None:
-        checkpoints = [(5, 0, "running", "wayback archive sweep"), (3, 0, "done", "archive delta complete"), (2, 1, "running", "satellite frame correlation"), (2, 1, "done", "geospatial overlays matched")]
+        checkpoints = [
+            (5, 0, "running", "wayback archive sweep"),
+            (4, 0, "done", "archive delta complete"),
+            (6, 1, "running", "satellite frame correlation"),
+            (4, 1, "done", "geospatial overlays matched"),
+        ]
         for delay, module_index, status, detail in checkpoints:
             sleep(delay)
             self.call_from_thread(self._apply_mock_lane_update, module_index, status, detail)
@@ -482,6 +860,8 @@ class HannaTUIApp(App[None]):
             result = event.get("result")
             if result is not None:
                 apply_run_result(self.session_state, result)
+                self._switch_view("overview")
+                return
         self._refresh_views()
 
 

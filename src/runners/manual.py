@@ -17,7 +17,7 @@ from __future__ import annotations
 import time
 from datetime import datetime
 
-from adapters.base import AdapterExecutionError, ReconHit
+from adapters.base import AdapterExecutionError, ReconHit, derive_runtime_issue
 from models import AdapterOutcome, RunResult
 from registry import MODULES, MODULE_LANE
 
@@ -50,8 +50,13 @@ class ManualRunner:
             return RunResult(
                 target_name=target_name,
                 mode="manual",
+                outcomes=[AdapterOutcome(
+                    module_name=module_name,
+                    lane="unknown",
+                    error=f"Unknown module: {module_name}",
+                    error_kind="unknown_module",
+                )],
                 extra={"queued_modules": [module_name]},
-                errors=[{"module": module_name, "error": f"Unknown module: {module_name}", "error_kind": "unknown_module"}],
                 started_at=datetime.now().isoformat(),
                 finished_at=datetime.now().isoformat(),
             )
@@ -68,11 +73,18 @@ class ManualRunner:
             )
             hits = adapter.search(target_name, known_phones, known_usernames)
             elapsed = time.monotonic() - t0
-            print(f"  [{module_name}] → {len(hits)} hit(s)  ({elapsed:.1f}s)")
+            runtime_issue = derive_runtime_issue(adapter, hits)
+            if runtime_issue:
+                print(f"  [{module_name}] WARN: {runtime_issue['error']}  ({elapsed:.1f}s)")
+            else:
+                print(f"  [{module_name}] → {len(hits)} hit(s)  ({elapsed:.1f}s)")
 
             outcome = AdapterOutcome(
                 module_name=module_name, lane=lane,
-                hits=hits, error_kind=None, elapsed_sec=elapsed,
+                hits=hits,
+                error=runtime_issue["error"] if runtime_issue else None,
+                error_kind=runtime_issue["error_kind"] if runtime_issue else None,
+                elapsed_sec=elapsed,
             )
             known_set = set(known_phones)
             return RunResult(
@@ -98,7 +110,6 @@ class ManualRunner:
                     module_name=module_name, lane=lane,
                     error=str(exc), error_kind=getattr(exc, "error_kind", "adapter_error"), elapsed_sec=elapsed,
                 )],
-                errors=[{"module": module_name, "error": str(exc), "error_kind": getattr(exc, "error_kind", "adapter_error")}],
                 started_at=started,
                 finished_at=datetime.now().isoformat(),
                 extra={"queued_modules": [module_name]},
@@ -114,7 +125,6 @@ class ManualRunner:
                     module_name=module_name, lane=lane,
                     error=str(exc), error_kind="adapter_error", elapsed_sec=elapsed,
                 )],
-                errors=[{"module": module_name, "error": str(exc), "error_kind": "adapter_error"}],
                 started_at=started,
                 finished_at=datetime.now().isoformat(),
                 extra={"queued_modules": [module_name]},

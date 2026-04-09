@@ -21,6 +21,7 @@ class EyewitnessAdapter(ReconAdapter):
     def search(self, target_name: str, known_phones: list[str], known_usernames: list[str]) -> list[ReconHit]:
         urls = self._collect_urls(target_name, known_usernames)
         if not urls:
+            self._record_noop("no URL or domain seeds available for EyeWitness")
             return []
         return self._run_eyewitness(urls[:20])
 

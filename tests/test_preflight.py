@@ -41,6 +41,12 @@ def test_preflight_can_filter_getcontact_alias_live_requirements():
     assert names == {"telegram_bot_token", "getcontact_token", "getcontact_aes_key"}
 
 
+def test_preflight_can_filter_hibp_live_requirements():
+    checks = run_preflight(modules=["hibp"])
+    names = {check.name for check in checks}
+    assert names == {"hibp_api_key"}
+
+
 def test_preflight_summary_returns_counts_and_checks():
     checks = run_preflight(modules=["ua_phone"])
     payload = preflight_summary(checks, modules=["ua_phone"])

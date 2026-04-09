@@ -1,0 +1,33 @@
+{
+  "adapters": [
+    { "id": "amass", "lane": "slow", "priority": 1 },
+    { "id": "ashok", "lane": "slow", "priority": 0 },
+    { "id": "avito", "lane": "fast", "priority": 2 },
+    { "id": "blackbird", "lane": "fast", "priority": 2 },
+    { "id": "censys", "lane": "fast", "priority": 1 },
+    { "id": "eyewitness", "lane": "slow", "priority": 3 },
+    { "id": "firms", "lane": "slow", "priority": 1 },
+    { "id": "ghunt", "lane": "fast", "priority": 2 },
+    { "id": "hibp", "lane": "fast", "priority": 1 },
+    { "id": "holehe", "lane": "fast", "priority": 1 },
+    { "id": "httpx_probe", "lane": "fast", "priority": 1 },
+    { "id": "katana", "lane": "slow", "priority": 2 },
+    { "id": "maryam", "lane": "fast", "priority": 3 },
+    { "id": "metagoofil", "lane": "slow", "priority": 2 },
+    { "id": "naabu", "lane": "fast", "priority": 1 },
+    { "id": "nmap", "lane": "slow", "priority": 0 },
+    { "id": "nuclei", "lane": "slow", "priority": 1 },
+    { "id": "opendatabot", "lane": "fast", "priority": 1 },
+    { "id": "reconng", "lane": "slow", "priority": 2 },
+    { "id": "ru_leak", "lane": "fast", "priority": 1 },
+    { "id": "satintel", "lane": "fast", "priority": 2 },
+    { "id": "search4faces", "lane": "fast", "priority": 2 },
+    { "id": "shodan", "lane": "fast", "priority": 1 },
+    { "id": "social_analyzer", "lane": "slow", "priority": 3 },
+    { "id": "subfinder", "lane": "fast", "priority": 1 },
+    { "id": "ua_leak", "lane": "fast", "priority": 1 },
+    { "id": "ua_phone", "lane": "fast", "priority": 1 },
+    { "id": "vk_graph", "lane": "slow", "priority": 2 },
+    { "id": "web_search", "lane": "slow", "priority": 1 }
+  ]
+}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from adapters.base import ReconHit, ReconReport
@@ -133,3 +134,44 @@ def test_chain_runner_exposes_runtime_summary(monkeypatch, tmp_path):
     assert summary["completed"] == 1
     assert summary["skipped_missing_credentials"] == 1
     assert summary["report_mode"] == "strict"
+
+
+def test_chain_runner_ignores_generated_hanna_exports_during_ingest(monkeypatch, tmp_path):
+    from discovery_engine import DiscoveryEngine
+
+    ingested_paths: list[str] = []
+
+    monkeypatch.setattr(DiscoveryEngine, "resolve_entities", lambda self: [])
+    monkeypatch.setattr(DiscoveryEngine, "get_stats", lambda self: {"ok": True})
+    monkeypatch.setattr(
+        DiscoveryEngine,
+        "run_deep_recon",
+        lambda self, **_kwargs: ({"modules_run": [], "new_observables": 0, "new_phones": [], "new_emails": [], "errors": []}, None),
+    )
+    monkeypatch.setattr(DiscoveryEngine, "render_graph_report", lambda self, output_path, redaction_mode="shareable": Path(output_path).write_text("ok", encoding="utf-8"))
+
+    def _ingest_metadata(self, path):
+        ingested_paths.append(Path(path).name)
+        return {"status": "skipped"}
+
+    monkeypatch.setattr(DiscoveryEngine, "ingest_metadata", _ingest_metadata)
+
+    exports_dir = tmp_path / "exports"
+    exports_dir.mkdir(parents=True, exist_ok=True)
+    source_meta = {
+        "target": "+380991234598",
+        "profile": "phone",
+        "status": "success",
+        "log_file": "/tmp/source.log",
+        "sha256": "abc123",
+    }
+    (exports_dir / "phone-source.json").write_text(json.dumps(source_meta), encoding="utf-8")
+    (exports_dir / "example.chain.metadata.json").write_text(json.dumps({"runtime_summary": {"mode": "chain"}}), encoding="utf-8")
+    (exports_dir / "example-chain-20260408120000.json").write_text(json.dumps({"schema_version": 1, "mode": "chain", "runtime_summary": {}}), encoding="utf-8")
+    (exports_dir / "inventory.json").write_text(json.dumps({"modules": [], "presets": []}), encoding="utf-8")
+    (exports_dir / "preflight.recovery.json").write_text(json.dumps({"checks": [], "summary": {}}), encoding="utf-8")
+
+    runner = ChainRunner(db_path=str(tmp_path / "chain.db"))
+    runner.run(exports_dir=str(exports_dir), output_path=str(tmp_path / "dossier.html"))
+
+    assert ingested_paths == ["phone-source.json"]

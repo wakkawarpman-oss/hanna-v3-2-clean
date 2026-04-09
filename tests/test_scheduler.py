@@ -38,3 +38,31 @@ def test_dedup_and_confirm_boosts_cross_confirmed_hits():
     assert len(deduped) == 1
     assert len(cross) == 1
     assert cross[0].confidence > 0.6
+
+
+def test_scheduler_timeout_cancellation_state_for_running_future():
+    class _RunningFuture:
+        def running(self):
+            return True
+
+        def cancel(self):
+            return False
+
+    state, cancelled = LaneScheduler._timeout_cancellation_state(_RunningFuture())
+
+    assert state == "running_worker_not_reclaimed"
+    assert cancelled is False
+
+
+def test_scheduler_timeout_cancellation_state_for_pending_future():
+    class _PendingFuture:
+        def running(self):
+            return False
+
+        def cancel(self):
+            return True
+
+    state, cancelled = LaneScheduler._timeout_cancellation_state(_PendingFuture())
+
+    assert state == "cancelled_before_start"
+    assert cancelled is True

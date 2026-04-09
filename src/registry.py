@@ -15,6 +15,7 @@ from adapters.censys_adapter import CensysAdapter
 from adapters.eyewitness_adapter import EyewitnessAdapter
 from adapters.firms import FIRMSAdapter
 from adapters.ghunt import GHuntAdapter
+from adapters.hibp_adapter import HIBPAdapter
 from adapters.holehe_adapter import HoleheAdapter
 from adapters.httpx_probe import HttpxAdapter
 from adapters.katana import KatanaAdapter
@@ -58,6 +59,7 @@ ADAPTER_REGISTRY: dict[str, type[ReconAdapter]] = {
     "naabu": NaabuAdapter,
     "blackbird": BlackbirdAdapter,
     "holehe": HoleheAdapter,
+    "hibp": HIBPAdapter,
     "censys": CensysAdapter,
     "metagoofil": MetagoofilAdapter,
     "subfinder": SubfinderAdapter,
@@ -100,7 +102,7 @@ MODULE_PRESETS: dict[str, list[str]] = {
     "pd-infra": ["httpx_probe", "katana", "nuclei", "naabu"],
     "pd-full": ["httpx_probe", "katana", "nuclei", "naabu", "ashok"],
     "person-deep": ["ua_phone", "ghunt", "holehe", "blackbird", "search4faces", "social_analyzer"],
-    "email-chain": ["holehe", "ghunt", "metagoofil"],
+    "email-chain": ["holehe", "hibp", "ghunt", "metagoofil"],
     "subdomain-full": ["subfinder", "amass", "ashok"],
     "port-scan": ["naabu", "nmap"],
     "infra-deep": ["subfinder", "httpx_probe", "nuclei", "nmap", "shodan", "censys"],
@@ -132,6 +134,7 @@ MODULE_PRIORITY: dict[str, int] = {
     "shodan": 1,
     "censys": 1,
     "holehe": 1,
+    "hibp": 1,
     "nmap": 0,
     "vk_graph": 2,
     "avito": 2,
@@ -166,6 +169,7 @@ MODULE_LANE: dict[str, str] = {
     "shodan": "fast",
     "censys": "fast",
     "holehe": "fast",
+    "hibp": "fast",
     "blackbird": "fast",
     "ashok": "slow",
     "vk_graph": "slow",

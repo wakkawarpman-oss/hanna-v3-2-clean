@@ -5,7 +5,7 @@ import os
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
-from adapters.base import ReconAdapter, ReconHit
+from adapters.base import ReconAdapter, ReconHit, UnsupportedProxyError
 from adapters.cli_common import run_cli
 
 
@@ -17,7 +17,11 @@ class NmapAdapter(ReconAdapter):
 
     def search(self, target_name: str, known_phones: list[str], known_usernames: list[str]) -> list[ReconHit]:
         hits: list[ReconHit] = []
-        for target in self._collect_targets(target_name, known_usernames)[:5]:
+        targets = self._collect_targets(target_name, known_usernames)
+        if not targets:
+            self._record_noop("no host, domain, or IP seeds available for Nmap")
+            return hits
+        for target in targets[:5]:
             hits.extend(self._run_nmap(target))
         return hits
 
@@ -34,6 +38,8 @@ class NmapAdapter(ReconAdapter):
         return list(dict.fromkeys(targets))
 
     def _run_nmap(self, target: str) -> list[ReconHit]:
+        if self.proxy:
+            raise UnsupportedProxyError("nmap cannot be executed safely with proxy/Tor routing; remove nmap from the module set or run it only in direct mode")
         nmap_bin = os.environ.get("NMAP_BIN", "nmap")
         proc = run_cli(
             [nmap_bin, "-sV", "-T4", "--top-ports", "1000", "-oX", "-", target],

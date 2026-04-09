@@ -7,7 +7,7 @@ import time
 import urllib.parse
 from datetime import datetime
 
-from adapters.base import ReconAdapter, ReconHit
+from adapters.base import MissingCredentialsError, ReconAdapter, ReconHit
 
 
 class Search4FacesAdapter(ReconAdapter):
@@ -34,10 +34,13 @@ class Search4FacesAdapter(ReconAdapter):
         hits: list[ReconHit] = []
         api_key = os.environ.get("SEARCH4FACES_API_KEY", "").strip()
         if not api_key:
-            return hits
+            raise MissingCredentialsError("SEARCH4FACES_API_KEY")
 
         # Collect face image URLs from known profiles
         image_urls = self._collect_face_images(target_name, known_usernames)
+        if not image_urls:
+            self._record_noop("no profile images derivable for Search4Faces")
+            return hits
 
         for img_url in image_urls[:3]:
             hits.extend(self._search_faces(api_key, img_url, "vk", target_name))

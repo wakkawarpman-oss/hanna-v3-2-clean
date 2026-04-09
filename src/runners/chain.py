@@ -25,6 +25,7 @@ from pathlib import Path
 
 from adapters.base import ReconHit
 from config import DEFAULT_DB_PATH, RUNS_ROOT
+from metadata_inputs import discover_ingest_metadata_paths
 from models import AdapterOutcome, RunResult
 from registry import resolve_modules
 
@@ -73,7 +74,7 @@ class ChainRunner:
         engine = DiscoveryEngine(db_path=self.db_path)
 
         # ── Stage 1: Ingest ──
-        metas = sorted(exports.glob("*.json"))
+        metas = discover_ingest_metadata_paths(exports)
         ing = {"ingested": 0, "rejected": 0, "skipped": 0}
         for mp in metas:
             res = engine.ingest_metadata(mp)
@@ -115,16 +116,40 @@ class ChainRunner:
 
             errors = recon_result.get("errors", []) if recon_result else []
             all_hits = list(recon_report.hits) if recon_report else []
-            for mod in (recon_result or {}).get("modules_run", []):
-                module_hits = [h for h in all_hits if h.source_module == mod]
-                module_error = next((item for item in errors if item.get("module") == mod), None)
-                outcomes.append(AdapterOutcome(
-                    module_name=mod,
-                    lane="chain",
-                    hits=module_hits,
-                    error=module_error.get("error") if module_error else None,
-                    error_kind=module_error.get("error_kind") if module_error else None,
-                ))
+            if recon_report:
+                for item in recon_report.outcomes:
+                    outcomes.append(AdapterOutcome(
+                        module_name=item.module_name,
+                        lane=item.lane,
+                        hits=item.hits,
+                        error=item.error,
+                        error_kind=item.error_kind,
+                        elapsed_sec=item.elapsed_sec,
+                        log_path=item.log_path,
+                    ))
+            else:
+                outcome_modules: list[str] = []
+                seen_modules: set[str] = set()
+                for mod in (recon_result or {}).get("modules_run", []):
+                    if mod not in seen_modules:
+                        outcome_modules.append(mod)
+                        seen_modules.add(mod)
+                for item in errors:
+                    mod = str(item.get("module", "")).strip()
+                    if mod and mod not in seen_modules:
+                        outcome_modules.append(mod)
+                        seen_modules.add(mod)
+
+                for mod in outcome_modules:
+                    module_hits = [h for h in all_hits if h.source_module == mod]
+                    module_error = next((item for item in errors if item.get("module") == mod), None)
+                    outcomes.append(AdapterOutcome(
+                        module_name=mod,
+                        lane="chain",
+                        hits=module_hits,
+                        error=module_error.get("error") if module_error else None,
+                        error_kind=module_error.get("error_kind") if module_error else None,
+                    ))
 
         # ── Stage 4: Verification ──
         if verify or verify_all:
@@ -143,7 +168,6 @@ class ChainRunner:
             modules_run=(recon_result or {}).get("modules_run", []),
             outcomes=outcomes,
             all_hits=all_hits,
-            errors=errors,
             started_at=started,
             finished_at=datetime.now().isoformat(),
             new_phones=(recon_result or {}).get("new_phones", []),

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from adapters.base import ReconHit, ReconReport
@@ -31,7 +32,6 @@ def test_run_mode_manual_emits_expected_events(monkeypatch):
 
     monkeypatch.setattr(execution_mod, "run_preflight", lambda modules=None: [])
     monkeypatch.setitem(execution_mod.MODULES, "stub_manual", StubAdapter)
-    monkeypatch.setattr(execution_mod, "_export_artifacts", lambda result, config: {})
 
     events: list[dict] = []
     result = run_mode(
@@ -47,6 +47,7 @@ def test_run_mode_manual_emits_expected_events(monkeypatch):
     assert "readiness" in event_types
     assert "phase" in event_types
     assert sum(1 for event in events if event["type"] == "module") >= 2
+    assert not any("Exported artifacts" in event.get("text", "") for event in events if event["type"] == "activity")
     assert event_types[-1] == "run_finished"
 
 
@@ -73,7 +74,6 @@ def test_run_mode_aggregate_emits_scheduler_driven_module_events(monkeypatch):
         return SchedulerResult(all_hits=[hit], modules_run=["stub_aggregate"], errors=[], task_results=[])
 
     monkeypatch.setattr(execution_mod.LaneScheduler, "dispatch", _dispatch)
-    monkeypatch.setattr(execution_mod, "_export_artifacts", lambda result, config: {})
 
     events: list[dict] = []
     result = run_mode(
@@ -87,6 +87,7 @@ def test_run_mode_aggregate_emits_scheduler_driven_module_events(monkeypatch):
     assert any(event["status"] == "queued" for event in module_events)
     assert any(event["status"] == "done" for event in module_events)
     assert any(event["type"] == "activity" and "fast complete" in event["text"] for event in events)
+    assert "exports" not in result.extra
 
 
 def test_run_mode_chain_emits_detailed_phase_counters(monkeypatch, tmp_path):
@@ -107,7 +108,7 @@ def test_run_mode_chain_emits_detailed_phase_counters(monkeypatch, tmp_path):
             self.clusters = []
 
         def ingest_metadata(self, path):
-            if Path(path).name.endswith("a.json"):
+            if Path(path).name == "source.json":
                 return {"status": "ingested"}
             return {"status": "rejected"}
 
@@ -150,13 +151,25 @@ def test_run_mode_chain_emits_detailed_phase_counters(monkeypatch, tmp_path):
 
     exports_dir = tmp_path / "exports"
     exports_dir.mkdir(parents=True, exist_ok=True)
-    (exports_dir / "a.json").write_text("{}", encoding="utf-8")
-    (exports_dir / "b.json").write_text("{}", encoding="utf-8")
+    (exports_dir / "source.json").write_text(
+        json.dumps(
+            {
+                "target": "+380991234598",
+                "profile": "phone",
+                "status": "success",
+                "log_file": "/tmp/source.log",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (exports_dir / "generated.chain.metadata.json").write_text(
+        json.dumps({"runtime_summary": {"mode": "chain"}}),
+        encoding="utf-8",
+    )
 
     monkeypatch.setattr(execution_mod, "DiscoveryEngine", FakeEngine)
     monkeypatch.setattr(execution_mod, "run_preflight", lambda modules=None: [])
     monkeypatch.setattr(execution_mod, "_run_deep_recon_live", lambda engine, config, modules, event_sink: report)
-    monkeypatch.setattr(execution_mod, "_export_artifacts", lambda result, config: {})
 
     events: list[dict] = []
     result = run_mode(
@@ -177,5 +190,6 @@ def test_run_mode_chain_emits_detailed_phase_counters(monkeypatch, tmp_path):
     phases = {event["phase"] for event in counter_events}
     assert {"ingest", "resolve", "deep_recon", "verify_profiles", "verify_content", "render"}.issubset(phases)
     ingest_updates = [event for event in counter_events if event["phase"] == "ingest"]
-    assert any(event["counters"].get("total_files") == 2 for event in ingest_updates)
+    assert any(event["counters"].get("total_files") == 1 for event in ingest_updates)
     assert any(event["counters"].get("ingested") == 1 for event in ingest_updates)
+    assert "exports" not in result.extra

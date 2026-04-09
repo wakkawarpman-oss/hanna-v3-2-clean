@@ -17,7 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from adapters.base import AdapterExecutionError, ReconAdapter, ReconHit
+from adapters.base import AdapterExecutionError, ReconAdapter, ReconHit, derive_runtime_issue
 from config import (
     ADAPTER_REQ_CAP,
     LOG_ENCRYPT,
@@ -171,15 +171,19 @@ def _run_adapter_isolated(
             signal.setitimer(signal.ITIMER_REAL, 0.0)
 
         elapsed = time.monotonic() - t0
+        runtime_issue = derive_runtime_issue(adapter, hits)
         for h in hits:
             lines.append(f"  HIT {h.observable_type}:{h.value}  conf={h.confidence:.2f}  src={h.source_detail}\n")
-        lines.append(f"[{mod_name}] DONE   {len(hits)} hit(s)  {elapsed:.1f}s\n")
+        if runtime_issue:
+            lines.append(f"[{mod_name}] WARN  {runtime_issue['error']}\n")
+        else:
+            lines.append(f"[{mod_name}] DONE   {len(hits)} hit(s)  {elapsed:.1f}s\n")
         result = TaskResult(
             module_name=mod_name,
             lane="fast",
             hits=hits,
-            error=None,
-            error_kind=None,
+            error=runtime_issue["error"] if runtime_issue else None,
+            error_kind=runtime_issue["error_kind"] if runtime_issue else None,
             elapsed_sec=elapsed,
             raw_log_path=log_path,
         ).to_dict()

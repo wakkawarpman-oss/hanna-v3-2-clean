@@ -17,7 +17,11 @@ class ShodanAdapter(ReconAdapter):
 
     def search(self, target_name: str, known_phones: list[str], known_usernames: list[str]) -> list[ReconHit]:
         hits: list[ReconHit] = []
-        for target in self._collect_targets(target_name, known_usernames)[:5]:
+        targets = self._collect_targets(target_name, known_usernames)
+        if not targets:
+            self._record_noop("no host, domain, or IP seeds available for Shodan")
+            return hits
+        for target in targets[:5]:
             hits.extend(self._run_shodan(target))
         return hits
 
@@ -34,7 +38,7 @@ class ShodanAdapter(ReconAdapter):
 
     def _run_shodan(self, target: str) -> list[ReconHit]:
         shodan_bin = os.environ.get("SHODAN_BIN", "shodan")
-        proc = run_cli([shodan_bin, "host", target, "--format", "json"], timeout=self.timeout * 8)
+        proc = run_cli([shodan_bin, "host", target, "--format", "json"], timeout=self.timeout * 8, proxy=self.proxy)
         if not proc:
             return []
         output = (proc.stdout or "").strip()

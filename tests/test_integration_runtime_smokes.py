@@ -8,7 +8,7 @@ from runners.aggregate import AggregateRunner
 from runners.manual import ManualRunner
 from registry import MODULES
 
-from adapters.base import DependencyUnavailableError
+from adapters.base import DependencyUnavailableError, ReconAdapter
 
 
 def test_manual_runtime_smoke_exports_artifacts(tmp_path):
@@ -112,3 +112,43 @@ def test_manual_runtime_tracks_dependency_unavailable(monkeypatch):
     summary = result.runtime_summary()
     assert summary["dependency_unavailable"] == 1
     assert any(err.get("error_kind") == "dependency_unavailable" for err in result.errors)
+
+
+def test_manual_runtime_tracks_silent_noop(monkeypatch):
+    class NoopAdapter(ReconAdapter):
+        name = "noop_adapter"
+        region = "global"
+
+        def search(self, target_name, known_phones, known_usernames):
+            self._record_noop("no usernames available for test adapter")
+            return []
+
+    monkeypatch.setitem(MODULES, "noop_adapter", NoopAdapter)
+
+    runner = ManualRunner()
+    result = runner.run(module_name="noop_adapter", target_name="Case")
+
+    summary = result.runtime_summary()
+    assert summary["failed"] == 1
+    assert any(err.get("error_kind") == "silent_noop" for err in result.errors)
+
+
+def test_manual_runtime_tracks_auto_disabled(monkeypatch):
+    class AutoDisabledAdapter(ReconAdapter):
+        name = "auto_disabled_adapter"
+        region = "global"
+
+        def search(self, target_name, known_phones, known_usernames):
+            self._record_failure()
+            self._record_failure()
+            self._record_failure()
+            return []
+
+    monkeypatch.setitem(MODULES, "auto_disabled_adapter", AutoDisabledAdapter)
+
+    runner = ManualRunner()
+    result = runner.run(module_name="auto_disabled_adapter", target_name="Case")
+
+    summary = result.runtime_summary()
+    assert summary["failed"] == 1
+    assert any(err.get("error_kind") == "auto_disabled" for err in result.errors)

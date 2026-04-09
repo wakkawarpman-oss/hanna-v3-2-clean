@@ -36,6 +36,7 @@ MODULE_CHECKS: dict[str, set[str]] = {
     "nmap": {"nmap"},
     "shodan": {"shodan", "shodan_api_key"},
     "holehe": {"holehe"},
+    "hibp": {"hibp_api_key"},
     "blackbird": {"blackbird"},
     "reconng": {"reconng"},
     "metagoofil": {"metagoofil"},
@@ -130,7 +131,7 @@ def run_preflight(modules: list[str] | None = None) -> list[PreflightCheck]:
             detail=found or "set EYEWITNESS_CHROME_BIN",
         ))
 
-    for env_name in ["CENSYS_API_ID", "CENSYS_API_SECRET", "SHODAN_API_KEY"]:
+    for env_name in ["CENSYS_API_ID", "CENSYS_API_SECRET", "SHODAN_API_KEY", "HIBP_API_KEY"]:
         checks.append(PreflightCheck(
             name=env_name.lower(),
             status="ok" if os.environ.get(env_name, "").strip() else "warn",

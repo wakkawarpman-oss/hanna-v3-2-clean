@@ -16,9 +16,28 @@ ROOT="$(cd -P "$(dirname "$SOURCE")/.." && pwd)"
 PY_BIN="$ROOT/.venv/bin/python3"
 MODE="${1:-}"
 
+restore_tty_state() {
+  if [[ "${HANNA_TTY_RESTORE:-1}" == "0" ]]; then
+    return 0
+  fi
+  if [[ "${HANNA_FORCE_TTY_RESTORE:-0}" != "1" ]] && [[ ! -t 0 || ! -t 1 ]]; then
+    return 0
+  fi
+
+  command -v stty >/dev/null 2>&1 && stty sane 2>/dev/null || true
+  if command -v tput >/dev/null 2>&1; then
+    tput sgr0 2>/dev/null || true
+    tput cnorm 2>/dev/null || true
+    tput rmkx 2>/dev/null || true
+  fi
+  printf '\033[0m\033[?25h\033[?1l\033>\033[?1000l\033[?1002l\033[?1003l\033[?1004l\033[?1006l' >/dev/tty 2>/dev/null || true
+}
+
 if [[ ! -x "$PY_BIN" ]]; then
   PY_BIN="$(command -v python3)"
 fi
+
+trap restore_tty_state EXIT
 
 if [[ "$MODE" == "ui" || "$MODE" == "tui" ]]; then
   case "${TERM:-}" in
@@ -28,4 +47,4 @@ if [[ "$MODE" == "ui" || "$MODE" == "tui" ]]; then
   esac
 fi
 
-exec env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" "$PY_BIN" "$ROOT/src/cli.py" "$@"
+env PYTHONPATH="$ROOT/src${PYTHONPATH:+:$PYTHONPATH}" "$PY_BIN" "$ROOT/src/cli.py" "$@"

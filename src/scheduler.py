@@ -23,6 +23,16 @@ class LaneScheduler:
     """Dispatch recon tasks by lane with worker isolation and timeout controls."""
 
     @staticmethod
+    def _timeout_cancellation_state(future: Future) -> tuple[str, bool]:
+        was_running = future.running()
+        cancelled = future.cancel()
+        if was_running:
+            return "running_worker_not_reclaimed", cancelled
+        if cancelled:
+            return "cancelled_before_start", True
+        return "cancellation_requested", False
+
+    @staticmethod
     def dispatch(
         tasks: list[ReconTask],
         max_workers: int,
@@ -171,7 +181,7 @@ class LaneScheduler:
                     for fut in timed_out:
                         pending.discard(fut)
                         task = future_map[fut]
-                        fut.cancel()
+                        cancellation_state, cancelled = LaneScheduler._timeout_cancellation_state(fut)
                         msg = f"TIMEOUT ({int(task.worker_timeout)}s)"
                         result.errors.append({"module": task.module_name, "error": msg, "error_kind": "timeout"})
                         result.task_results.append(TaskResult(
@@ -183,7 +193,7 @@ class LaneScheduler:
                             elapsed_sec=float(task.worker_timeout),
                             raw_log_path="",
                         ))
-                        print(f"  [{task.module_name}] {msg} - cancelled")
+                        print(f"  [{task.module_name}] {msg} - {cancellation_state}")
                         LaneScheduler._emit(
                             event_callback,
                             {
@@ -193,6 +203,8 @@ class LaneScheduler:
                                 "module": task.module_name,
                                 "error": msg,
                                 "elapsed_sec": float(task.worker_timeout),
+                                "cancellation_state": cancellation_state,
+                                "cancelled": cancelled,
                             },
                         )
             finally:
