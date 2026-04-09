@@ -3,11 +3,12 @@ from __future__ import annotations
 import re
 import shlex
 from threading import Thread
-from time import sleep
+from time import monotonic, sleep
 
 from pathlib import Path
 
-from textual.app import App, ComposeResult
+from textual.app import App, ComposeResult, ScreenStackError
+from textual.css.query import NoMatches
 from textual.containers import Horizontal
 from textual.widgets import Button, Input, Static, Switch
 
@@ -22,6 +23,7 @@ from tui.state import (
     apply_run_result,
     build_default_session_state,
     clear_pipeline_history,
+    credential_value,
     credential_slug,
     credential_env_from_slug,
     refresh_readiness,
@@ -109,6 +111,9 @@ COMMAND_BOARD_TRANSLATIONS = {
         ],
     },
 }
+
+EVENT_BATCH_WINDOW_SEC = 0.05
+EVENT_BATCH_SIZE = 8
 
 PHONE_INTENT_PREFIXES = (
     "phone",
@@ -327,6 +332,7 @@ class HannaTUIApp(App[None]):
         self._worker: Thread | None = None
         self._mock_worker: Thread | None = None
         self._suspend_credential_events = False
+        self._chrome_cache: dict[str, str] = {}
         self._screens = {
             "overview": OverviewScreen(),
             "pipeline": PipelineScreen(),
@@ -490,23 +496,31 @@ class HannaTUIApp(App[None]):
             return f"Chain: {module_summary} | {' | '.join(compact_parts)} | latest: {timeline_tail}"
         return f"Chain: {module_summary} | {' | '.join(compact_parts)}"
 
-    def _switch_view(self, name: str) -> None:
+    def _switch_view(self, name: str, *, refresh: bool = True) -> None:
         self.session_state.current_view = name
         try:
             self.switch_screen(name)
         except KeyError:
             pass
-        self._refresh_views()
+        if refresh:
+            self._refresh_views()
+
+    def _update_static_if_changed(self, selector: str, content: str) -> None:
+        if self._chrome_cache.get(selector) == content:
+            return
+        self.query_one(selector, Static).update(content)
+        self._chrome_cache[selector] = content
 
     def _refresh_views(self) -> None:
         if self.is_mounted:
-            self.query_one("#command-board", Static).update(self._render_command_board())
-            self.query_one("#topbar", Static).update(self._render_topbar())
-            self.query_one("#command-status", Static).update(self._render_command_status())
-            self.query_one("#startup-banner", Static).update(self._render_startup_banner())
+            self._update_static_if_changed("#command-board", self._render_command_board())
+            self._update_static_if_changed("#topbar", self._render_topbar())
+            self._update_static_if_changed("#command-status", self._render_command_status())
+            self._update_static_if_changed("#startup-banner", self._render_startup_banner())
         self._suspend_credential_events = True
         try:
-            for screen in self._screens.values():
+            screen = self._screens.get(self.session_state.current_view)
+            if screen is not None:
                 screen.update_state(self.session_state)
         finally:
             self._suspend_credential_events = False
@@ -544,9 +558,32 @@ class HannaTUIApp(App[None]):
         self._refresh_views()
 
     def _run_in_background(self, mode: str, config: TUIExecutionConfig) -> None:
+        buffered_events: list[dict] = []
+        last_flush = monotonic()
+
+        def flush_events() -> None:
+            nonlocal last_flush
+            if not buffered_events:
+                return
+            batch = list(buffered_events)
+            buffered_events.clear()
+            last_flush = monotonic()
+            self.call_from_thread(self._apply_event_batch, batch)
+
+        def event_sink(event: dict) -> None:
+            buffered_events.append(event)
+            event_type = str(event.get("type", ""))
+            immediate = event_type == "run_finished"
+            immediate = immediate or (event_type == "module" and str(event.get("status", "")) in {"error", "timeout"})
+            immediate = immediate or (event_type == "activity" and str(event.get("level", "")) in {"warn", "error"})
+            if immediate or len(buffered_events) >= EVENT_BATCH_SIZE or (monotonic() - last_flush) >= EVENT_BATCH_WINDOW_SEC:
+                flush_events()
+
         try:
-            run_mode(config, mode, lambda event: self.call_from_thread(self._apply_event, event))
+            run_mode(config, mode, event_sink)
+            flush_events()
         except Exception as exc:
+            flush_events()
             self.call_from_thread(self._handle_background_error, mode, exc)
 
     def _handle_background_error(self, mode: str, exc: Exception) -> None:
@@ -600,8 +637,14 @@ class HannaTUIApp(App[None]):
         env_name = credential_env_from_slug(slug)
         if not env_name:
             return
-        input_widget = self.query_one(f"#credential-input-{slug}", Input)
-        self._set_credential_enabled(env_name, input_widget.value, event.value)
+        if not self.is_mounted:
+            input_value = credential_value(self.session_state, env_name)
+        else:
+            try:
+                input_value = self.query_one(f"#credential-input-{slug}", Input).value
+            except (NoMatches, ScreenStackError):
+                input_value = credential_value(self.session_state, env_name)
+        self._set_credential_enabled(env_name, input_value, event.value)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id or ""
@@ -828,7 +871,25 @@ class HannaTUIApp(App[None]):
         append_activity(self.session_state, "info", f"Slow lane {module.name}: {detail}")
         self._refresh_views()
 
-    def _apply_event(self, event: dict) -> None:
+    def _apply_event_batch(self, events: list[dict]) -> None:
+        if not events:
+            return
+        switch_to_overview = False
+        for event in events:
+            event_type = event.get("type")
+            if event_type == "run_finished":
+                result = event.get("result")
+                if result is not None:
+                    apply_run_result(self.session_state, result)
+                    switch_to_overview = True
+                continue
+            self._apply_event(event, refresh=False)
+        if switch_to_overview:
+            self._switch_view("overview")
+            return
+        self._refresh_views()
+
+    def _apply_event(self, event: dict, *, refresh: bool = True) -> None:
         event_type = event.get("type")
         if event_type == "phase":
             set_phase(self.session_state, str(event.get("phase", "running")), str(event.get("detail", "")))
@@ -860,9 +921,11 @@ class HannaTUIApp(App[None]):
             result = event.get("result")
             if result is not None:
                 apply_run_result(self.session_state, result)
-                self._switch_view("overview")
+                if refresh:
+                    self._switch_view("overview")
                 return
-        self._refresh_views()
+        if refresh:
+            self._refresh_views()
 
 
 def _parse_command_options(tokens: list[str]) -> dict[str, str]:

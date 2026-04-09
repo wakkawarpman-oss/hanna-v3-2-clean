@@ -151,6 +151,15 @@ CREDENTIAL_SPECS: tuple[tuple[str, str, str], ...] = (
     ("GETCONTACT_AES_KEY", "GetContact AES", "getcontact"),
 )
 
+MAX_INITIAL_MODULES = 14
+MAX_ACTIVITY_ITEMS = 40
+MAX_PHASE_TIMELINE_ITEMS = 24
+
+CREDENTIAL_SLUG_TO_ENV = {
+    env_name.lower().replace("_", "-"): env_name
+    for env_name, _, _ in CREDENTIAL_SPECS
+}
+
 
 def build_default_session_state(
     target: str | None = None,
@@ -176,10 +185,7 @@ def build_default_session_state(
 ) -> SessionState:
     resolved_modules = resolve_modules(modules)
     module_names = _initial_module_names(resolved_modules, manual_module)
-    module_states = [
-        ModuleRunState(name=name, lane=MODULE_LANE.get(name, "fast"), status="idle", detail="queued for orchestration")
-        for name in module_names
-    ]
+    module_states = _build_module_states(module_names, status="idle", detail="queued for orchestration")
     checks = run_preflight(modules=module_names or None)
     readiness = _build_readiness_state(checks)
     started_at = datetime.now().isoformat(timespec="seconds")
@@ -285,10 +291,7 @@ def credential_slug(env_name: str) -> str:
 
 
 def credential_env_from_slug(slug: str) -> str | None:
-    for env_name, _, _ in CREDENTIAL_SPECS:
-        if credential_slug(env_name) == slug:
-            return env_name
-    return None
+    return CREDENTIAL_SLUG_TO_ENV.get(slug)
 
 
 def apply_editor_updates(state: SessionState, payload: dict[str, str]) -> None:
@@ -352,10 +355,7 @@ def apply_editor_updates(state: SessionState, payload: dict[str, str]) -> None:
     state.prompt_status = "ready"
     state.show_rejected = False
     preview_modules = active_modules_for_mode(mode, state.execution)
-    state.pipeline.modules = [
-        ModuleRunState(name=name, lane=MODULE_LANE.get(name, "fast"), status="idle", detail="ready from interactive profile")
-        for name in preview_modules
-    ]
+    state.pipeline.modules = _build_module_states(preview_modules, status="idle", detail="ready from interactive profile")
     state.observables = _build_seed_observables(state.target)
     _recompute_progress(state)
     refresh_readiness(state)
@@ -376,10 +376,7 @@ def reset_modules_for_run(state: SessionState, mode: str, modules: list[str]) ->
     state.pipeline.phase = "preparing"
     state.pipeline.phase_counters = {}
     state.pipeline.phase_timeline = []
-    state.pipeline.modules = [
-        ModuleRunState(name=name, lane=MODULE_LANE.get(name, "fast"), status="queued", detail="awaiting execution")
-        for name in modules
-    ]
+    state.pipeline.modules = _build_module_states(modules, status="queued", detail="awaiting execution")
     _recompute_progress(state)
     state.last_result_summary = []
     state.next_actions = []
@@ -414,7 +411,7 @@ def update_phase_counters(state: SessionState, phase: str, counters: dict[str, s
 def append_activity(state: SessionState, level: str, text: str) -> None:
     timestamp = datetime.now().isoformat(timespec="seconds")
     state.activity.append(ActivityEvent(level=level, text=text, timestamp=timestamp))
-    state.activity = state.activity[-40:]
+    state.activity = state.activity[-MAX_ACTIVITY_ITEMS:]
 
 
 def apply_run_result(state: SessionState, result: RunResult) -> None:
@@ -523,6 +520,13 @@ def _find_credential_entry(state: SessionState, env_name: str) -> CredentialEntr
     return None
 
 
+def credential_value(state: SessionState, env_name: str) -> str:
+    entry = _find_credential_entry(state, env_name)
+    if entry is None:
+        return ""
+    return entry.value
+
+
 def _sync_credential_env(state: SessionState) -> None:
     if not state.credentials:
         return
@@ -537,7 +541,14 @@ def _sync_credential_env(state: SessionState) -> None:
 def _initial_module_names(resolved_modules: list[str], manual_module: str | None) -> list[str]:
     if manual_module:
         return [manual_module]
-    return list(resolved_modules[:14])
+    return list(resolved_modules[:MAX_INITIAL_MODULES])
+
+
+def _build_module_states(module_names: list[str], *, status: str, detail: str) -> list[ModuleRunState]:
+    return [
+        ModuleRunState(name=name, lane=MODULE_LANE.get(name, "fast"), status=status, detail=detail)
+        for name in module_names
+    ]
 
 
 def _build_seed_observables(target: TargetState) -> list[ObservableState]:
@@ -621,7 +632,7 @@ def _append_phase_timeline(state: SessionState, phase: str, detail: str) -> None
     if state.pipeline.phase_timeline and state.pipeline.phase_timeline[-1] == entry:
         return
     state.pipeline.phase_timeline.append(entry)
-    state.pipeline.phase_timeline = state.pipeline.phase_timeline[-24:]
+    state.pipeline.phase_timeline = state.pipeline.phase_timeline[-MAX_PHASE_TIMELINE_ITEMS:]
 
 
 def _recompute_progress(state: SessionState) -> None:

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from adapters.base import ReconHit, ReconReport
+from metadata_inputs import discover_ingest_metadata_paths
 from runners.chain import ChainRunner
 
 
@@ -175,3 +176,22 @@ def test_chain_runner_ignores_generated_hanna_exports_during_ingest(monkeypatch,
     runner.run(exports_dir=str(exports_dir), output_path=str(tmp_path / "dossier.html"))
 
     assert ingested_paths == ["phone-source.json"]
+
+
+def test_discover_ingest_metadata_paths_filters_generated_files_and_sorts(tmp_path):
+    exports_dir = tmp_path / "exports"
+    exports_dir.mkdir(parents=True, exist_ok=True)
+
+    valid_payload = {
+        "target": "+380991234598",
+        "profile": "phone",
+        "status": "success",
+    }
+    (exports_dir / "b-source.json").write_text(json.dumps(valid_payload), encoding="utf-8")
+    (exports_dir / "a-source.json").write_text(json.dumps(valid_payload), encoding="utf-8")
+    (exports_dir / "inventory.json").write_text(json.dumps({"modules": []}), encoding="utf-8")
+    (exports_dir / "ignored.metadata.json").write_text(json.dumps(valid_payload), encoding="utf-8")
+
+    discovered = discover_ingest_metadata_paths(exports_dir)
+
+    assert [path.name for path in discovered] == ["a-source.json", "b-source.json"]

@@ -33,6 +33,21 @@ class LaneScheduler:
         return "cancellation_requested", False
 
     @staticmethod
+    def _next_wait_timeout(
+        pending: set[Future],
+        submitted_at: dict[Future, float],
+        future_map: dict[Future, ReconTask],
+        now: float,
+    ) -> float:
+        if not pending:
+            return 0.0
+        remaining = [
+            max(0.0, future_map[future].worker_timeout - (now - submitted_at[future]))
+            for future in pending
+        ]
+        return min(remaining, default=0.0)
+
+    @staticmethod
     def dispatch(
         tasks: list[ReconTask],
         max_workers: int,
@@ -109,7 +124,45 @@ class LaneScheduler:
             pending = set(future_map)
             try:
                 while pending:
-                    done, pending = wait(pending, timeout=1.0, return_when=FIRST_COMPLETED)
+                    now = time.monotonic()
+                    timed_out = [
+                        future for future in pending
+                        if now - submitted_at[future] >= future_map[future].worker_timeout
+                    ]
+                    for fut in timed_out:
+                        pending.discard(fut)
+                        task = future_map[fut]
+                        cancellation_state, cancelled = LaneScheduler._timeout_cancellation_state(fut)
+                        msg = f"TIMEOUT ({int(task.worker_timeout)}s)"
+                        result.errors.append({"module": task.module_name, "error": msg, "error_kind": "timeout"})
+                        result.task_results.append(TaskResult(
+                            module_name=task.module_name,
+                            lane=task.lane,
+                            hits=[],
+                            error=msg,
+                            error_kind="timeout",
+                            elapsed_sec=float(task.worker_timeout),
+                            raw_log_path="",
+                        ))
+                        print(f"  [{task.module_name}] {msg} - {cancellation_state}")
+                        LaneScheduler._emit(
+                            event_callback,
+                            {
+                                "type": "task_timeout",
+                                "label": label,
+                                "lane": task.lane,
+                                "module": task.module_name,
+                                "error": msg,
+                                "elapsed_sec": float(task.worker_timeout),
+                                "cancellation_state": cancellation_state,
+                                "cancelled": cancelled,
+                            },
+                        )
+                    if not pending:
+                        break
+
+                    wait_timeout = LaneScheduler._next_wait_timeout(pending, submitted_at, future_map, now)
+                    done, pending = wait(pending, timeout=wait_timeout, return_when=FIRST_COMPLETED)
 
                     for fut in done:
                         task = future_map[fut]
@@ -173,40 +226,6 @@ class LaneScheduler:
                                 },
                             )
 
-                    now = time.monotonic()
-                    timed_out = [
-                        f for f in pending
-                        if now - submitted_at[f] >= future_map[f].worker_timeout
-                    ]
-                    for fut in timed_out:
-                        pending.discard(fut)
-                        task = future_map[fut]
-                        cancellation_state, cancelled = LaneScheduler._timeout_cancellation_state(fut)
-                        msg = f"TIMEOUT ({int(task.worker_timeout)}s)"
-                        result.errors.append({"module": task.module_name, "error": msg, "error_kind": "timeout"})
-                        result.task_results.append(TaskResult(
-                            module_name=task.module_name,
-                            lane=task.lane,
-                            hits=[],
-                            error=msg,
-                            error_kind="timeout",
-                            elapsed_sec=float(task.worker_timeout),
-                            raw_log_path="",
-                        ))
-                        print(f"  [{task.module_name}] {msg} - {cancellation_state}")
-                        LaneScheduler._emit(
-                            event_callback,
-                            {
-                                "type": "task_timeout",
-                                "label": label,
-                                "lane": task.lane,
-                                "module": task.module_name,
-                                "error": msg,
-                                "elapsed_sec": float(task.worker_timeout),
-                                "cancellation_state": cancellation_state,
-                                "cancelled": cancelled,
-                            },
-                        )
             finally:
                 pool.shutdown(wait=False, cancel_futures=True)
 

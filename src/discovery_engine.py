@@ -232,6 +232,7 @@ class DiscoveryEngine:
         self.clusters: list[IdentityCluster] = []
         self._all_observables: list[Observable] = []
         self._obs_by_value: dict[str, Observable] = {}  # fingerprint -> Observable (dedup + corroboration)
+        self._obs_lookup: dict[str, Observable] = {}
         self._metas: list[dict[str, Any]] = []
         self._tool_stats: dict[str, dict[str, int]] = {}  # tool -> {success, failed, observables}
         self._confirmed_imports: list[dict[str, Any]] = []
@@ -365,12 +366,13 @@ class DiscoveryEngine:
         )
         self.db.commit()
 
-    def _record_rejected_target(self, source_file: str, raw_target: str, reason: str) -> None:
+    def _record_rejected_target(self, source_file: str, raw_target: str, reason: str, *, commit: bool = True) -> None:
         self.db.execute(
             "INSERT OR IGNORE INTO rejected_targets (source_file, raw_target, reason) VALUES (?, ?, ?)",
             (source_file, raw_target, reason),
         )
-        self.db.commit()
+        if commit:
+            self.db.commit()
 
     # ── 1.  Input Validation + Ingestion ──────────────────────────
 
@@ -473,6 +475,7 @@ class DiscoveryEngine:
                 source_file=str(evidence_path),
                 depth=0,
                 is_original_target=True,
+                commit=False,
             )
             if seed_obs:
                 seed_obs.tier = TIER_CONFIRMED
@@ -524,8 +527,7 @@ class DiscoveryEngine:
                 "INSERT OR IGNORE INTO observables (obs_type, value, raw, source_tool, source_target, source_file, depth, is_original_target, tier) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (obs.obs_type, obs.value, obs.raw, obs.source_tool, obs.source_target, obs.source_file, obs.depth, 1 if obs.is_original_target else 0, obs.tier),
             )
-            self._all_observables.append(obs)
-            self._obs_by_value[fp] = obs
+            self._cache_observable(obs)
             if target_anchor and target_anchor.fingerprint != obs.fingerprint:
                 self._link_observables(target_anchor, obs, "confirmed_manifest", 0.95)
             imported += 1
@@ -552,23 +554,25 @@ class DiscoveryEngine:
         found: list[Observable] = []
 
         # Always register the target itself as an observable (original investigation input)
-        seed_obs = self._classify_and_register(target, profile, target, source_file, depth=0, is_original_target=True)
+        seed_obs = self._classify_and_register(target, profile, target, source_file, depth=0, is_original_target=True, commit=False)
         if seed_obs:
             found.append(seed_obs)
 
         if profile == "phone":
-            found.extend(self._extract_from_phone_log(log_text, target, source_file))
+            found.extend(self._extract_from_phone_log(log_text, target, source_file, commit=False))
         elif profile in ("username",):
-            found.extend(self._extract_from_username_log(log_text, profile, target, source_file))
+            found.extend(self._extract_from_username_log(log_text, profile, target, source_file, commit=False))
         elif profile in ("domain", "dnsenum", "whatweb"):
-            found.extend(self._extract_from_domain_log(log_text, profile, target, source_file))
+            found.extend(self._extract_from_domain_log(log_text, profile, target, source_file, commit=False))
 
         # Generic: extract all emails, phones, domains from any log
-        found.extend(self._extract_generic(log_text, profile, target, source_file))
+        found.extend(self._extract_generic(log_text, profile, target, source_file, commit=False))
+
+        self.db.commit()
 
         return found
 
-    def _classify_and_register(self, value: str, source_tool: str, source_target: str, source_file: str, depth: int = 0, is_original_target: bool = False) -> Observable | None:
+    def _classify_and_register(self, value: str, source_tool: str, source_target: str, source_file: str, depth: int = 0, is_original_target: bool = False, *, commit: bool = True) -> Observable | None:
         """Classify a value, normalize it, and register in DB. Returns None for unrecognizable types."""
         value = value.strip()
         if not value or _is_garbage_target(value):
@@ -597,7 +601,8 @@ class DiscoveryEngine:
                 "WHERE obs_type = ? AND value = ? AND source_tool != ?",
                 (obs_type, normalized, source_tool),
             )
-            self.db.commit()
+            if commit:
+                self.db.commit()
             return existing
 
         obs = Observable(
@@ -614,10 +619,18 @@ class DiscoveryEngine:
             "WHEN corroboration_count >= 2 THEN 'probable' ELSE tier END",
             (obs.obs_type, obs.value, obs.raw, obs.source_tool, obs.source_target, obs.source_file, obs.depth, 1 if is_original_target else 0),
         )
-        self.db.commit()
-        self._all_observables.append(obs)
-        self._obs_by_value[fp] = obs
+        if commit:
+            self.db.commit()
+        self._cache_observable(obs)
         return obs
+
+    def _cache_observable(self, obs: Observable) -> None:
+        self._all_observables.append(obs)
+        self._obs_by_value[obs.fingerprint] = obs
+        if obs.value:
+            self._obs_lookup.setdefault(obs.value, obs)
+        if obs.raw:
+            self._obs_lookup.setdefault(obs.raw, obs)
 
     def _infer_type(self, value: str) -> str | None:
         """Classify a string. Returns None if unrecognizable (NO catch-all default)."""
@@ -651,7 +664,7 @@ class DiscoveryEngine:
             return value.strip()
         return value.strip() or None
 
-    def _extract_from_phone_log(self, log_text: str, target: str, source_file: str) -> list[Observable]:
+    def _extract_from_phone_log(self, log_text: str, target: str, source_file: str, *, commit: bool = True) -> list[Observable]:
         found: list[Observable] = []
         # Extract E164, local, international from phoneinfoga output
         for label, pattern in [
@@ -660,13 +673,13 @@ class DiscoveryEngine:
         ]:
             m = re.search(pattern, log_text)
             if m:
-                obs = self._classify_and_register(m.group(1), "phoneinfoga", target, source_file)
+                obs = self._classify_and_register(m.group(1), "phoneinfoga", target, source_file, commit=commit)
                 if obs:
                     found.append(obs)
         # Note: Country code (e.g. "UA") is metadata, NOT an observable — don't register it
         return found
 
-    def _extract_from_username_log(self, log_text: str, tool: str, target: str, source_file: str) -> list[Observable]:
+    def _extract_from_username_log(self, log_text: str, tool: str, target: str, source_file: str, *, commit: bool = True) -> list[Observable]:
         found: list[Observable] = []
         # Extract profile URLs from sherlock/maigret [+] lines
         for m in _SHERLOCK_HIT_RE.finditer(log_text):
@@ -686,28 +699,30 @@ class DiscoveryEngine:
                                        "reddit.com", "pinterest.com", "vk.com", "tiktok.com"):
                     # Non-social-media domain might be interesting
                     pass  # don't auto-pivot on every social media domain
-        self.db.commit()
+        if commit:
+            self.db.commit()
         return found
 
-    def _extract_from_domain_log(self, log_text: str, tool: str, target: str, source_file: str) -> list[Observable]:
+    def _extract_from_domain_log(self, log_text: str, tool: str, target: str, source_file: str, *, commit: bool = True) -> list[Observable]:
         found: list[Observable] = []
         # Skip placeholder domains
         if target.lower().strip().rstrip(".") in _PLACEHOLDER_DOMAINS:
             return found
         # Extract emails from theHarvester (but not tool-internal emails)
-        for email in set(_EMAIL_RE.findall(log_text)):
-            # skip tool author emails and noise
-            if any(skip in email for skip in ("edge-security", "example.com", "noreply", "localhost")):
-                continue
-            obs = self._classify_and_register(email, tool, target, source_file, depth=1)
-            if obs:
-                found.append(obs)
+        if "@" in log_text:
+            for email in set(_EMAIL_RE.findall(log_text)):
+                # skip tool author emails and noise
+                if any(skip in email for skip in ("edge-security", "example.com", "noreply", "localhost")):
+                    continue
+                obs = self._classify_and_register(email, tool, target, source_file, depth=1, commit=commit)
+                if obs:
+                    found.append(obs)
         # Extract subdomains (cap at 20 to avoid noise)
         subdomain_count = 0
         for line in log_text.splitlines():
             line = line.strip()
             if _DOMAIN_RE.fullmatch(line) and line != target:
-                obs = self._classify_and_register(line, tool, target, source_file, depth=1)
+                obs = self._classify_and_register(line, tool, target, source_file, depth=1, commit=commit)
                 if obs:
                     found.append(obs)
                 subdomain_count += 1
@@ -715,7 +730,7 @@ class DiscoveryEngine:
                     break
         return found
 
-    def _extract_generic(self, log_text: str, tool: str, target: str, source_file: str) -> list[Observable]:
+    def _extract_generic(self, log_text: str, tool: str, target: str, source_file: str, *, commit: bool = True) -> list[Observable]:
         """Fallback: extract emails, phones from any log text. Only for phone/username tools — domain tools have their own extractor."""
         found: list[Observable] = []
         # Only run generic extraction on phone and username tools (domain tools are too noisy)
@@ -724,11 +739,13 @@ class DiscoveryEngine:
         # Skip very large logs
         if len(log_text) > 200_000:
             return found
+        if "@" not in log_text:
+            return found
         # Emails (skip tool-internal ones)
         for email in set(_EMAIL_RE.findall(log_text)):
             if any(skip in email for skip in ("edge-security", "example.com", "noreply", "localhost")):
                 continue
-            obs = self._classify_and_register(email, tool, target, source_file, depth=1)
+            obs = self._classify_and_register(email, tool, target, source_file, depth=1, commit=commit)
             if obs and obs not in found:
                 found.append(obs)
         return found
@@ -864,10 +881,7 @@ class DiscoveryEngine:
         )
 
     def _find_observable(self, value: str) -> Observable | None:
-        for obs in self._all_observables:
-            if obs.value == value or obs.raw == value:
-                return obs
-        return None
+        return self._obs_lookup.get(value)
 
     def _build_clusters(self) -> list[IdentityCluster]:
         """Union-Find transitive closure over entity_links — tier-aware."""
@@ -1246,6 +1260,7 @@ class DiscoveryEngine:
                 source_target=target_name,
                 source_file=f"deep_recon:{hit.source_detail}",
                 depth=1,
+                commit=False,
             )
             if obs:
                 new_obs_count += 1

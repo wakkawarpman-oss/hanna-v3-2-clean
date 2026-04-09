@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 
@@ -34,6 +35,19 @@ def _is_candidate_filename(path: Path) -> bool:
     return not any(name.endswith(suffix) for suffix in _GENERATED_FILENAME_SUFFIXES)
 
 
+def _iter_json_candidate_paths(root: Path) -> list[Path]:
+    try:
+        with os.scandir(root) as entries:
+            candidates = [
+                Path(entry.path)
+                for entry in entries
+                if entry.is_file() and entry.name.lower().endswith(".json") and _is_candidate_filename(Path(entry.name))
+            ]
+    except FileNotFoundError:
+        return []
+    return sorted(candidates)
+
+
 def is_ingest_metadata_file(path: str | Path) -> bool:
     candidate = Path(path)
     if not candidate.is_file() or candidate.suffix.lower() != ".json":
@@ -59,4 +73,4 @@ def is_ingest_metadata_file(path: str | Path) -> bool:
 
 def discover_ingest_metadata_paths(exports_dir: str | Path) -> list[Path]:
     root = Path(exports_dir)
-    return [path for path in sorted(root.glob("*.json")) if is_ingest_metadata_file(path)]
+    return [path for path in _iter_json_candidate_paths(root) if is_ingest_metadata_file(path)]

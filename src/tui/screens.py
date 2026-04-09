@@ -486,6 +486,7 @@ class SessionScreen(Screen[None]):
         super().__init__(name=name)
         self.title = title
         self.session_state: SessionState | None = None
+        self._render_cache: dict[str, str] = {}
 
     def update_state(self, session_state: SessionState) -> None:
         self.session_state = session_state
@@ -495,6 +496,12 @@ class SessionScreen(Screen[None]):
     def on_mount(self) -> None:
         if self.session_state is not None:
             self.refresh_screen()
+
+    def _update_static_if_changed(self, selector: str, content: str) -> None:
+        if self._render_cache.get(selector) == content:
+            return
+        self.query_one(selector, Static).update(content)
+        self._render_cache[selector] = content
 
     def refresh_screen(self) -> None:
         raise NotImplementedError
@@ -642,6 +649,8 @@ class OverviewScreen(SessionScreen):
 
     def __init__(self) -> None:
         super().__init__(name="overview", title="Overview")
+        self._summary_cache_key: tuple[str, str] | None = None
+        self._summary_cache_payload: tuple[str, list[str]] | None = None
 
     def compose(self) -> ComposeResult:
         with Vertical(id="overview-root"):
@@ -663,11 +672,18 @@ class OverviewScreen(SessionScreen):
             return
         target = self.session_state.target
         ai_input = _build_summary_input(self.session_state)
-        smart = summarize_text(target.label or "No target selected", ai_input or "No active intelligence yet.")
-        risk_tags = [f"[{flag.code.upper()}]" for flag in smart.risk_flags[:3]]
+        summary_key = (target.label or "No target selected", ai_input or "No active intelligence yet.")
+        if self._summary_cache_key != summary_key or self._summary_cache_payload is None:
+            smart = summarize_text(summary_key[0], summary_key[1])
+            self._summary_cache_key = summary_key
+            self._summary_cache_payload = (
+                smart.summary,
+                [f"[{flag.code.upper()}]" for flag in smart.risk_flags[:3]],
+            )
+        summary_text, risk_tags = self._summary_cache_payload
 
         self.query_one("#ascii-header", AsciiHeader).render_header(self.session_state)
-        self.query_one("#main-finding", MainFindingPanel).render_main(self.session_state, smart.summary, risk_tags)
+        self.query_one("#main-finding", MainFindingPanel).render_main(self.session_state, summary_text, risk_tags)
         self.query_one("#evidence-strip", EvidenceStripPanel).render_evidence(self.session_state)
         self.query_one("#next-actions", NextActionsPanel).render_actions(self.session_state)
         self.query_one("#credentials-panel", CredentialControlPanel).render_credentials(self.session_state)
@@ -698,7 +714,7 @@ class PipelineScreen(SessionScreen):
     def refresh_screen(self) -> None:
         if not self.session_state:
             return
-        self.query_one("#pipeline-body", Static).update(_build_pipeline_body(self.session_state))
+        self._update_static_if_changed("#pipeline-body", _build_pipeline_body(self.session_state))
 
 
 class ReadinessScreen(SessionScreen):
@@ -722,7 +738,7 @@ class ReadinessScreen(SessionScreen):
     def refresh_screen(self) -> None:
         if not self.session_state:
             return
-        self.query_one("#readiness-body", Static).update(_build_readiness_body(self.session_state))
+        self._update_static_if_changed("#readiness-body", _build_readiness_body(self.session_state))
 
 
 class ActivityScreen(SessionScreen):
@@ -746,7 +762,7 @@ class ActivityScreen(SessionScreen):
     def refresh_screen(self) -> None:
         if not self.session_state:
             return
-        self.query_one("#activity-body", Static).update(_build_activity_body(self.session_state))
+        self._update_static_if_changed("#activity-body", _build_activity_body(self.session_state))
 
 
 class ConfigEditorScreen(ModalScreen[dict[str, str] | None]):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shlex
+from types import SimpleNamespace
 
 import pytest
 
@@ -8,7 +9,7 @@ from models import AdapterOutcome, RunResult
 from registry import resolve_modules
 from tui.app import EMAIL_INTENT_PREFIXES, INTENT_EXACT_COMMANDS, PHONE_INTENT_PREFIXES, USERNAME_INTENT_PREFIXES, HannaTUIApp
 from tui.screens import OverviewScreen
-from tui.state import build_default_session_state
+from tui.state import build_default_session_state, set_credential_value
 
 
 def test_apply_event_updates_ui_state_transitions(monkeypatch):
@@ -276,6 +277,45 @@ def test_intent_router_maps_keys_service_phrase(monkeypatch):
 
     assert app.session_state.prompt_status == "focus-credentials"
     assert focused == ["CENSYS_API_ID"]
+
+
+def test_switch_changed_uses_stored_credential_value_when_input_is_missing(monkeypatch):
+    state = build_default_session_state(target="Case Entity")
+    app = HannaTUIApp(session_state=state)
+    captured: list[tuple[str, str, bool]] = []
+
+    set_credential_value(state, "HIBP_API_KEY", "cached-key")
+    monkeypatch.setattr(app, "_set_credential_enabled", lambda env_name, value, enabled: captured.append((env_name, value, enabled)))
+
+    event = SimpleNamespace(
+        switch=SimpleNamespace(id="credential-toggle-hibp-api-key"),
+        value=True,
+    )
+
+    app.on_switch_changed(event)
+
+    assert captured == [("HIBP_API_KEY", "cached-key", True)]
+
+
+def test_apply_event_batch_refreshes_once(monkeypatch):
+    state = build_default_session_state(target="Case Entity", modules=["pd-infra"], default_mode="chain")
+    app = HannaTUIApp(session_state=state)
+    refresh_calls: list[str] = []
+
+    monkeypatch.setattr(app, "_refresh_views", lambda: refresh_calls.append("refresh"))
+
+    app._apply_event_batch(
+        [
+            {"type": "phase", "phase": "ingest", "detail": "starting ingest"},
+            {"type": "activity", "level": "info", "text": "batch update"},
+            {"type": "module", "module": state.pipeline.modules[0].name, "status": "running", "detail": "worker active"},
+        ]
+    )
+
+    assert refresh_calls == ["refresh"]
+    assert app.session_state.pipeline.phase == "ingest"
+    assert app.session_state.pipeline.modules[0].status == "running"
+    assert any(item.text == "batch update" for item in app.session_state.activity)
 
 
 def test_intent_router_maps_print_to_export(monkeypatch):

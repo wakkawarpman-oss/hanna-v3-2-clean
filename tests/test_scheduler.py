@@ -66,3 +66,23 @@ def test_scheduler_timeout_cancellation_state_for_pending_future():
 
     assert state == "cancelled_before_start"
     assert cancelled is True
+
+
+def test_scheduler_next_wait_timeout_uses_nearest_deadline():
+    class _FutureA:
+        pass
+
+    class _FutureB:
+        pass
+
+    future_a = _FutureA()
+    future_b = _FutureB()
+    submitted_at = {future_a: 10.0, future_b: 15.0}
+    future_map = {
+        future_a: type("Task", (), {"worker_timeout": 20.0})(),
+        future_b: type("Task", (), {"worker_timeout": 10.0})(),
+    }
+
+    timeout = LaneScheduler._next_wait_timeout({future_a, future_b}, submitted_at, future_map, now=20.0)
+
+    assert timeout == 5.0

@@ -7,6 +7,7 @@ from tui.app import HannaTUIApp
 from preflight import PreflightCheck
 from tui.screens import HeatmapPanel, ThreatMeterPanel, _build_activity_body, _build_pipeline_body, _build_readiness_body, validate_editor_payload
 from tui.state import ActivityEvent, apply_editor_updates, apply_run_result, build_default_session_state, clear_pipeline_history, refresh_readiness, reset_modules_for_run, set_credential_value, toggle_credential_entry, update_module_status, update_phase_counters
+from tui.state import ActivityEvent, apply_editor_updates, apply_run_result, build_default_session_state, clear_pipeline_history, credential_env_from_slug, credential_value, refresh_readiness, reset_modules_for_run, set_credential_value, toggle_credential_entry, update_module_status, update_phase_counters
 
 
 def test_build_default_session_state_uses_target_and_report_mode():
@@ -100,6 +101,13 @@ def test_refresh_readiness_rebuilds_check_state():
 
     assert state.readiness.checks
     assert state.readiness.secrets_missing or state.readiness.secrets_ready
+
+
+def test_credential_slug_reverse_lookup_and_value_reader():
+    state = build_default_session_state(target="Case Entity")
+
+    assert credential_env_from_slug("hibp-api-key") == "HIBP_API_KEY"
+    assert credential_value(state, "HIBP_API_KEY") == ""
 
 
 def test_apply_editor_updates_rebuilds_execution_profile():

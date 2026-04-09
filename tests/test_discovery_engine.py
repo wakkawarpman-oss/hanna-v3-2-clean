@@ -165,6 +165,13 @@ class TestEntityResolution:
         obs = self._register("example.com")
         assert obs is None
 
+    def test_find_observable_uses_cached_value_and_raw_lookup(self):
+        obs = self._register("Acme.IO")
+
+        assert obs is not None
+        assert self.eng._find_observable("acme.io") is obs
+        assert self.eng._find_observable("Acme.IO") is obs
+
     def test_same_business_record_links_push_cluster_confidence_above_threshold(self):
         phone = "+380991234598"
         target = "Test FOP Persona"
