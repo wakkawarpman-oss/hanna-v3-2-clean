@@ -1,0 +1,62 @@
+
+=== Available Adapters ===
+Name               Lane   Description
+----------------------------------------------------------------------
+amass              slow   Enumerate subdomains and ASN-linked asse
+ashok              slow   Ashok — infrastructure reconnaissance to
+avito              fast   Search Avito.ru and Yula for seller prof
+blackbird          fast   Find usernames across modern platforms u
+censys             fast   Use Censys API for hosts, certificates, 
+eyewitness         slow   Capture screenshots for discovered URLs 
+firms              slow   NASA FIRMS thermal-anomaly corroboration
+getcontact         fast   Reverse phone lookup through UA-specific
+ghunt              fast   GHunt — Google account reconnaissance.
+hibp               fast   Enrich email pivots with breach and past
+holehe             fast   Map an email address to services where i
+httpx_probe        fast   Probe domains/URLs and return live web s
+katana             slow   Discover URLs, endpoints, JS references,
+maryam             fast   OWASP Maryam — modular OSINT framework i
+metagoofil         slow   Collect emails and usernames leaked via 
+naabu              fast   Fast port scan for domains and IPs.
+nmap               slow   Top-ports scan with service/version dete
+nuclei             slow   Nuclei template-based vulnerability scan
+opendatabot        fast   Ukrainian business-registry (ЄДР) deanon
+reconng            slow   Execute recon-ng modules against domain/
+ru_leak            fast   Search Russian leak databases.
+satintel           fast   Satellite Intelligence + EXIF GEOINT ada
+search4faces       fast   Search4Faces — facial recognition pivot 
+shodan             fast   Query Shodan for internet-facing service
+social_analyzer    slow   Social-Analyzer — 1000+ social network u
+subfinder          fast   Enumerate passive subdomains for a root 
+ua_leak            fast   Search Ukrainian leak databases and mark
+ua_phone           fast   Reverse phone lookup through UA-specific
+vk_graph           slow   Analyze VK/OK social graph — friend list
+web_search         slow   Web search adapter — DuckDuckGo queries 
+
+=== Presets (26) ===
+  core-local           -> subfinder, httpx_probe, naabu, nmap
+  deep-ua              -> ua_leak
+  deep-ru              -> ru_leak, vk_graph, avito
+  deep-all             -> ua_leak, ru_leak, vk_graph, avito
+  leaks_all            -> ua_leak, ru_leak
+  milint               -> maryam, ashok, satintel
+  infra                -> ashok, maryam
+  geoint               -> satintel
+  social-deep          -> blackbird, holehe
+  fast-lane            -> ua_leak, ru_leak, satintel, avito, maryam, holehe
+  slow-lane            -> ashok, vk_graph, reconng, eyewitness
+  pd-infra-quick       -> httpx_probe, katana, nuclei, naabu
+  pd-infra-deep        -> httpx_probe, katana, nuclei, naabu
+  pd-infra             -> httpx_probe, katana, nuclei, naabu
+  pd-full              -> httpx_probe, katana, nuclei, naabu, ashok
+  person-deep          -> holehe, blackbird, ua_leak, ru_leak
+  email-chain          -> holehe, metagoofil
+  subdomain-full       -> subfinder, amass, ashok
+  port-scan            -> naabu, nmap
+  infra-deep           -> subfinder, httpx_probe, nuclei, nmap
+  recon-auto-quick     -> subfinder, httpx_probe, nuclei, katana, naabu
+  recon-auto-deep      -> subfinder, httpx_probe, nuclei, katana, naabu
+  recon-auto           -> subfinder, httpx_probe, nuclei, katana, naabu
+  enrich-optional      -> getcontact, holehe, opendatabot, shodan, censys, hibp
+  full-spectrum-2026   -> ua_leak, ru_leak, vk_graph, avito, maryam, ashok, satintel, httpx_probe, naabu, subfinder, amass, nmap, nuclei, katana, blackbird, metagoofil, reconng, eyewitness
+  full-spectrum        -> ua_leak, ru_leak, vk_graph, avito, maryam, ashok, satintel, httpx_probe, naabu, subfinder, amass, nmap, nuclei, katana, blackbird, metagoofil, reconng, eyewitness

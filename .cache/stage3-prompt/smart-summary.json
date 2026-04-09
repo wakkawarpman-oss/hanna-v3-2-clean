@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "target_name": "Stage3 QA",
+  "cleaned_text": "Password leaked for user@example.com near військова частина. Contact +380991234598.",
+  "summary": "Password leaked for user@example.com near військова частина. Contact +380991234598.",
+  "observables": {
+    "phones": [
+      "+380991234598"
+    ],
+    "emails": [
+      "user@example.com"
+    ],
+    "urls": []
+  },
+  "risk_flags": [
+    {
+      "code": "credential_leak",
+      "severity": "high",
+      "evidence": "Password leaked for user@example.com near військова частина. Contact"
+    },
+    {
+      "code": "military_association",
+      "severity": "high",
+      "evidence": "ssword leaked for user@example.com near військова частина. Contact +380991234598."
+    },
+    {
+      "code": "doxxing_contact_exposure",
+      "severity": "medium",
+      "evidence": "ser@example.com near військова частина. Contact +380991234598."
+    }
+  ]
+}

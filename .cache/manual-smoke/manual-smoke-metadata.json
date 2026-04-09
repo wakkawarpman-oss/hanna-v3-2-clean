@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "target_name": "example.com",
+  "mode": "chain",
+  "started_at": "2026-04-09T04:42:36.552827",
+  "finished_at": "2026-04-09T04:44:45.994738",
+  "modules_run": [
+    "httpx_probe",
+    "blackbird",
+    "shodan",
+    "naabu",
+    "subfinder",
+    "web_search",
+    "reconng",
+    "nmap"
+  ],
+  "queued_modules": [
+    "web_search",
+    "httpx_probe",
+    "naabu",
+    "nmap",
+    "subfinder",
+    "shodan",
+    "blackbird",
+    "reconng"
+  ],
+  "runtime_summary": {
+    "target_name": "example.com",
+    "mode": "chain",
+    "queued": 8,
+    "completed": 7,
+    "failed": 1,
+    "timed_out": 0,
+    "skipped_missing_credentials": 0,
+    "missing_binary": 0,
+    "dependency_unavailable": 0,
+    "worker_crash": 0,
+    "exports": [],
+    "report_mode": "shareable"
+  },
+  "outcomes": [
+    {
+      "module_name": "httpx_probe",
+      "lane": "fast",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.19287500000791624,
+      "log_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/logs/task_httpx_probe_044236.log"
+    },
+    {
+      "module_name": "blackbird",
+      "lane": "fast",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no usernames available for Blackbird enumeration",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 8.812500163912773e-05,
+      "log_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/logs/task_blackbird_044236.log"
+    },
+    {
+      "module_name": "shodan",
+      "lane": "fast",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.2618385839741677,
+      "log_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/logs/task_shodan_044236.log"
+    },
+    {
+      "module_name": "naabu",
+      "lane": "fast",
+      "ok": true,
+      "hit_count": 8,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 32.80358070798684,
+      "log_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/logs/task_naabu_044236.log"
+    },
+    {
+      "module_name": "subfinder",
+      "lane": "fast",
+      "ok": true,
+      "hit_count": 37616,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 37.27577420900343,
+      "log_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/logs/task_subfinder_044236.log"
+    },
+    {
+      "module_name": "web_search",
+      "lane": "slow",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 22.068225875031203,
+      "log_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/logs/task_web_search_044314.log"
+    },
+    {
+      "module_name": "reconng",
+      "lane": "slow",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 55.02156908303732,
+      "log_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/logs/task_reconng_044314.log"
+    },
+    {
+      "module_name": "nmap",
+      "lane": "slow",
+      "ok": true,
+      "hit_count": 4,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 86.30713720800122,
+      "log_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/logs/task_nmap_044314.log"
+    }
+  ],
+  "errors": [
+    {
+      "error": "silent no-op: no usernames available for Blackbird enumeration",
+      "module": "blackbird",
+      "error_kind": "silent_noop"
+    }
+  ],
+  "artifacts": {
+    "exports": {},
+    "output_path": ".cache/manual-smoke/manual-smoke.html",
+    "report_mode": "shareable"
+  },
+  "extra": {
+    "queued_modules": [
+      "web_search",
+      "httpx_probe",
+      "naabu",
+      "nmap",
+      "subfinder",
+      "shodan",
+      "blackbird",
+      "reconng"
+    ],
+    "ingestion": {
+      "ingested": 0,
+      "rejected": 0,
+      "skipped": 0
+    },
+    "clusters": 37603,
+    "output_path": ".cache/manual-smoke/manual-smoke.html",
+    "report_mode": "shareable",
+    "stats": {
+      "total_metadata_files": 0,
+      "total_observables": 37617,
+      "confirmed_observables": 0,
+      "probable_observables": 0,
+      "unverified_observables": 37603,
+      "rejected_targets": 35,
+      "entity_links": 48,
+      "profile_urls": 0,
+      "profile_verification": {},
+      "identity_clusters": 37603,
+      "pending_pivots": 75220,
+      "tool_stats": {}
+    },
+    "exports": {}
+  }
+}

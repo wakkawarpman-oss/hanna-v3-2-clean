@@ -1,0 +1,559 @@
+{
+  "schema_version": 1,
+  "target_name": "account-exists@hibp-integration-tests.com",
+  "mode": "chain",
+  "started_at": "2026-04-08T23:57:56.321023",
+  "finished_at": "2026-04-08T23:59:49.052169",
+  "modules_run": [
+    "ua_phone",
+    "httpx_probe",
+    "naabu",
+    "holehe",
+    "hibp",
+    "censys",
+    "subfinder",
+    "shodan",
+    "ua_leak",
+    "ghunt",
+    "satintel",
+    "search4faces",
+    "avito",
+    "maryam",
+    "ru_leak",
+    "blackbird",
+    "opendatabot",
+    "nmap",
+    "nuclei",
+    "firms",
+    "amass",
+    "katana",
+    "metagoofil",
+    "reconng",
+    "vk_graph",
+    "eyewitness",
+    "social_analyzer",
+    "web_search",
+    "ashok"
+  ],
+  "queued_modules": [
+    "ua_leak",
+    "ru_leak",
+    "vk_graph",
+    "avito",
+    "ua_phone",
+    "maryam",
+    "ashok",
+    "ghunt",
+    "social_analyzer",
+    "satintel",
+    "search4faces",
+    "web_search",
+    "opendatabot",
+    "firms",
+    "nuclei",
+    "katana",
+    "httpx_probe",
+    "naabu",
+    "blackbird",
+    "holehe",
+    "hibp",
+    "censys",
+    "metagoofil",
+    "subfinder",
+    "amass",
+    "nmap",
+    "shodan",
+    "reconng",
+    "eyewitness"
+  ],
+  "runtime_summary": {
+    "target_name": "account-exists@hibp-integration-tests.com",
+    "mode": "chain",
+    "queued": 29,
+    "completed": 13,
+    "failed": 12,
+    "timed_out": 0,
+    "skipped_missing_credentials": 4,
+    "missing_binary": 0,
+    "dependency_unavailable": 0,
+    "worker_crash": 0,
+    "exports": [],
+    "report_mode": "shareable"
+  },
+  "outcomes": [
+    {
+      "module_name": "ua_phone",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 1,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "httpx_probe",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no domain or URL seeds available for httpx",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "naabu",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no domain or IP seeds available for Naabu",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "holehe",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no email observables available for Holehe",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "hibp",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "missing credentials: HIBP_API_KEY",
+      "error_kind": "missing_credentials",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "censys",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "missing credentials: CENSYS_API_ID, CENSYS_API_SECRET",
+      "error_kind": "missing_credentials",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "subfinder",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no root domains available for Subfinder",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "shodan",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "ua_leak",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "ghunt",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no Gmail pivots available for GHunt",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "satintel",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no EXIF GPS coordinates found for SatIntel",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "search4faces",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "missing credentials: SEARCH4FACES_API_KEY",
+      "error_kind": "missing_credentials",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "avito",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "maryam",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "ru_leak",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "blackbird",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "opendatabot",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "nmap",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no host, domain, or IP seeds available for Nmap",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "nuclei",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no URL or domain seeds available for Nuclei",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "firms",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "missing credentials: FIRMS_MAP_KEY",
+      "error_kind": "missing_credentials",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "amass",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "katana",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no crawlable URL or domain seeds available for Katana",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "metagoofil",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no domain-like seeds available for Metagoofil",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "reconng",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "vk_graph",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "eyewitness",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no URL or domain seeds available for EyeWitness",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "social_analyzer",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "auto-disabled after 3 consecutive failures",
+      "error_kind": "auto_disabled",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "web_search",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "ashok",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 3,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    }
+  ],
+  "errors": [
+    {
+      "module": "httpx_probe",
+      "error": "silent no-op: no domain or URL seeds available for httpx",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "naabu",
+      "error": "silent no-op: no domain or IP seeds available for Naabu",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "holehe",
+      "error": "silent no-op: no email observables available for Holehe",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "hibp",
+      "error": "missing credentials: HIBP_API_KEY",
+      "error_kind": "missing_credentials"
+    },
+    {
+      "module": "censys",
+      "error": "missing credentials: CENSYS_API_ID, CENSYS_API_SECRET",
+      "error_kind": "missing_credentials"
+    },
+    {
+      "module": "subfinder",
+      "error": "silent no-op: no root domains available for Subfinder",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "ghunt",
+      "error": "silent no-op: no Gmail pivots available for GHunt",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "satintel",
+      "error": "silent no-op: no EXIF GPS coordinates found for SatIntel",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "search4faces",
+      "error": "missing credentials: SEARCH4FACES_API_KEY",
+      "error_kind": "missing_credentials"
+    },
+    {
+      "module": "nmap",
+      "error": "silent no-op: no host, domain, or IP seeds available for Nmap",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "nuclei",
+      "error": "silent no-op: no URL or domain seeds available for Nuclei",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "firms",
+      "error": "missing credentials: FIRMS_MAP_KEY",
+      "error_kind": "missing_credentials"
+    },
+    {
+      "module": "katana",
+      "error": "silent no-op: no crawlable URL or domain seeds available for Katana",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "metagoofil",
+      "error": "silent no-op: no domain-like seeds available for Metagoofil",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "eyewitness",
+      "error": "silent no-op: no URL or domain seeds available for EyeWitness",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "social_analyzer",
+      "error": "auto-disabled after 3 consecutive failures",
+      "error_kind": "auto_disabled"
+    }
+  ],
+  "artifacts": {
+    "exports": {},
+    "output_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/exports/html/dossiers/discovery_dossier.html",
+    "report_mode": "shareable"
+  },
+  "extra": {
+    "queued_modules": [
+      "ua_leak",
+      "ru_leak",
+      "vk_graph",
+      "avito",
+      "ua_phone",
+      "maryam",
+      "ashok",
+      "ghunt",
+      "social_analyzer",
+      "satintel",
+      "search4faces",
+      "web_search",
+      "opendatabot",
+      "firms",
+      "nuclei",
+      "katana",
+      "httpx_probe",
+      "naabu",
+      "blackbird",
+      "holehe",
+      "hibp",
+      "censys",
+      "metagoofil",
+      "subfinder",
+      "amass",
+      "nmap",
+      "shodan",
+      "reconng",
+      "eyewitness"
+    ],
+    "ingestion": {
+      "ingested": 0,
+      "rejected": 35,
+      "skipped": 39
+    },
+    "clusters": 3,
+    "output_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/exports/html/dossiers/discovery_dossier.html",
+    "report_mode": "shareable",
+    "stats": {
+      "total_metadata_files": 0,
+      "total_observables": 14,
+      "confirmed_observables": 0,
+      "probable_observables": 0,
+      "unverified_observables": 3,
+      "rejected_targets": 35,
+      "entity_links": 48,
+      "profile_urls": 0,
+      "profile_verification": {},
+      "identity_clusters": 3,
+      "pending_pivots": 14,
+      "tool_stats": {
+        "phone": {
+          "success": 16,
+          "failed": 2,
+          "observables": 0
+        },
+        "domain": {
+          "success": 20,
+          "failed": 5,
+          "observables": 0
+        },
+        "health": {
+          "success": 9,
+          "failed": 0,
+          "observables": 0
+        },
+        "username": {
+          "success": 13,
+          "failed": 0,
+          "observables": 0
+        },
+        "whatweb": {
+          "success": 2,
+          "failed": 0,
+          "observables": 0
+        },
+        "dnsenum": {
+          "success": 0,
+          "failed": 1,
+          "observables": 0
+        },
+        "oneshot_batch": {
+          "success": 4,
+          "failed": 1,
+          "observables": 0
+        },
+        "unknown": {
+          "success": 0,
+          "failed": 1,
+          "observables": 0
+        }
+      }
+    },
+    "exports": {}
+  }
+}

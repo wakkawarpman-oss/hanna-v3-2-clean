@@ -1,0 +1,489 @@
+{
+  "schema_version": 1,
+  "target_name": "example.com",
+  "mode": "chain",
+  "started_at": "2026-04-09T00:14:21.758191",
+  "finished_at": "2026-04-09T00:16:38.181459",
+  "modules_run": [
+    "ua_phone",
+    "httpx_probe",
+    "ua_leak",
+    "holehe",
+    "hibp",
+    "censys",
+    "opendatabot",
+    "shodan",
+    "ru_leak",
+    "ghunt",
+    "satintel",
+    "search4faces",
+    "blackbird",
+    "maryam",
+    "avito",
+    "naabu",
+    "subfinder",
+    "firms",
+    "ashok",
+    "web_search",
+    "vk_graph",
+    "metagoofil",
+    "reconng",
+    "nmap"
+  ],
+  "queued_modules": [
+    "ua_leak",
+    "ru_leak",
+    "vk_graph",
+    "avito",
+    "ua_phone",
+    "maryam",
+    "ashok",
+    "ghunt",
+    "social_analyzer",
+    "satintel",
+    "search4faces",
+    "web_search",
+    "opendatabot",
+    "firms",
+    "nuclei",
+    "katana",
+    "httpx_probe",
+    "naabu",
+    "blackbird",
+    "holehe",
+    "hibp",
+    "censys",
+    "metagoofil",
+    "subfinder",
+    "amass",
+    "nmap",
+    "shodan",
+    "reconng",
+    "eyewitness"
+  ],
+  "runtime_summary": {
+    "target_name": "example.com",
+    "mode": "chain",
+    "queued": 29,
+    "completed": 16,
+    "failed": 4,
+    "timed_out": 5,
+    "skipped_missing_credentials": 4,
+    "missing_binary": 0,
+    "dependency_unavailable": 0,
+    "worker_crash": 0,
+    "exports": [],
+    "report_mode": "shareable"
+  },
+  "outcomes": [
+    {
+      "module_name": "ua_phone",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 1,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "httpx_probe",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "ua_leak",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "holehe",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no email observables available for Holehe",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "hibp",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "missing credentials: HIBP_API_KEY",
+      "error_kind": "missing_credentials",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "censys",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "missing credentials: CENSYS_API_ID, CENSYS_API_SECRET",
+      "error_kind": "missing_credentials",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "opendatabot",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "shodan",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "ru_leak",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "ghunt",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no Gmail pivots available for GHunt",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "satintel",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "silent no-op: no EXIF GPS coordinates found for SatIntel",
+      "error_kind": "silent_noop",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "search4faces",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "missing credentials: SEARCH4FACES_API_KEY",
+      "error_kind": "missing_credentials",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "blackbird",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "maryam",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "avito",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "naabu",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 4,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "subfinder",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 37609,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "firms",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "missing credentials: FIRMS_MAP_KEY",
+      "error_kind": "missing_credentials",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "ashok",
+      "lane": "chain",
+      "ok": false,
+      "hit_count": 0,
+      "error": "auto-disabled after 3 consecutive failures",
+      "error_kind": "auto_disabled",
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "web_search",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "vk_graph",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "metagoofil",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "reconng",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "nmap",
+      "lane": "chain",
+      "ok": true,
+      "hit_count": 4,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.0,
+      "log_path": ""
+    }
+  ],
+  "errors": [
+    {
+      "module": "holehe",
+      "error": "silent no-op: no email observables available for Holehe",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "hibp",
+      "error": "missing credentials: HIBP_API_KEY",
+      "error_kind": "missing_credentials"
+    },
+    {
+      "module": "censys",
+      "error": "missing credentials: CENSYS_API_ID, CENSYS_API_SECRET",
+      "error_kind": "missing_credentials"
+    },
+    {
+      "module": "ghunt",
+      "error": "silent no-op: no Gmail pivots available for GHunt",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "satintel",
+      "error": "silent no-op: no EXIF GPS coordinates found for SatIntel",
+      "error_kind": "silent_noop"
+    },
+    {
+      "module": "search4faces",
+      "error": "missing credentials: SEARCH4FACES_API_KEY",
+      "error_kind": "missing_credentials"
+    },
+    {
+      "module": "firms",
+      "error": "missing credentials: FIRMS_MAP_KEY",
+      "error_kind": "missing_credentials"
+    },
+    {
+      "module": "ashok",
+      "error": "auto-disabled after 3 consecutive failures",
+      "error_kind": "auto_disabled"
+    },
+    {
+      "module": "social_analyzer",
+      "error": "TIMEOUT (45s)",
+      "error_kind": "timeout"
+    },
+    {
+      "module": "katana",
+      "error": "TIMEOUT (45s)",
+      "error_kind": "timeout"
+    },
+    {
+      "module": "amass",
+      "error": "TIMEOUT (60s)",
+      "error_kind": "timeout"
+    },
+    {
+      "module": "nuclei",
+      "error": "TIMEOUT (60s)",
+      "error_kind": "timeout"
+    },
+    {
+      "module": "eyewitness",
+      "error": "TIMEOUT (60s)",
+      "error_kind": "timeout"
+    }
+  ],
+  "artifacts": {
+    "exports": {},
+    "output_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/exports/html/dossiers/discovery_dossier.html",
+    "report_mode": "shareable"
+  },
+  "extra": {
+    "queued_modules": [
+      "ua_leak",
+      "ru_leak",
+      "vk_graph",
+      "avito",
+      "ua_phone",
+      "maryam",
+      "ashok",
+      "ghunt",
+      "social_analyzer",
+      "satintel",
+      "search4faces",
+      "web_search",
+      "opendatabot",
+      "firms",
+      "nuclei",
+      "katana",
+      "httpx_probe",
+      "naabu",
+      "blackbird",
+      "holehe",
+      "hibp",
+      "censys",
+      "metagoofil",
+      "subfinder",
+      "amass",
+      "nmap",
+      "shodan",
+      "reconng",
+      "eyewitness"
+    ],
+    "ingestion": {
+      "ingested": 0,
+      "rejected": 35,
+      "skipped": 39
+    },
+    "clusters": 37603,
+    "output_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/exports/html/dossiers/discovery_dossier.html",
+    "report_mode": "shareable",
+    "stats": {
+      "total_metadata_files": 0,
+      "total_observables": 37617,
+      "confirmed_observables": 0,
+      "probable_observables": 0,
+      "unverified_observables": 37603,
+      "rejected_targets": 35,
+      "entity_links": 48,
+      "profile_urls": 0,
+      "profile_verification": {},
+      "identity_clusters": 37603,
+      "pending_pivots": 75220,
+      "tool_stats": {
+        "phone": {
+          "success": 16,
+          "failed": 2,
+          "observables": 0
+        },
+        "domain": {
+          "success": 20,
+          "failed": 5,
+          "observables": 0
+        },
+        "health": {
+          "success": 9,
+          "failed": 0,
+          "observables": 0
+        },
+        "username": {
+          "success": 13,
+          "failed": 0,
+          "observables": 0
+        },
+        "whatweb": {
+          "success": 2,
+          "failed": 0,
+          "observables": 0
+        },
+        "dnsenum": {
+          "success": 0,
+          "failed": 1,
+          "observables": 0
+        },
+        "oneshot_batch": {
+          "success": 4,
+          "failed": 1,
+          "observables": 0
+        },
+        "unknown": {
+          "success": 0,
+          "failed": 1,
+          "observables": 0
+        }
+      }
+    },
+    "exports": {}
+  }
+}

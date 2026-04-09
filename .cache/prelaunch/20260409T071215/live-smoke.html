@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang='uk'>
+<head>
+<meta charset='utf-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>Gonzo Evidence Pack v3.0.2 — https://p********prelaunch.com/p*******projects/...</title>
+<style>
+:root {--bg:#f1f4f3;--card:#fff;--border:#d3dbd6;--accent:#1a6b56;--accent2:#112b45;--text:#171f2b;--muted:#5c6e64;--red:#b84c2e;--green:#2a7d3f;--yellow:#b8860b;}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Segoe UI','Noto Sans',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.55}
+.wrap{max-width:1280px;margin:0 auto;padding:24px 20px 60px}
+.hero{background:linear-gradient(135deg,var(--accent2),var(--accent) 65%,#99622d);color:#fff;border-radius:18px;padding:28px 26px}
+.hero h1{margin:0;font-size:24px;letter-spacing:.5px}
+.hero-sub{opacity:.85;font-size:13px;margin:4px 0 0}
+.hero-grid{display:grid;grid-template-columns:1.4fr .6fr;gap:14px;align-items:start}
+.hero-meta{text-align:right;font-size:12px;opacity:.8}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-top:16px}
+.card{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px;text-align:center}
+.card .k{font-size:10px;text-transform:uppercase;opacity:.72}
+.card .v{font-size:24px;font-weight:800;margin-top:1px}
+.section{background:var(--card);border:1px solid var(--border);border-radius:14px;margin-top:14px;overflow:hidden}
+.section h2{margin:0;padding:12px 16px;background:#eaf2ed;border-bottom:1px solid var(--border);font-size:13px;text-transform:uppercase;letter-spacing:.4px;color:var(--accent2)}
+.pad{padding:14px 16px}
+.exec p{margin:4px 0;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:#f4f7f5;font-weight:600;font-size:11px;text-transform:uppercase;color:var(--muted)}
+code{background:#e8ecea;padding:1px 5px;border-radius:4px;font-size:12px}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;word-break:break-all}
+a{color:var(--accent)}
+.badge{display:inline-block;padding:2px 8px;border-radius:7px;font-size:11px;font-weight:600;margin:1px 3px 1px 0;background:#e0ede7;color:var(--accent2)}
+.badge-phone{background:#dde8f7;color:#1a3a6b}.badge-email{background:#f0e6fa;color:#5a2d82}.badge-username{background:#e6f0e8;color:#1a5a2e}.badge-domain{background:#fce6d5;color:#7a3d1a}.badge-url{background:#f5f5dc;color:#444}.badge-ok{background:#d4edda;color:var(--green)}.badge-warn{background:#fff3cd;color:#856404}.badge-dead{background:#f8d7da;color:var(--red)}
+.platform{font-weight:600;color:var(--accent);text-transform:capitalize}
+.edge-reason{font-style:italic;color:var(--muted)}
+details{margin-bottom:6px} summary{cursor:pointer;font-weight:600;padding:3px 0}
+.hint{color:var(--muted);font-size:12px}
+.graph-grid{display:flex;flex-wrap:wrap;gap:8px;padding:8px 0}
+.gnode{padding:8px 14px;border-radius:10px;font-size:13px;font-weight:500;border:2px solid var(--border);background:#fafcfb}
+.gnode-phone{border-color:#4a90d9;background:#eaf1fb}.gnode-email{border-color:#9b59b6;background:#f4ecf9}.gnode-username{border-color:var(--green);background:#e8f5e9}.gnode-domain{border-color:#e67e22;background:#fdf2e5}.gnode-url{border-color:#95a5a6;background:#f9f9f9}
+.identity-anchor{text-align:center;padding:16px;margin-bottom:12px}
+.identity-anchor .name{font-size:22px;font-weight:800;color:var(--accent2)}
+.identity-anchor .sub{font-size:13px;color:var(--muted)}
+.tier-badge{display:inline-block;padding:1px 6px;border-radius:5px;font-size:10px;font-weight:700;text-transform:uppercase;margin-left:4px}
+.tier-confirmed{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+.tier-probable{background:#fff3cd;color:#856404;border:1px solid #ffeaa7}
+.tier-unverified{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
+.tier-rejected{background:#eceff3;color:#4b5563;border:1px solid #cfd8e3}
+.lane-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px}
+.lane-card{border:1px solid var(--border);border-radius:12px;padding:14px;background:linear-gradient(180deg,#fff, #f8fbf9)}
+.lane-fast{border-top:5px solid #228b5a}
+.lane-slow{border-top:5px solid #8c5a2b}
+.lane-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.lane-head h3{margin:0;font-size:16px;color:var(--accent2)}
+.lane-snr{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.lane-snr-badge{display:inline-block;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.25px}
+.lane-snr-confirmed{background:#dff3e5;color:#1f6a35}
+.lane-snr-rejected{background:#eceff3;color:#55606c}
+.lane-snr-dead{background:#f6e6dc;color:#8b4f2a}
+.lane-metrics{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;font-size:12px;color:var(--muted)}
+.lane-metrics span{background:#eef3f0;border-radius:999px;padding:4px 8px}
+.lane-modules,.lane-highlights,.lane-errors{margin-top:10px}
+.lane-highlights ul,.lane-errors ul{margin:8px 0 0 18px;padding:0}
+.lane-evidence-block{margin-top:8px;padding:10px 12px;border-radius:10px}
+.lane-evidence-confirmed{background:#eef8f1;border-left:4px solid var(--green)}
+.lane-evidence-confirmed ul{margin:8px 0 0 18px;padding:0}
+.lane-dead-ends{margin-top:10px;border:1px dashed #c8d0d8;border-radius:10px;background:#f5f7f8}
+.lane-dead-ends summary{padding:10px 12px;color:#5f6b76;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.lane-muted-list{margin:0;padding:0 12px 12px 30px;opacity:.6;font-size:12px}
+.lane-muted-list li{margin:6px 0}
+.badge-lane-module{background:#edf3f7;color:#23405e}
+@media(max-width:980px){.hero-grid,.cards{grid-template-columns:1fr}.cards{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<div class='wrap'>
+
+<div class='hero'>
+  <div class='hero-grid'>
+    <div>
+      <h1>GONZO EVIDENCE PACK v3.0.2</h1>
+      <p class='hero-sub'>Phase 8 Atomic Event-Driven Discovery: verification-first architecture with lane-aware deep recon, fast tactical signal, slow strategic depth, and explicit signal-to-noise control.</p>
+    </div>
+    <div class='hero-meta'>Generated: 2026-04-09 07:15:52<br>Engine: discovery_engine v3.0.2<br>Clusters: 10</div>
+  </div>
+  <div class='cards'>
+    <div class='card'><div class='k'>Sources</div><div class='v'>0</div></div>
+    <div class='card'><div class='k'>Confirmed</div><div class='v' style='color:#2a7d3f'>0</div></div>
+    <div class='card'><div class='k'>Probable</div><div class='v' style='color:#b8860b'>0</div></div>
+    <div class='card'><div class='k'>Unverified</div><div class='v' style='color:#b84c2e'>10</div></div>
+    <div class='card'><div class='k'>Rejected</div><div class='v'>35</div></div>
+    <div class='card'><div class='k'>Profiles</div><div class='v'>0</div></div>
+    <div class='card'><div class='k'>Pivots</div><div class='v'>75230</div></div>
+  </div>
+</div>
+
+<section class='section'><h2>📋 Executive Summary</h2><div class='pad exec'>
+  <p><strong>Primary Identity:</strong> https://p********prelaunch.com/p*******projects/...</p><p><strong>Cluster confidence:</strong> 15% (0 confirmed, 0 probable, 1 unverified)</p><p><strong>Social profiles found:</strong> 0</p>
+  <p style='margin-top:10px'><strong>Source coverage:</strong> <span class='badge badge-warn'>dnsenum: 0/1 OK, 0 obs</span> <span class='badge badge-warn'>domain: 20/25 OK, 0 obs</span> <span class='badge badge-ok'>health: 9/9 OK, 0 obs</span> <span class='badge badge-warn'>oneshot_batch: 4/5 OK, 0 obs</span> <span class='badge badge-warn'>phone: 16/18 OK, 0 obs</span> <span class='badge badge-ok'>username: 13/13 OK, 0 obs</span> <span class='badge badge-ok'>whatweb: 2/2 OK, 0 obs</span> </p>
+  <p class='hint'>v2 verification-first resolution across 0 tool outputs. 35 target(s) filtered (hashes, placeholders, type mismatches).</p>
+</div></section>
+
+<section class='section'><h2>🏎️ Fast / Slow Lane Summary</h2><div class='pad'>
+  <p class='hint'>Operational split of deep recon outputs into hot-path tactical findings and cold-path strategic expansion.</p>
+  <p class='hint'>Latest deep recon artifact: <span class='mono'>deep_recon_20260409_071551.json</span> (2026-04-09T07:15:08.633005 → 2026-04-09T07:15:51.740107)</p>
+  <p class='hint'>Legend: <span class='lane-snr-badge lane-snr-confirmed' title='Confirmed: corroborated or validated evidence ready for analyst attention.'>confirmed</span> <span class='lane-snr-badge lane-snr-rejected' title='Rejected: filtered false positives, such as platform artefacts or invalid profile hits.'>rejected</span> <span class='lane-snr-badge lane-snr-dead' title='Dead-end: leads that did not confirm and currently terminate without escalation.'>dead-end</span></p>
+  <div class='lane-grid'>
+    <div class='lane-card lane-fast'><div class='lane-head'><div><h3>Fast Lane</h3><div class='lane-snr'><span class='lane-snr-badge lane-snr-confirmed' title='Confirmed: corroborated or validated evidence ready for analyst attention.'>0 confirmed</span><span class='lane-snr-badge lane-snr-rejected' title='Rejected: filtered false positives, such as platform artefacts or invalid profile hits.'>0 rejected</span><span class='lane-snr-badge lane-snr-dead' title='Dead-end: leads that did not confirm and currently terminate without escalation.'>37624 dead-end</span></div><p class='hint'>Hot-path pivots, low-noise surface acquisition.</p></div><div class='lane-metrics'><span><strong>9</strong> modules</span><span><strong>0</strong> raw hits</span><span><strong>37624</strong> dossier observables</span><span><strong>5</strong> faults</span></div></div><div class='lane-modules'><strong>Modules run:</strong> <span class='badge badge-lane-module'>avito</span> <span class='badge badge-lane-module'>blackbird</span> <span class='badge badge-lane-module'>httpx_probe</span> <span class='badge badge-lane-module'>maryam</span> <span class='badge badge-lane-module'>naabu</span> <span class='badge badge-lane-module'>ru_leak</span> <span class='badge badge-lane-module'>satintel</span> <span class='badge badge-lane-module'>subfinder</span> <span class='badge badge-lane-module'>ua_leak</span></div><div class='lane-highlights'><strong>Highlights:</strong><ul><li><span class='badge badge-domain'>domain</span> <code>*.e******example.com</code> <span class='tier-badge tier-unverified'>UNVERIFIED</span></li><li><span class='badge badge-domain'>domain</span> <code>0***0000.e******example.com</code> <span class='tier-badge tier-unverified'>UNVERIFIED</span></li><li><span class='badge badge-domain'>domain</span> <code>0**001.e******example.com</code> <span class='tier-badge tier-unverified'>UNVERIFIED</span></li><li><span class='badge badge-domain'>domain</span> <code>0*01.e******example.com</code> <span class='tier-badge tier-unverified'>UNVERIFIED</span></li><li><span class='badge badge-domain'>domain</span> <code>0*02.e******example.com</code> <span class='tier-badge tier-unverified'>UNVERIFIED</span></li><li><span class='badge badge-domain'>domain</span> <code>0****************03----may----rrdd.e******example.com</code> <span class='tier-badge tier-unverified'>UNVERIFIED</span></li></ul></div><div class='lane-errors'><strong>Execution faults:</strong><ul><li><code>httpx_probe</code> <span class='hint'>silent no-op: no domain or URL seeds available for httpx</span></li><li><code>naabu</code> <span class='hint'>silent no-op: no domain or IP seeds available for Naabu</span></li><li><code>subfinder</code> <span class='hint'>silent no-op: no root domains available for Subfinder</span></li><li><code>blackbird</code> <span class='hint'>silent no-op: no usernames available for Blackbird enumeration</span></li><li><code>satintel</code> <span class='hint'>silent no-op: no EXIF GPS coordinates found for SatIntel</span></li></ul></div></div><div class='lane-card lane-slow'><div class='lane-head'><div><h3>Slow Lane</h3><div class='lane-snr'><span class='lane-snr-badge lane-snr-confirmed' title='Confirmed: corroborated or validated evidence ready for analyst attention.'>0 confirmed</span><span class='lane-snr-badge lane-snr-rejected' title='Rejected: filtered false positives, such as platform artefacts or invalid profile hits.'>0 rejected</span><span class='lane-snr-badge lane-snr-dead' title='Dead-end: leads that did not confirm and currently terminate without escalation.'>3 dead-end</span></div><p class='hint'>Deep infrastructure, archive, and wide-network enumeration.</p></div><div class='lane-metrics'><span><strong>9</strong> modules</span><span><strong>0</strong> raw hits</span><span><strong>3</strong> dossier observables</span><span><strong>6</strong> faults</span></div></div><div class='lane-modules'><strong>Modules run:</strong> <span class='badge badge-lane-module'>amass</span> <span class='badge badge-lane-module'>ashok</span> <span class='badge badge-lane-module'>eyewitness</span> <span class='badge badge-lane-module'>katana</span> <span class='badge badge-lane-module'>metagoofil</span> <span class='badge badge-lane-module'>nmap</span> <span class='badge badge-lane-module'>nuclei</span> <span class='badge badge-lane-module'>reconng</span> <span class='badge badge-lane-module'>vk_graph</span></div><div class='lane-highlights'><div class='lane-evidence-block lane-evidence-confirmed'><strong>Confirmed Evidence:</strong><ul><li class='hint'>No confirmed slow-lane evidence registered yet.</li></ul></div><details class='lane-dead-ends'><summary>Rejected / Dead Ends (3)</summary><ul class='lane-muted-list'><li><span class='badge badge-url'>url</span> <code>https://w**web.a******archive.org/w**web/...</code> <span class='tier-badge tier-unverified'>UNVERIFIED</span> <span class='hint'>via deep_recon:ashok</span></li><li><span class='badge badge-url'>url</span> <code>https://w**web.a******archive.org/w**web/...</code> <span class='tier-badge tier-unverified'>UNVERIFIED</span> <span class='hint'>via deep_recon:ashok</span></li><li><span class='badge badge-url'>url</span> <code>https://w**web.a******archive.org/w**web/...</code> <span class='tier-badge tier-unverified'>UNVERIFIED</span> <span class='hint'>via deep_recon:ashok</span></li></ul></details></div><div class='lane-errors'><strong>Execution faults:</strong><ul><li><code>nmap</code> <span class='hint'>silent no-op: no host, domain, or IP seeds available for Nmap</span></li><li><code>nuclei</code> <span class='hint'>silent no-op: no URL or domain seeds available for Nuclei</span></li><li><code>metagoofil</code> <span class='hint'>silent no-op: no domain-like seeds available for Metagoofil</span></li><li><code>katana</code> <span class='hint'>silent no-op: no crawlable URL or domain seeds available for Katana</span></li><li><code>eyewitness</code> <span class='hint'>silent no-op: no URL or domain seeds available for EyeWitness</span></li></ul></div></div>
+  </div>
+</div></section>
+
+<section class='section'><h2>🎯 Identity Anchor</h2><div class='pad'>
+  <div class='identity-anchor'><div class='name'>https://p********prelaunch.com/p*******projects/...</div><div class='sub'>Person ID: <code>2d9c2839-2bf...</code> Confidence: 15% 0 confirmed, 0 probable, 1 unverified</div></div>
+  <div class='graph-grid'>
+    <div class='gnode gnode-url tier-unverified'>🔗 https://p********prelaunch.com/p*******projects/... <span class='tier-badge tier-unverified'>UNVERIFIED</span></div>
+
+  </div>
+</div></section>
+
+<section class='section'><h2>🔗 Entity Link Graph</h2><div class='pad'>
+  <p class='hint'>Links between observables — only applied when at least one side is confirmed/probable.</p>
+  <table><tr><th>Observable A</th><th>Link Reason</th><th>Observable B</th><th>Confidence</th></tr>
+  <tr><td colspan='4'>No links</td></tr>
+  </table>
+</div></section>
+
+<section class='section'><h2>🌐 Social Profiles (0)</h2><div class='pad'>
+  <p class='hint'>Profile URLs discovered by sherlock/maigret. Status: VERIFIED (HTTP 200 + content), SOFT (HTTP 200, low content), DEAD (4xx/5xx/timeout), UNCHECKED (not yet verified).</p>
+  <table><tr><th>Platform</th><th>URL</th><th>Status</th></tr>
+  <tr><td colspan='3'>No profiles found</td></tr>
+  </table>
+</div></section>
+
+<section class='section'><h2>🔄 Auto-Pivot Queue (0)</h2><div class='pad'>
+  <p class='hint'>Observables needing further investigation. Reasons explain WHY each pivot is suggested.</p>
+  <table><tr><th>Type</th><th>Value</th><th>Suggested Tools</th><th>Reason</th><th>Tier</th></tr>
+  <tr><td colspan='5'>No pending pivots</td></tr>
+  </table>
+</div></section>
+
+<section class='section'><h2>📊 All Observables (37627)</h2><div class='pad'>
+  <table><tr><th>Type</th><th>Value</th><th>Source Tool</th><th>Target</th><th>Depth</th><th>Tier</th></tr>
+  <tr><td><span class='badge badge-domain'>domain</span></td><td><code>*.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0***0000.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0**001.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0*01.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0*02.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0****************03----may----rrdd.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0*03.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0*04.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0****************05----apr----rrdd.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0*05.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0****************06----apr----rrdd.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0*06.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0*07.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0*08.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>0*09.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>*.1**102.7*78.*.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>*.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>*.u*****unused.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*10.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**100.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**101.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****101065.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**102.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****102323.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*************103-174-191-83.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**103.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****104323.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**105.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1****10588.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****105889.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****106936.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1****10762.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1************108-62-208-15.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****108156.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****108158.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****108194.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****109199.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*11.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**110.5*********53omasgan5.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****110711.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**111.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1****11113.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1****11131.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****111870.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1******1118867.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1****11207.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****112900.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****113326.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****116704.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*12.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*12.u*****unused.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****120113.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1***1207.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*******12121212.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*********1212133146.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****122066.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****122137.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****122169.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1****12256.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****122651.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**123.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1****12338.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1****12345.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1****12345.t******test011.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****123456.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****123803.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****124644.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****126125.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****126415.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*********1270011721.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****128172.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****128623.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**129.u*****unused.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*13.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*13.u*****unused.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**130.u*****unused.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****130011.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**131.u*****unused.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1************1313131313137.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**132.u*****unused.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****132627.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**133.u*****unused.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****133175.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**********************13333333333333333333337.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****133740.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****133778.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**************134-119-218-226.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**134.u*****unused.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****************134111111111111116.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****134330.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*********1344444448.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****134615.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****134892.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**135.u*****unused.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****135163.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****135876.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**136.u*****unused.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****136093.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1**137.u*****unused.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+<tr><td><span class='badge badge-domain'>domain</span></td><td><code>1*****137393.e******example.com</code></td><td>deep_recon:subfinder</td><td>e******example.com</td><td>1</td><td><span class='tier-badge tier-unverified'>UNVERIFIED</span></td></tr>
+
+  </table>
+</div></section>
+
+<section class='section'><h2>👥 Secondary Clusters (9)</h2><div class='pad'><table><tr><th>Label</th><th>Observables</th><th>Confidence</th><th>Values</th></tr><tr><td>https://s****space.s************stackexchange.com/q********questions/...</td><td>1</td><td>15%</td><td class='mono'>https://s****space.s************stackexchange.com/q********questions/...</td></tr>
+<tr><td>https://h*************headedforspace.com/r********************************rocket-engine-chill-before-launch</td><td>1</td><td>15%</td><td class='mono'>https://h*************headedforspace.com/r********************************rocket-engine-chill-before-launch</td></tr>
+<tr><td>https://w**www.y******youtube.com/w****watch</td><td>1</td><td>15%</td><td class='mono'>https://w**www.y******youtube.com/w****watch</td></tr>
+<tr><td>https://p********prelaunch.com</td><td>1</td><td>15%</td><td class='mono'>https://p********prelaunch.com</td></tr>
+<tr><td>https://f****forum.k*****************kerbalspaceprogram.com/t****topic/...</td><td>1</td><td>15%</td><td class='mono'>https://f****forum.k*****************kerbalspaceprogram.com/t****topic/...</td></tr>
+<tr><td>https://e********eaglepubs.e***erau.edu/i************************************introductiontoaerospaceflightvehicles/...</td><td>1</td><td>15%</td><td class='mono'>https://e********eaglepubs.e***erau.edu/i************************************introductiontoaerospaceflightvehicles/...</td></tr>
+<tr><td>https://w**www.r************rocketryforum.com/t******threads/...</td><td>1</td><td>15%</td><td class='mono'>https://w**www.r************rocketryforum.com/t******threads/...</td></tr>
+<tr><td>https://w**www.r************rocketryforum.com/t******threads/...</td><td>1</td><td>15%</td><td class='mono'>https://w**www.r************rocketryforum.com/t******threads/...</td></tr>
+<tr><td>https://w**www.r*****reddit.com/*/...</td><td>1</td><td>15%</td><td class='mono'>https://w**www.r*****reddit.com/*/...</td></tr>
+</table></div></section>
+
+<section class='section'><h2>🚫 Rejected Targets (35)</h2><div class='pad'><p class='hint'>Filtered by input validation: garbage strings, SHA hashes used as targets, profile-target type mismatches, placeholder domains, high-entropy tokens.</p><table><tr><th>Raw Target</th><th>Reason</th><th>Source</th></tr><tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_004127_dossier_domain_theHarvester_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_004537_dossier_domain_amass_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_004925_dossier_domain_subfinder_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_004959_dossier_domain_dnsx_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_005010_dossier_domain_whois_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_005645_dossier_domain_theHarvester_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_010110_dossier_domain_amass_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_010418_dossier_domain_subfinder_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_010457_dossier_domain_dnsx_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_010505_dossier_domain_whois_example.com_.json</td></tr>
+<tr><td><code>5**************************************************************c</code></td><td>hex_hash_target</td><td class='mono'>20260406_021238_dossier_phone_phoneinfoga_5f0e25b4b1d4680586498282c6b20408ac38ecae21490133f2942426fed0186c_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_021620_dossier_domain_theHarvester_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_022841_dossier_domain_amass_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_023015_dossier_domain_subfinder_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_023056_dossier_domain_dnsx_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_023108_dossier_domain_whois_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_042402_dossier_domain_theHarvester_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_043011_dossier_domain_amass_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_043339_dossier_domain_subfinder_example.com_.json</td></tr>
+<tr><td><code>e******example.com</code></td><td>placeholder_domain</td><td class='mono'>20260406_043435_dossier_domain_dnsx_example.com_.json</td></tr>
+</table></div></section>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "target_name": "example.com",
+  "mode": "aggregate",
+  "started_at": "2026-04-09T06:39:29.669656",
+  "finished_at": "2026-04-09T06:39:51.706184",
+  "modules_run": [
+    "httpx_probe"
+  ],
+  "queued_modules": [
+    "subfinder",
+    "httpx_probe",
+    "naabu",
+    "nmap"
+  ],
+  "runtime_summary": {
+    "target_name": "example.com",
+    "mode": "aggregate",
+    "queued": 4,
+    "completed": 1,
+    "failed": 0,
+    "timed_out": 3,
+    "skipped_missing_credentials": 0,
+    "missing_binary": 0,
+    "dependency_unavailable": 0,
+    "worker_crash": 0,
+    "exports": [],
+    "report_mode": null
+  },
+  "outcomes": [
+    {
+      "module_name": "httpx_probe",
+      "lane": "fast",
+      "ok": true,
+      "hit_count": 0,
+      "error": null,
+      "error_kind": null,
+      "elapsed_sec": 0.3563970410032198,
+      "log_path": "/Users/admin/Desktop/ОСІНТ_ВИВІД/runs/logs/task_httpx_probe_063930.log"
+    },
+    {
+      "module_name": "subfinder",
+      "lane": "fast",
+      "ok": false,
+      "hit_count": 0,
+      "error": "TIMEOUT (10s)",
+      "error_kind": "timeout",
+      "elapsed_sec": 10.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "naabu",
+      "lane": "fast",
+      "ok": false,
+      "hit_count": 0,
+      "error": "TIMEOUT (10s)",
+      "error_kind": "timeout",
+      "elapsed_sec": 10.0,
+      "log_path": ""
+    },
+    {
+      "module_name": "nmap",
+      "lane": "slow",
+      "ok": false,
+      "hit_count": 0,
+      "error": "TIMEOUT (12s)",
+      "error_kind": "timeout",
+      "elapsed_sec": 12.0,
+      "log_path": ""
+    }
+  ],
+  "errors": [
+    {
+      "error": "TIMEOUT (10s)",
+      "module": "subfinder",
+      "error_kind": "timeout"
+    },
+    {
+      "error": "TIMEOUT (10s)",
+      "module": "naabu",
+      "error_kind": "timeout"
+    },
+    {
+      "error": "TIMEOUT (12s)",
+      "module": "nmap",
+      "error_kind": "timeout"
+    }
+  ],
+  "artifacts": {
+    "exports": {},
+    "output_path": null,
+    "report_mode": null
+  },
+  "extra": {
+    "queued_modules": [
+      "subfinder",
+      "httpx_probe",
+      "naabu",
+      "nmap"
+    ],
+    "deferred_modules": [],
+    "core_snapshot": false,
+    "exports": {}
+  }
+}

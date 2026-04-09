@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "target_name": "example.com",
+  "mode": "manual",
+  "started_at": "2026-04-09T00:11:58.204701",
+  "finished_at": "2026-04-09T00:14:28.216847",
+  "modules_run": [
+    "social_analyzer"
+  ],
+  "queued_modules": [
+    "social_analyzer"
+  ],
+  "runtime_summary": {
+    "target_name": "example.com",
+    "mode": "manual",
+    "queued": 1,
+    "completed": 0,
+    "failed": 1,
+    "timed_out": 0,
+    "skipped_missing_credentials": 0,
+    "missing_binary": 0,
+    "dependency_unavailable": 0,
+    "worker_crash": 0,
+    "exports": [],
+    "report_mode": null
+  },
+  "outcomes": [
+    {
+      "module_name": "social_analyzer",
+      "lane": "slow",
+      "ok": false,
+      "hit_count": 0,
+      "error": "can't concat str to bytes",
+      "error_kind": "adapter_error",
+      "elapsed_sec": 150.01139558298746,
+      "log_path": ""
+    }
+  ],
+  "errors": [
+    {
+      "module": "social_analyzer",
+      "error": "can't concat str to bytes",
+      "error_kind": "adapter_error"
+    }
+  ],
+  "artifacts": {
+    "exports": {},
+    "output_path": null,
+    "report_mode": null
+  },
+  "extra": {
+    "queued_modules": [
+      "social_analyzer"
+    ],
+    "exports": {}
+  }
+}

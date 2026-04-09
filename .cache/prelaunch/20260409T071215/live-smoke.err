@@ -1,0 +1,5 @@
+[prelaunch] Optional no-credential chain smoke
+2026-04-09 07:15:08,627 [hanna.runners.chain] INFO: Ingest: 0 ok, 34 rejected, 39 skipped
+2026-04-09 07:15:08,629 [hanna.runners.chain] INFO: Entity resolution: 0 cluster(s)
+ashok: auto-disabled after 3 consecutive failures
+2026-04-09 07:15:52,597 [hanna.runners.chain] INFO: Dossier: /Users/admin/Desktop/runs/exports/html/dossiers/new osint-ui rewrite/hanna-v3-2-clean/.cache/prelaunch/20260409T071215/live-smoke.html

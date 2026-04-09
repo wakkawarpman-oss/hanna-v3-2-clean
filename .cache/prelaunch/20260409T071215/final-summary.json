@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "bundle_root": "/Users/admin/Desktop/runs/exports/html/dossiers/new osint-ui rewrite/hanna-v3-2-clean/.cache/prelaunch/20260409T071215",
+  "generated_from": "scripts/prelaunch_check.sh",
+  "overall_status": "pass",
+  "failure_count": 0,
+  "stage_count": 7,
+  "nonempty_error_files": {
+    "count": 2,
+    "files": [
+      "live-smoke.err",
+      "run_discovery.list.err"
+    ]
+  },
+  "stages": [
+    {
+      "name": "Canonical inventory JSON",
+      "slug": "canonical-inventory-json",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-09T04:12:22Z",
+      "finished_at": "2026-04-09T04:12:32Z"
+    },
+    {
+      "name": "Canonical preflight JSON",
+      "slug": "canonical-preflight-json",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-09T04:12:33Z",
+      "finished_at": "2026-04-09T04:12:34Z"
+    },
+    {
+      "name": "Focused regression pack",
+      "slug": "focused-regression-pack",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-09T04:12:35Z",
+      "finished_at": "2026-04-09T04:13:18Z"
+    },
+    {
+      "name": "Legacy wrapper inventory",
+      "slug": "legacy-wrapper-inventory",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-09T04:12:15Z",
+      "finished_at": "2026-04-09T04:12:18Z"
+    },
+    {
+      "name": "Optional no-credential chain smoke",
+      "slug": "optional-no-credential-chain-smoke",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-09T04:13:18Z",
+      "finished_at": "2026-04-09T04:15:54Z"
+    },
+    {
+      "name": "Root UI wrapper help",
+      "slug": "root-ui-wrapper-help",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-09T04:12:19Z",
+      "finished_at": "2026-04-09T04:12:22Z"
+    },
+    {
+      "name": "Summary schema smoke",
+      "slug": "summary-schema-smoke",
+      "status": "pass",
+      "exit_code": 0,
+      "started_at": "2026-04-09T04:12:34Z",
+      "finished_at": "2026-04-09T04:12:35Z"
+    }
+  ],
+  "checks": {
+    "preflight": {
+      "status": "pass",
+      "summary": {
+        "total": 12,
+        "ok": 12,
+        "warn": 0,
+        "fail": 0,
+        "has_hard_failures": false
+      },
+      "modules": [
+        "full-spectrum"
+      ],
+      "path": "preflight.json"
+    },
+    "smart_summary": {
+      "status": "pass",
+      "path": "smart-summary.json",
+      "risk_flag_codes": [
+        "credential_leak",
+        "military_association"
+      ],
+      "observable_counts": {
+        "phones": 0,
+        "emails": 1,
+        "urls": 0
+      }
+    },
+    "focused_regression": {
+      "status": "pass",
+      "path": "pytest.txt",
+      "summary": {
+        "passed": 49,
+        "failed": 0,
+        "skipped": 0,
+        "duration_seconds": 36.86
+      }
+    },
+    "live_smoke": {
+      "enabled": true,
+      "status": "pass",
+      "path": "live-smoke.json",
+      "runtime_summary": {
+        "target_name": "prelaunch-smoke",
+        "mode": "chain",
+        "queued": 18,
+        "completed": 7,
+        "failed": 11,
+        "timed_out": 0,
+        "skipped_missing_credentials": 0,
+        "missing_binary": 0,
+        "dependency_unavailable": 0,
+        "worker_crash": 0,
+        "exports": [
+          "metadata"
+        ],
+        "report_mode": "shareable"
+      }
+    },
+    "full_rollout_rehearsal": {
+      "enabled": false,
+      "status": "not-run",
+      "artifact_verification_status": "not-run",
+      "target": null,
+      "modules": null,
+      "runtime_path": null,
+      "verification_path": null,
+      "verification": null
+    }
+  }
+}
